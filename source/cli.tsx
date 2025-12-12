@@ -3,6 +3,10 @@ import { render } from "ink";
 import meow from "meow";
 import App from "./app.js";
 
+export type CliFlags = {
+	name: string | undefined;
+};
+
 const cli = meow(
 	`
 	Usage
@@ -25,4 +29,12 @@ const cli = meow(
 	},
 );
 
-render(<App name={cli.flags.name} />);
+// 保留参数结构供后续使用
+const flags: CliFlags = cli.flags;
+
+const { waitUntilExit } = render(<App flags={flags} />);
+
+// 退出时清屏
+waitUntilExit().then(() => {
+	process.stdout.write("\x1b[2J\x1b[H");
+});

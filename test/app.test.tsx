@@ -3,15 +3,14 @@ import { describe, expect, it } from "vitest";
 import App from "../source/app.js";
 
 describe("App", () => {
-	it("greets unknown user", () => {
-		const { lastFrame } = render(<App name={undefined} />);
-		expect(lastFrame()).toContain("Hello,");
-		expect(lastFrame()).toContain("Stranger");
+	it("renders the app title", () => {
+		const { lastFrame } = render(<App flags={{ name: undefined }} />);
+		expect(lastFrame()).toContain("axiomate-cli");
 	});
 
-	it("greets user with a name", () => {
-		const { lastFrame } = render(<App name="Jane" />);
-		expect(lastFrame()).toContain("Hello,");
-		expect(lastFrame()).toContain("Jane");
+	it("renders autocomplete hint", () => {
+		const { lastFrame } = render(<App flags={{ name: "Jane" }} />);
+		expect(lastFrame()).toContain("Tab");
+		expect(lastFrame()).toContain("autocomplete");
 	});
 });
