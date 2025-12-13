@@ -627,7 +627,7 @@ export default function AutocompleteInput({
 				const isFirstLine = lineIndex === 0;
 
 				return (
-					<Box key={`${lineIndex}-${line.length}`}>
+					<Box key={`${lineIndex}-${line}`}>
 						{/* 第一行显示粉色 prompt，后续行显示等宽空格缩进 */}
 						{isFirstLine ? (
 							<Text color="#FF69B4">{prompt}</Text>
