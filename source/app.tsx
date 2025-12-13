@@ -5,12 +5,11 @@ import Divider from "./components/Divider.js";
 import Header from "./components/Header.js";
 import MessageOutput from "./components/MessageOutput.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
-import {
-	COMMANDS,
-	SLASH_COMMANDS,
-	getCommandSuggestion,
-} from "./constants/commands.js";
+import { SLASH_COMMANDS } from "./constants/commands.js";
 import type { CliFlags } from "./cli.js";
+
+// 可用命令列表（用于 help 显示）
+const AVAILABLE_COMMANDS = ["help", "exit", "quit", "clear", "version"];
 
 type Props = {
 	flags: CliFlags;
@@ -36,7 +35,7 @@ export default function App({ flags }: Props) {
 					if (slashCmd === "help") {
 						setMessages((prev) => [
 							...prev,
-							"Available commands: " + COMMANDS.join(", "),
+							"Available commands: " + AVAILABLE_COMMANDS.join(", "),
 						]);
 					} else if (slashCmd === "exit") {
 						clearAndExit();
@@ -59,7 +58,7 @@ export default function App({ flags }: Props) {
 				if (cmd === "help") {
 					setMessages((prev) => [
 						...prev,
-						"Available commands: " + COMMANDS.join(", "),
+						"Available commands: " + AVAILABLE_COMMANDS.join(", "),
 					]);
 				} else if (cmd === "exit" || cmd === "quit") {
 					clearAndExit();
@@ -102,7 +101,6 @@ export default function App({ flags }: Props) {
 					prompt="> "
 					onSubmit={handleSubmit}
 					onExit={clearAndExit}
-					autocompleteProvider={getCommandSuggestion}
 					slashCommands={SLASH_COMMANDS}
 				/>
 			</Box>

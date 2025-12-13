@@ -2,10 +2,24 @@ import { Box, Text, useInput, useApp } from "ink";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
 
-export type AutocompleteProvider = (
-	input: string,
-	signal: AbortSignal,
-) => Promise<string | null>;
+// 命令列表用于自动补全
+const COMMANDS = [
+	"help",
+	"exit",
+	"quit",
+	"clear",
+	"history",
+	"config",
+	"config set",
+	"config get",
+	"config list",
+	"status",
+	"start",
+	"stop",
+	"restart",
+	"logs",
+	"version",
+];
 
 export type SlashCommand = {
 	name: string;
@@ -16,7 +30,6 @@ type Props = {
 	prompt?: string;
 	onSubmit?: (value: string) => void;
 	onExit?: () => void;
-	autocompleteProvider: AutocompleteProvider;
 	slashCommands?: SlashCommand[];
 };
 
@@ -24,7 +37,6 @@ export default function AutocompleteInput({
 	prompt = "> ",
 	onSubmit,
 	onExit,
-	autocompleteProvider,
 	slashCommands = [],
 }: Props) {
 	const { exit } = useApp();
@@ -67,6 +79,37 @@ export default function AutocompleteInput({
 		return null;
 	}, [isSlashMode, filteredCommands, selectedCommandIndex, input]);
 
+	// 命令自动补全函数
+	const getCommandSuggestion = useCallback(
+		async (text: string, signal: AbortSignal): Promise<string | null> => {
+			// 模拟异步延迟
+			await new Promise<void>((resolve, reject) => {
+				const timeout = setTimeout(resolve, 100);
+				signal.addEventListener("abort", () => {
+					clearTimeout(timeout);
+					reject(new DOMException("Aborted", "AbortError"));
+				});
+			});
+
+			if (signal.aborted) {
+				return null;
+			}
+
+			// 查找匹配的命令
+			const lowerInput = text.toLowerCase();
+			const match = COMMANDS.find(
+				(cmd) => cmd.toLowerCase().startsWith(lowerInput) && cmd !== text,
+			);
+
+			if (match) {
+				return match.slice(text.length);
+			}
+
+			return null;
+		},
+		[],
+	);
+
 	// 触发自动补全
 	const triggerAutocomplete = useCallback(
 		async (text: string) => {
@@ -90,7 +133,7 @@ export default function AutocompleteInput({
 			abortControllerRef.current = controller;
 
 			try {
-				const result = await autocompleteProvider(text, controller.signal);
+				const result = await getCommandSuggestion(text, controller.signal);
 				if (!controller.signal.aborted) {
 					setSuggestion(result);
 				}
@@ -101,7 +144,7 @@ export default function AutocompleteInput({
 				}
 			}
 		},
-		[autocompleteProvider],
+		[getCommandSuggestion],
 	);
 
 	// 当输入变化时触发自动补全
