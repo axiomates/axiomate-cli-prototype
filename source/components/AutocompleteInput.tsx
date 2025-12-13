@@ -443,7 +443,7 @@ export default function AutocompleteInput({
 				return (
 					<Box key={lineIndex}>
 						{/* 第一行显示粉色 prompt */}
-						{isFirstLine && <Text color="magenta">{prompt}</Text>}
+						{isFirstLine && <Text color="#FF69B4">{prompt}</Text>}
 						<Text>
 							{isCursorLine ? (
 								<>
@@ -496,47 +496,47 @@ export default function AutocompleteInput({
 					<Text color="gray">{"─".repeat(columns)}</Text>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="yellow">/ </Text>
+							<Text color="#FFFF00">/ </Text>
 							<Text color="gray">for commands</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="yellow">Tab </Text>
+							<Text color="#FFFF00">Tab </Text>
 							<Text color="gray">to autocomplete</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="yellow">Ctrl+Enter </Text>
+							<Text color="#FFFF00">Ctrl+Enter </Text>
 							<Text color="gray">new line</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="yellow">Ctrl+C </Text>
+							<Text color="#FFFF00">Ctrl+C </Text>
 							<Text color="gray">exit</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="yellow">Ctrl+A </Text>
+							<Text color="#FFFF00">Ctrl+A </Text>
 							<Text color="gray">move to start</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="yellow">Ctrl+E </Text>
+							<Text color="#FFFF00">Ctrl+E </Text>
 							<Text color="gray">move to end</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="yellow">Ctrl+U </Text>
+							<Text color="#FFFF00">Ctrl+U </Text>
 							<Text color="gray">clear before cursor</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="yellow">Ctrl+K </Text>
+							<Text color="#FFFF00">Ctrl+K </Text>
 							<Text color="gray">clear after cursor</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="yellow">Escape </Text>
+							<Text color="#FFFF00">Escape </Text>
 							<Text color="gray">clear input</Text>
 						</Box>
 					</Box>
