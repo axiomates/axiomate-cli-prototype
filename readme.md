@@ -66,6 +66,7 @@ Type `/` to see available slash commands. Use arrow keys to select and Enter to 
 | `→` | Accept one character from suggestion |
 | `←` / `→` | Move cursor left/right |
 | `↑` / `↓` | Navigate slash command list |
+| `Ctrl+Enter` | Insert new line |
 | `Ctrl+A` | Move cursor to line start |
 | `Ctrl+E` | Move cursor to line end |
 | `Ctrl+U` | Clear text before cursor |

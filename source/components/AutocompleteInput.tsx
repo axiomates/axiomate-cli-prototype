@@ -165,6 +165,15 @@ export default function AutocompleteInput({
 	}, []);
 
 	useInput((inputChar, key) => {
+		// Ctrl+Enter 插入换行
+		if (key.ctrl && key.return) {
+			const newInput =
+				input.slice(0, cursorPosition) + "\n" + input.slice(cursorPosition);
+			setInput(newInput);
+			setCursorPosition(cursorPosition + 1);
+			return;
+		}
+
 		// 斜杠命令模式下的特殊处理
 		if (isSlashMode && filteredCommands.length > 0) {
 			if (key.upArrow) {
@@ -318,18 +327,13 @@ export default function AutocompleteInput({
 		}
 	});
 
-	// 计算显示内容，支持自动换行
+	// 计算显示内容，支持手动换行和自动换行
 	const displayText = input;
 	const suggestionText = effectiveSuggestion || "";
-	// 不再把 prompt 拼接进去，单独渲染
-	const fullText = displayText + suggestionText;
 
-	// 计算光标位置相对于显示文本（不含 prompt）
-	const cursorOffset = cursorPosition;
-
-	// 将文本分成多行
-	const wrapText = (text: string, width: number): string[] => {
-		if (width <= 0) return [text];
+	// 将单行文本按宽度自动换行
+	const wrapLine = (text: string, width: number): string[] => {
+		if (width <= 0 || text.length === 0) return [text];
 		const lines: string[] = [];
 		let remaining = text;
 		while (remaining.length > 0) {
@@ -339,22 +343,90 @@ export default function AutocompleteInput({
 		return lines.length > 0 ? lines : [""];
 	};
 
-	const effectiveWidth = columns - prompt.length; // 第一行要减去 prompt 宽度
-	const lines = wrapText(fullText, effectiveWidth > 0 ? effectiveWidth : columns);
+	// 处理手动换行 + 自动换行
+	// 返回: { lines: 显示行数组, cursorLine: 光标所在行, cursorCol: 光标所在列 }
+	const processLines = () => {
+		const lineWidth = columns - prompt.length > 0 ? columns - prompt.length : columns;
+		const fullText = displayText + suggestionText;
 
-	// 找到光标所在的行和列
-	const cursorLine = Math.floor(cursorOffset / (effectiveWidth > 0 ? effectiveWidth : columns));
-	const cursorCol = cursorOffset % (effectiveWidth > 0 ? effectiveWidth : columns);
+		// 先按手动换行符分割
+		const manualLines = fullText.split("\n");
+		const allLines: string[] = [];
+
+		// 记录每个手动行的起始位置（用于计算光标位置）
+		let charCount = 0;
+		let cursorLine = 0;
+		let cursorCol = 0;
+		let foundCursor = false;
+
+		for (let i = 0; i < manualLines.length; i++) {
+			const manualLine = manualLines[i]!;
+			const wrappedLines = wrapLine(manualLine, lineWidth);
+
+			for (let j = 0; j < wrappedLines.length; j++) {
+				const line = wrappedLines[j]!;
+
+				// 计算光标位置
+				if (!foundCursor) {
+					const lineStart = charCount;
+					const lineEnd = charCount + line.length;
+
+					if (cursorPosition >= lineStart && cursorPosition <= lineEnd) {
+						cursorLine = allLines.length;
+						cursorCol = cursorPosition - lineStart;
+						foundCursor = true;
+					}
+				}
+
+				allLines.push(line);
+				charCount += line.length;
+			}
+
+			// 手动换行符也占一个字符位置
+			if (i < manualLines.length - 1) {
+				charCount += 1; // \n
+			}
+		}
+
+		// 如果没找到光标（光标在末尾），设置到最后
+		if (!foundCursor) {
+			cursorLine = allLines.length - 1;
+			cursorCol = allLines[cursorLine]?.length || 0;
+		}
+
+		return { lines: allLines, cursorLine, cursorCol, lineWidth };
+	};
+
+	const { lines, cursorLine, cursorCol, lineWidth } = processLines();
+
+	// 计算输入文本在哪一行结束（用于显示建议）
+	const inputEndInfo = (() => {
+		const manualLines = displayText.split("\n");
+		let totalLines = 0;
+		let lastLineLength = 0;
+
+		for (const manualLine of manualLines) {
+			const wrappedCount = Math.max(1, Math.ceil(manualLine.length / lineWidth) || 1);
+			totalLines += wrappedCount;
+			lastLineLength = manualLine.length % lineWidth;
+			if (manualLine.length > 0 && lastLineLength === 0) {
+				lastLineLength = lineWidth;
+			}
+		}
+
+		return {
+			endLine: totalLines - 1,
+			endCol: lastLineLength,
+		};
+	})();
 
 	return (
 		<Box flexDirection="column">
 			{/* 输入行 */}
 			{lines.map((line, lineIndex) => {
-				const lineWidth = effectiveWidth > 0 ? effectiveWidth : columns;
-				const inputEndInLine =
-					lineIndex === Math.floor(input.length / lineWidth);
-				const suggestionStart =
-					inputEndInLine ? input.length % lineWidth : -1;
+				// 判断是否是输入结束行（用于显示建议部分）
+				const isInputEndLine = lineIndex === inputEndInfo.endLine;
+				const suggestionStart = isInputEndLine ? inputEndInfo.endCol : -1;
 
 				// 拆分行内容：用户输入部分 vs 建议部分
 				let userPart = line;
@@ -434,6 +506,16 @@ export default function AutocompleteInput({
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
+							<Text color="yellow">Ctrl+Enter </Text>
+							<Text color="gray">new line</Text>
+						</Box>
+						<Box width="50%">
+							<Text color="yellow">Ctrl+C </Text>
+							<Text color="gray">exit</Text>
+						</Box>
+					</Box>
+					<Box flexDirection="row" flexWrap="wrap">
+						<Box width="50%">
 							<Text color="yellow">Ctrl+A </Text>
 							<Text color="gray">move to start</Text>
 						</Box>
@@ -456,10 +538,6 @@ export default function AutocompleteInput({
 						<Box width="50%">
 							<Text color="yellow">Escape </Text>
 							<Text color="gray">clear input</Text>
-						</Box>
-						<Box width="50%">
-							<Text color="yellow">Ctrl+C </Text>
-							<Text color="gray">exit</Text>
 						</Box>
 					</Box>
 				</Box>
