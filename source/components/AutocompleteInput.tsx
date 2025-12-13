@@ -28,14 +28,16 @@ export type SlashCommand = {
 
 type Props = {
 	prompt?: string;
-	onSubmit?: (value: string) => void;
+	onMessage?: (message: string) => void;
+	onClear?: () => void;
 	onExit?: () => void;
 	slashCommands?: SlashCommand[];
 };
 
 export default function AutocompleteInput({
 	prompt = "> ",
-	onSubmit,
+	onMessage,
+	onClear,
 	onExit,
 	slashCommands = [],
 }: Props) {
@@ -47,6 +49,62 @@ export default function AutocompleteInput({
 	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
 	const columns = useTerminalWidth();
 	const abortControllerRef = useRef<AbortController | null>(null);
+
+	// 处理提交
+	const handleSubmit = useCallback(
+		(value: string) => {
+			if (!value.trim()) return;
+
+			// 可用命令列表（用于 help 显示）
+			const AVAILABLE_COMMANDS = ["help", "exit", "quit", "clear", "version"];
+
+			onMessage?.(`> ${value}`);
+
+			// 处理斜杠命令
+			if (value.startsWith("/")) {
+				const slashCmd = value.slice(1).toLowerCase();
+				if (slashCmd === "help") {
+					onMessage?.("Available commands: " + AVAILABLE_COMMANDS.join(", "));
+				} else if (slashCmd === "exit") {
+					if (onExit) {
+						onExit();
+					} else {
+						exit();
+					}
+				} else if (slashCmd === "clear") {
+					onClear?.();
+				} else if (slashCmd === "version") {
+					onMessage?.("axiomate-cli v1.0.0");
+				} else if (slashCmd === "config") {
+					onMessage?.("Config: (empty)");
+				} else if (slashCmd === "status") {
+					onMessage?.("Status: running");
+				} else {
+					onMessage?.(`Unknown slash command: ${value}`);
+				}
+				return;
+			}
+
+			// 处理普通命令
+			const cmd = value.trim().toLowerCase();
+			if (cmd === "help") {
+				onMessage?.("Available commands: " + AVAILABLE_COMMANDS.join(", "));
+			} else if (cmd === "exit" || cmd === "quit") {
+				if (onExit) {
+					onExit();
+				} else {
+					exit();
+				}
+			} else if (cmd === "clear") {
+				onClear?.();
+			} else if (cmd === "version") {
+				onMessage?.("axiomate-cli v1.0.0");
+			} else {
+				onMessage?.(`Unknown command: ${value}`);
+			}
+		},
+		[onMessage, onClear, onExit, exit],
+	);
 
 	// 检测是否在斜杠命令模式
 	const isSlashMode = input.startsWith("/");
@@ -195,7 +253,7 @@ export default function AutocompleteInput({
 				const selectedCmd = filteredCommands[selectedCommandIndex];
 				if (selectedCmd) {
 					const cmdText = "/" + selectedCmd.name;
-					onSubmit?.(cmdText);
+					handleSubmit(cmdText);
 					setInput("");
 					setCursorPosition(0);
 					setSuggestion(null);
@@ -207,7 +265,7 @@ export default function AutocompleteInput({
 
 		if (key.return) {
 			// 回车提交
-			onSubmit?.(input);
+			handleSubmit(input);
 			setInput("");
 			setCursorPosition(0);
 			setSuggestion(null);
