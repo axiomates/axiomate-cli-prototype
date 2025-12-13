@@ -34,6 +34,25 @@ type Props = {
 	slashCommands?: SlashCommand[];
 };
 
+// 统一的输入状态类型
+type InputState = {
+	input: string;
+	cursor: number;
+	historyIndex: number;
+	isBrowsingHistory: boolean;
+	savedInput: string;
+	suggestion: string | null;
+};
+
+const initialInputState: InputState = {
+	input: "",
+	cursor: 0,
+	historyIndex: -1,
+	isBrowsingHistory: false,
+	savedInput: "",
+	suggestion: null,
+};
+
 export default function AutocompleteInput({
 	prompt = "> ",
 	onMessage,
@@ -42,19 +61,22 @@ export default function AutocompleteInput({
 	slashCommands = [],
 }: Props) {
 	const { exit } = useApp();
-	const [input, setInput] = useState("");
-	const [cursorPosition, setCursorPosition] = useState(0);
-	const [suggestion, setSuggestion] = useState<string | null>(null);
+	const [state, setState] = useState<InputState>(initialInputState);
 	const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
 	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
 	const columns = useTerminalWidth();
 	const abortControllerRef = useRef<AbortController | null>(null);
 
-	// 输入历史记录
+	// 输入历史记录（独立于输入状态）
 	const [history, setHistory] = useState<string[]>([]);
-	const [historyIndex, setHistoryIndex] = useState(-1);
-	const [savedInput, setSavedInput] = useState(""); // 保存浏览历史前的输入
-	const [isBrowsingHistory, setIsBrowsingHistory] = useState(false); // 是否正在浏览历史
+
+	// 包装 setState，便于统一更新
+	const updateState = useCallback((updater: (s: InputState) => InputState) => {
+		setState((s) => updater(s));
+	}, []);
+
+	// 解构状态便于使用
+	const { input, cursor, historyIndex, isBrowsingHistory, suggestion } = state;
 
 	// 处理提交
 	const handleSubmit = useCallback(
@@ -67,10 +89,9 @@ export default function AutocompleteInput({
 				const filtered = prev.filter((item) => item !== trimmed);
 				return [...filtered, trimmed];
 			});
-			// 重置历史浏览状态
-			setHistoryIndex(-1);
-			setSavedInput("");
-			setIsBrowsingHistory(false);
+
+			// 重置输入状态
+			updateState(() => initialInputState);
 
 			// 可用命令列表（用于 help 显示）
 			const AVAILABLE_COMMANDS = ["help", "exit", "quit", "clear", "version"];
@@ -120,7 +141,7 @@ export default function AutocompleteInput({
 				onMessage?.(`Unknown command: ${value}`);
 			}
 		},
-		[onMessage, onClear, onExit, exit],
+		[onMessage, onClear, onExit, exit, updateState],
 	);
 
 	// 检测是否在斜杠命令模式
@@ -187,15 +208,15 @@ export default function AutocompleteInput({
 
 	// 触发自动补全
 	const triggerAutocomplete = useCallback(
-		async (text: string) => {
+		async (text: string, browsing: boolean) => {
 			// 历史浏览模式下不触发自动补全
-			if (isBrowsingHistory) {
+			if (browsing) {
 				return;
 			}
 
 			// 斜杠模式下使用 slashSuggestion，不触发异步补全
 			if (text.startsWith("/")) {
-				setSuggestion(null);
+				updateState((s) => ({ ...s, suggestion: null }));
 				return;
 			}
 
@@ -205,7 +226,7 @@ export default function AutocompleteInput({
 			}
 
 			if (!text) {
-				setSuggestion(null);
+				updateState((s) => ({ ...s, suggestion: null }));
 				return;
 			}
 
@@ -215,22 +236,23 @@ export default function AutocompleteInput({
 			try {
 				const result = await getCommandSuggestion(text, controller.signal);
 				if (!controller.signal.aborted) {
-					setSuggestion(result);
+					updateState((s) => ({ ...s, suggestion: result }));
 				}
 			} catch {
 				// 忽略取消错误
 				if (!controller.signal.aborted) {
-					setSuggestion(null);
+					updateState((s) => ({ ...s, suggestion: null }));
 				}
 			}
 		},
-		[getCommandSuggestion, isBrowsingHistory],
+		[getCommandSuggestion, updateState],
 	);
 
 	// 当输入变化时触发自动补全
+	// 注意：直接从 state 读取，确保使用最新值
 	useEffect(() => {
-		triggerAutocomplete(input);
-	}, [input, triggerAutocomplete]);
+		triggerAutocomplete(state.input, state.isBrowsingHistory);
+	}, [state.input, state.isBrowsingHistory, triggerAutocomplete]);
 
 	// 合并建议：斜杠模式使用 slashSuggestion，普通模式使用 suggestion
 	// 历史浏览模式下不显示建议
@@ -252,10 +274,11 @@ export default function AutocompleteInput({
 	useInput((inputChar, key) => {
 		// Ctrl+Enter 插入换行
 		if (key.ctrl && key.return) {
-			const newInput =
-				input.slice(0, cursorPosition) + "\n" + input.slice(cursorPosition);
-			setInput(newInput);
-			setCursorPosition(cursorPosition + 1);
+			updateState((s) => ({
+				...s,
+				input: s.input.slice(0, s.cursor) + "\n" + s.input.slice(s.cursor),
+				cursor: s.cursor + 1,
+			}));
 			return;
 		}
 
@@ -281,9 +304,6 @@ export default function AutocompleteInput({
 				if (selectedCmd) {
 					const cmdText = "/" + selectedCmd.name;
 					handleSubmit(cmdText);
-					setInput("");
-					setCursorPosition(0);
-					setSuggestion(null);
 					setSelectedCommandIndex(0);
 				}
 				return;
@@ -293,56 +313,56 @@ export default function AutocompleteInput({
 		if (key.return) {
 			// 回车提交
 			handleSubmit(input);
-			setInput("");
-			setCursorPosition(0);
-			setSuggestion(null);
 			return;
 		}
 
 		if (key.tab && effectiveSuggestion) {
 			// Tab 确认补全
 			const newInput = input + effectiveSuggestion;
-			setInput(newInput);
-			setCursorPosition(newInput.length);
-			setSuggestion(null);
+			updateState((s) => ({
+				...s,
+				input: newInput,
+				cursor: newInput.length,
+				suggestion: null,
+			}));
 			return;
 		}
 
 		if (key.backspace || key.delete) {
-			if (cursorPosition > 0) {
-				// 退出历史浏览模式（有编辑操作）
-				if (isBrowsingHistory) {
-					setIsBrowsingHistory(false);
-					setHistoryIndex(-1);
-					setSavedInput("");
-				}
-				const newInput =
-					input.slice(0, cursorPosition - 1) + input.slice(cursorPosition);
-				setInput(newInput);
-				setCursorPosition(cursorPosition - 1);
+			if (cursor > 0) {
+				updateState((s) => ({
+					...s,
+					input: s.input.slice(0, s.cursor - 1) + s.input.slice(s.cursor),
+					cursor: s.cursor - 1,
+					// 退出历史浏览模式（有编辑操作）
+					isBrowsingHistory: false,
+					historyIndex: -1,
+					savedInput: "",
+				}));
 			}
 			return;
 		}
 
 		if (key.leftArrow) {
-			if (cursorPosition > 0) {
-				setCursorPosition(cursorPosition - 1);
+			if (cursor > 0) {
+				updateState((s) => ({ ...s, cursor: s.cursor - 1 }));
 			}
 			return;
 		}
 
 		if (key.rightArrow) {
-			if (effectiveSuggestion && cursorPosition === input.length) {
+			if (effectiveSuggestion && cursor === input.length) {
 				// 如果光标在末尾且有建议，向右移动接受一个字符
 				const newInput = input + effectiveSuggestion[0];
-				setInput(newInput);
-				setCursorPosition(newInput.length);
 				const remaining = effectiveSuggestion.slice(1) || null;
-				if (!isSlashMode) {
-					setSuggestion(remaining);
-				}
-			} else if (cursorPosition < input.length) {
-				setCursorPosition(cursorPosition + 1);
+				updateState((s) => ({
+					...s,
+					input: newInput,
+					cursor: newInput.length,
+					suggestion: isSlashMode ? s.suggestion : remaining,
+				}));
+			} else if (cursor < input.length) {
+				updateState((s) => ({ ...s, cursor: s.cursor + 1 }));
 			}
 			return;
 		}
@@ -353,19 +373,29 @@ export default function AutocompleteInput({
 
 			if (key.upArrow) {
 				if (historyIndex === -1) {
-					// 第一次按上箭头，保存当前输入
-					setSavedInput(input);
-					setHistoryIndex(history.length - 1);
+					// 第一次按上箭头，保存当前输入并切换到最新历史
 					const historyItem = history[history.length - 1]!;
-					setInput(historyItem);
-					setCursorPosition(historyItem.length);
+					updateState((s) => ({
+						...s,
+						isBrowsingHistory: true,
+						savedInput: s.input,
+						historyIndex: history.length - 1,
+						input: historyItem,
+						cursor: historyItem.length,
+						suggestion: null,
+					}));
 				} else if (historyIndex > 0) {
 					// 继续向上浏览
 					const newIndex = historyIndex - 1;
-					setHistoryIndex(newIndex);
 					const historyItem = history[newIndex]!;
-					setInput(historyItem);
-					setCursorPosition(historyItem.length);
+					updateState((s) => ({
+						...s,
+						isBrowsingHistory: true,
+						historyIndex: newIndex,
+						input: historyItem,
+						cursor: historyItem.length,
+						suggestion: null,
+					}));
 				}
 			} else if (key.downArrow) {
 				if (historyIndex === -1) {
@@ -374,21 +404,28 @@ export default function AutocompleteInput({
 				} else if (historyIndex < history.length - 1) {
 					// 继续向下浏览
 					const newIndex = historyIndex + 1;
-					setHistoryIndex(newIndex);
 					const historyItem = history[newIndex]!;
-					setInput(historyItem);
-					setCursorPosition(historyItem.length);
+					updateState((s) => ({
+						...s,
+						isBrowsingHistory: true,
+						historyIndex: newIndex,
+						input: historyItem,
+						cursor: historyItem.length,
+						suggestion: null,
+					}));
 				} else {
 					// 回到原始输入
-					setHistoryIndex(-1);
-					setInput(savedInput);
-					setCursorPosition(savedInput.length);
+					updateState((s) => ({
+						...s,
+						isBrowsingHistory: false,
+						historyIndex: -1,
+						input: s.savedInput,
+						cursor: s.savedInput.length,
+						savedInput: "",
+						suggestion: null,
+					}));
 				}
 			}
-
-			// 进入历史浏览模式，关闭自动补全
-			setIsBrowsingHistory(true);
-			setSuggestion(null);
 			return;
 		}
 
@@ -403,26 +440,32 @@ export default function AutocompleteInput({
 
 		if (key.ctrl && inputChar === "u") {
 			// Ctrl+U 清除光标前的内容
-			setInput(input.slice(cursorPosition));
-			setCursorPosition(0);
+			updateState((s) => ({
+				...s,
+				input: s.input.slice(s.cursor),
+				cursor: 0,
+			}));
 			return;
 		}
 
 		if (key.ctrl && inputChar === "k") {
 			// Ctrl+K 清除光标后的内容
-			setInput(input.slice(0, cursorPosition));
+			updateState((s) => ({
+				...s,
+				input: s.input.slice(0, s.cursor),
+			}));
 			return;
 		}
 
 		if (key.ctrl && inputChar === "a") {
 			// Ctrl+A 移动到行首
-			setCursorPosition(0);
+			updateState((s) => ({ ...s, cursor: 0 }));
 			return;
 		}
 
 		if (key.ctrl && inputChar === "e") {
 			// Ctrl+E 移动到行尾
-			setCursorPosition(input.length);
+			updateState((s) => ({ ...s, cursor: s.input.length }));
 			return;
 		}
 
@@ -433,10 +476,9 @@ export default function AutocompleteInput({
 				return;
 			}
 			if (isSlashMode) {
-				setInput("");
-				setCursorPosition(0);
+				updateState((s) => ({ ...s, input: "", cursor: 0 }));
 			}
-			setSuggestion(null);
+			updateState((s) => ({ ...s, suggestion: null }));
 			return;
 		}
 
@@ -451,22 +493,25 @@ export default function AutocompleteInput({
 			if (showShortcutHelp) {
 				setShowShortcutHelp(false);
 			}
-			// 退出历史浏览模式（有新输入）
-			if (isBrowsingHistory) {
-				setIsBrowsingHistory(false);
-				setHistoryIndex(-1);
-				setSavedInput("");
-			}
-			const newInput =
-				input.slice(0, cursorPosition) + inputChar + input.slice(cursorPosition);
-			setInput(newInput);
-			setCursorPosition(cursorPosition + inputChar.length);
+			// 插入字符并退出历史浏览模式
+			updateState((s) => ({
+				...s,
+				input: s.input.slice(0, s.cursor) + inputChar + s.input.slice(s.cursor),
+				cursor: s.cursor + inputChar.length,
+				// 退出历史浏览模式（有新输入）
+				isBrowsingHistory: false,
+				historyIndex: -1,
+				savedInput: "",
+			}));
 		}
 	});
 
 	// 计算显示内容，支持手动换行和自动换行
-	const displayText = input;
-	const suggestionText = effectiveSuggestion || "";
+	// 直接使用 state（而非 ref），因为 state 变化才会触发重渲染
+	const displayText = state.input;
+	const suggestionText = state.isBrowsingHistory
+		? ""
+		: (state.input.startsWith("/") ? slashSuggestion : state.suggestion) || "";
 
 	// 将单行文本按宽度自动换行
 	const wrapLine = (text: string, width: number): string[] => {
@@ -484,6 +529,7 @@ export default function AutocompleteInput({
 	// 返回: { lines: 显示行数组, cursorLine: 光标所在行, cursorCol: 光标所在列 }
 	const processLines = () => {
 		const lineWidth = columns - prompt.length > 0 ? columns - prompt.length : columns;
+		// 直接用 state，确保渲染时数据一致
 		const fullText = displayText + suggestionText;
 
 		// 先按手动换行符分割
@@ -495,6 +541,7 @@ export default function AutocompleteInput({
 		let cursorLine = 0;
 		let cursorCol = 0;
 		let foundCursor = false;
+		const cursorPos = state.cursor;
 
 		for (let i = 0; i < manualLines.length; i++) {
 			const manualLine = manualLines[i]!;
@@ -508,9 +555,9 @@ export default function AutocompleteInput({
 					const lineStart = charCount;
 					const lineEnd = charCount + line.length;
 
-					if (cursorPosition >= lineStart && cursorPosition <= lineEnd) {
+					if (cursorPos >= lineStart && cursorPos <= lineEnd) {
 						cursorLine = allLines.length;
-						cursorCol = cursorPosition - lineStart;
+						cursorCol = cursorPos - lineStart;
 						foundCursor = true;
 					}
 				}
@@ -535,6 +582,8 @@ export default function AutocompleteInput({
 	};
 
 	const { lines, cursorLine, cursorCol, lineWidth } = processLines();
+
+	// DEBUG 信息（现在在 JSX 中显示）
 
 	// 计算输入文本在哪一行结束（用于显示建议）
 	const inputEndInfo = (() => {
@@ -581,7 +630,7 @@ export default function AutocompleteInput({
 				const isFirstLine = lineIndex === 0;
 
 				return (
-					<Box key={lineIndex}>
+					<Box key={`${lineIndex}-${line}`}>
 						{/* 第一行显示粉色 prompt，后续行显示等宽空格缩进 */}
 						{isFirstLine ? (
 							<Text color="#FF69B4">{prompt}</Text>
@@ -590,20 +639,38 @@ export default function AutocompleteInput({
 						)}
 						<Text>
 							{isCursorLine ? (
-								<>
-									{userPart.slice(0, cursorCol)}
-									<Text inverse>{userPart[cursorCol] || suggestPart[0] || " "}</Text>
-									{cursorCol < userPart.length
-										? userPart.slice(cursorCol + 1)
-										: ""}
-									{cursorCol >= userPart.length ? (
-										<Text color="gray">
-											{suggestPart.slice(cursorCol >= userPart.length ? 1 : 0)}
-										</Text>
-									) : (
-										<Text color="gray">{suggestPart}</Text>
-									)}
-								</>
+								(() => {
+									// 光标在用户输入部分
+									if (cursorCol < userPart.length) {
+										return (
+											<>
+												{userPart.slice(0, cursorCol)}
+												<Text inverse>{userPart[cursorCol]}</Text>
+												{userPart.slice(cursorCol + 1)}
+												<Text color="gray">{suggestPart}</Text>
+											</>
+										);
+									}
+									// 光标在用户输入末尾，有 suggestion
+									if (suggestPart.length > 0) {
+										return (
+											<>
+												{userPart}
+												<Text inverse>
+													<Text color="gray">{suggestPart[0]}</Text>
+												</Text>
+												<Text color="gray">{suggestPart.slice(1)}</Text>
+											</>
+										);
+									}
+									// 光标在末尾，没有 suggestion
+									return (
+										<>
+											{userPart}
+											<Text inverse>{" "}</Text>
+										</>
+									);
+								})()
 							) : (
 								<>
 									{userPart}
