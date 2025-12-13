@@ -110,7 +110,8 @@ source/
 │   ├── Header.tsx             # Title bar
 │   └── MessageOutput.tsx      # Message display area
 └── hooks/
-    └── useTerminalHeight.ts   # Terminal height hook
+    ├── useTerminalHeight.ts   # Terminal height hook
+    └── useTerminalWidth.ts    # Terminal width hook
 ```
 
 ## Tech Stack

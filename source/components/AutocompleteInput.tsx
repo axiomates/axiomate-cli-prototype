@@ -1,24 +1,6 @@
-import { Box, Text, useInput, useApp, useStdout } from "ink";
+import { Box, Text, useInput, useApp } from "ink";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-
-// 自定义 hook 获取终端宽度
-function useTerminalWidth(): number {
-	const { stdout } = useStdout();
-	const [width, setWidth] = useState(stdout.columns || 80);
-
-	useEffect(() => {
-		const handleResize = () => {
-			setWidth(stdout.columns || 80);
-		};
-
-		stdout.on("resize", handleResize);
-		return () => {
-			stdout.off("resize", handleResize);
-		};
-	}, [stdout]);
-
-	return width;
-}
+import useTerminalWidth from "../hooks/useTerminalWidth.js";
 
 export type AutocompleteProvider = (
 	input: string,
