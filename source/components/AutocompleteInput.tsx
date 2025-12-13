@@ -56,14 +56,12 @@ export default function AutocompleteInput({
 	// 检测是否在斜杠命令模式
 	const isSlashMode = input.startsWith("/");
 
-	// 过滤匹配的斜杠命令
+	// 过滤匹配的斜杠命令（只匹配命令名前缀）
 	const filteredCommands = useMemo(() => {
 		if (!isSlashMode) return [];
 		const query = input.slice(1).toLowerCase();
-		return slashCommands.filter(
-			(cmd) =>
-				cmd.name.toLowerCase().includes(query) ||
-				cmd.description.toLowerCase().includes(query),
+		return slashCommands.filter((cmd) =>
+			cmd.name.toLowerCase().startsWith(query),
 		);
 	}, [input, isSlashMode, slashCommands]);
 
@@ -72,10 +70,24 @@ export default function AutocompleteInput({
 		setSelectedCommandIndex(0);
 	}, [filteredCommands.length]);
 
+	// 斜杠命令模式下的自动补全建议
+	const slashSuggestion = useMemo(() => {
+		if (!isSlashMode || filteredCommands.length === 0) return null;
+		const selectedCmd = filteredCommands[selectedCommandIndex];
+		if (!selectedCmd) return null;
+		const query = input.slice(1).toLowerCase();
+		const cmdName = selectedCmd.name.toLowerCase();
+		// 只有当命令名以查询开头时才显示补全
+		if (cmdName.startsWith(query) && cmdName !== query) {
+			return selectedCmd.name.slice(query.length);
+		}
+		return null;
+	}, [isSlashMode, filteredCommands, selectedCommandIndex, input]);
+
 	// 触发自动补全
 	const triggerAutocomplete = useCallback(
 		async (text: string) => {
-			// 斜杠模式下不触发自动补全
+			// 斜杠模式下使用 slashSuggestion，不触发异步补全
 			if (text.startsWith("/")) {
 				setSuggestion(null);
 				return;
@@ -113,6 +125,9 @@ export default function AutocompleteInput({
 	useEffect(() => {
 		triggerAutocomplete(input);
 	}, [input, triggerAutocomplete]);
+
+	// 合并建议：斜杠模式使用 slashSuggestion，普通模式使用 suggestion
+	const effectiveSuggestion = isSlashMode ? slashSuggestion : suggestion;
 
 	// 清理
 	useEffect(() => {
@@ -164,9 +179,9 @@ export default function AutocompleteInput({
 			return;
 		}
 
-		if (key.tab && suggestion) {
+		if (key.tab && effectiveSuggestion) {
 			// Tab 确认补全
-			const newInput = input + suggestion;
+			const newInput = input + effectiveSuggestion;
 			setInput(newInput);
 			setCursorPosition(newInput.length);
 			setSuggestion(null);
@@ -191,12 +206,15 @@ export default function AutocompleteInput({
 		}
 
 		if (key.rightArrow) {
-			if (suggestion && cursorPosition === input.length) {
+			if (effectiveSuggestion && cursorPosition === input.length) {
 				// 如果光标在末尾且有建议，向右移动接受一个字符
-				const newInput = input + suggestion[0];
+				const newInput = input + effectiveSuggestion[0];
 				setInput(newInput);
 				setCursorPosition(newInput.length);
-				setSuggestion(suggestion.slice(1) || null);
+				const remaining = effectiveSuggestion.slice(1) || null;
+				if (!isSlashMode) {
+					setSuggestion(remaining);
+				}
 			} else if (cursorPosition < input.length) {
 				setCursorPosition(cursorPosition + 1);
 			}
@@ -263,7 +281,7 @@ export default function AutocompleteInput({
 
 	// 计算显示内容，支持自动换行
 	const displayText = input;
-	const suggestionText = suggestion || "";
+	const suggestionText = effectiveSuggestion || "";
 	const fullText = prompt + displayText + suggestionText;
 
 	// 计算光标位置相对于显示文本
