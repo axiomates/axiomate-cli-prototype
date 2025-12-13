@@ -321,10 +321,11 @@ export default function AutocompleteInput({
 	// 计算显示内容，支持自动换行
 	const displayText = input;
 	const suggestionText = effectiveSuggestion || "";
-	const fullText = prompt + displayText + suggestionText;
+	// 不再把 prompt 拼接进去，单独渲染
+	const fullText = displayText + suggestionText;
 
-	// 计算光标位置相对于显示文本
-	const cursorOffset = prompt.length + cursorPosition;
+	// 计算光标位置相对于显示文本（不含 prompt）
+	const cursorOffset = cursorPosition;
 
 	// 将文本分成多行
 	const wrapText = (text: string, width: number): string[] => {
@@ -338,21 +339,22 @@ export default function AutocompleteInput({
 		return lines.length > 0 ? lines : [""];
 	};
 
-	const effectiveWidth = columns;
-	const lines = wrapText(fullText, effectiveWidth);
+	const effectiveWidth = columns - prompt.length; // 第一行要减去 prompt 宽度
+	const lines = wrapText(fullText, effectiveWidth > 0 ? effectiveWidth : columns);
 
 	// 找到光标所在的行和列
-	const cursorLine = Math.floor(cursorOffset / effectiveWidth);
-	const cursorCol = cursorOffset % effectiveWidth;
+	const cursorLine = Math.floor(cursorOffset / (effectiveWidth > 0 ? effectiveWidth : columns));
+	const cursorCol = cursorOffset % (effectiveWidth > 0 ? effectiveWidth : columns);
 
 	return (
 		<Box flexDirection="column">
 			{/* 输入行 */}
 			{lines.map((line, lineIndex) => {
+				const lineWidth = effectiveWidth > 0 ? effectiveWidth : columns;
 				const inputEndInLine =
-					lineIndex === Math.floor((prompt.length + input.length) / effectiveWidth);
+					lineIndex === Math.floor(input.length / lineWidth);
 				const suggestionStart =
-					inputEndInLine ? (prompt.length + input.length) % effectiveWidth : -1;
+					inputEndInLine ? input.length % lineWidth : -1;
 
 				// 拆分行内容：用户输入部分 vs 建议部分
 				let userPart = line;
@@ -364,9 +366,12 @@ export default function AutocompleteInput({
 				}
 
 				const isCursorLine = lineIndex === cursorLine;
+				const isFirstLine = lineIndex === 0;
 
 				return (
 					<Box key={lineIndex}>
+						{/* 第一行显示粉色 prompt */}
+						{isFirstLine && <Text color="magenta">{prompt}</Text>}
 						<Text>
 							{isCursorLine ? (
 								<>
@@ -419,41 +424,41 @@ export default function AutocompleteInput({
 					<Text color="gray">{"─".repeat(columns)}</Text>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="cyan">/ </Text>
+							<Text color="yellow">/ </Text>
 							<Text color="gray">for commands</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="cyan">Tab </Text>
+							<Text color="yellow">Tab </Text>
 							<Text color="gray">to autocomplete</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="cyan">Ctrl+A </Text>
+							<Text color="yellow">Ctrl+A </Text>
 							<Text color="gray">move to start</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="cyan">Ctrl+E </Text>
+							<Text color="yellow">Ctrl+E </Text>
 							<Text color="gray">move to end</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="cyan">Ctrl+U </Text>
+							<Text color="yellow">Ctrl+U </Text>
 							<Text color="gray">clear before cursor</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="cyan">Ctrl+K </Text>
+							<Text color="yellow">Ctrl+K </Text>
 							<Text color="gray">clear after cursor</Text>
 						</Box>
 					</Box>
 					<Box flexDirection="row" flexWrap="wrap">
 						<Box width="50%">
-							<Text color="cyan">Escape </Text>
+							<Text color="yellow">Escape </Text>
 							<Text color="gray">clear input</Text>
 						</Box>
 						<Box width="50%">
-							<Text color="cyan">Ctrl+C </Text>
+							<Text color="yellow">Ctrl+C </Text>
 							<Text color="gray">exit</Text>
 						</Box>
 					</Box>

@@ -3,7 +3,7 @@ import { Box, Text } from "ink";
 export default function Header() {
 	return (
 		<Box flexShrink={0}>
-			<Text color="cyan" bold>
+			<Text color="magenta" bold>
 				axiomate-cli
 			</Text>
 			<Text color="gray"> - Type </Text>
