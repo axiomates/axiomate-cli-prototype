@@ -4,9 +4,11 @@ import meow from "meow";
 import App from "./app.js";
 import { initConfig } from "./utils/config.js";
 import { setFlags } from "./utils/flags.js";
+import { initLocalSettings } from "./utils/localsettings.js";
 
-// 启动时初始化配置（如果不存在或格式不正确则创建空配置文件）
+// 启动时初始化配置
 initConfig();
+initLocalSettings();
 
 const cli = meow({
 	importMeta: import.meta,
