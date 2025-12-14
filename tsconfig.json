@@ -5,7 +5,7 @@
 		"moduleResolution": "NodeNext",
 		"lib": ["ES2022", "DOM"],
 		"outDir": "dist",
-		"rootDir": ".",
+		"rootDir": "source",
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -19,6 +19,6 @@
 		"verbatimModuleSyntax": true,
 		"typeRoots": ["./source/types", "./node_modules/@types"]
 	},
-	"include": ["source", "test"],
+	"include": ["source/**/*"],
 	"exclude": ["node_modules", "dist"]
 }

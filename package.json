@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"bin": {
-		"axiomate-cli": "dist/source/cli.js"
+		"axiomate-cli": "dist/cli.js"
 	},
 	"type": "module",
 	"engines": {
@@ -12,7 +12,7 @@
 	"scripts": {
 		"build": "tsc",
 		"dev": "tsc --watch",
-		"start": "node dist/source/cli.js",
+		"start": "node dist/cli.js",
 		"bundle": "jiti scripts/bundle.ts",
 		"test": "vitest run",
 		"test:watch": "vitest",
