@@ -46,7 +46,9 @@ export function getLocalSettings(): LocalSettings {
 /**
  * 更新本地设置并保存到文件（懒创建）
  */
-export function updateLocalSettings(updates: Partial<LocalSettings>): LocalSettings {
+export function updateLocalSettings(
+	updates: Partial<LocalSettings>,
+): LocalSettings {
 	const newSettings: LocalSettings = {
 		permissions: {
 			...runtimeLocalSettings.permissions,
@@ -96,7 +98,11 @@ function loadLocalSettingsFile(): LocalSettingsFile {
 		const settings = JSON.parse(content);
 
 		// 验证是否为普通对象
-		if (typeof settings !== "object" || settings === null || Array.isArray(settings)) {
+		if (
+			typeof settings !== "object" ||
+			settings === null ||
+			Array.isArray(settings)
+		) {
 			return DEFAULT_LOCAL_SETTINGS;
 		}
 

@@ -90,7 +90,11 @@ function loadConfigFile(): ConfigFile {
 		const config = JSON.parse(content);
 
 		// 验证是否为普通对象
-		if (typeof config !== "object" || config === null || Array.isArray(config)) {
+		if (
+			typeof config !== "object" ||
+			config === null ||
+			Array.isArray(config)
+		) {
 			throw new Error("Config must be an object");
 		}
 

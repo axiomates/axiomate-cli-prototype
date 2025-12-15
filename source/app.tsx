@@ -20,7 +20,7 @@ export default function App() {
 		setMessages([]);
 	}, []);
 
-    const clearAndExit = useCallback(() => {
+	const clearAndExit = useCallback(() => {
 		exit();
 	}, [exit]);
 
