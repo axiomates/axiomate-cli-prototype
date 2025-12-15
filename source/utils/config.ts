@@ -27,52 +27,28 @@ const DEFAULT_CONFIG: Config = {
 let runtimeConfig: Config | null = null;
 
 /**
- * 获取用户主目录下的配置文件路径
- * 跨平台兼容：Windows 使用 C:\Users\%USERNAME%，Unix 使用 ~
+ * 获取当前配置（如果未初始化则自动初始化）
+ * 返回浅拷贝，防止外部直接修改内部状态
  */
-export function getConfigPath(): string {
-	const homeDir = os.homedir();
-	return path.join(homeDir, CONFIG_FILENAME);
-}
-
-/**
- * 读取配置文件，如果不存在或格式不正确则创建空配置文件
- */
-function loadConfigFile(): ConfigFile {
-	const configPath = getConfigPath();
-
-	try {
-		if (fs.existsSync(configPath)) {
-			const content = fs.readFileSync(configPath, "utf-8");
-			const config = JSON.parse(content) as ConfigFile;
-
-			// 验证是否为对象类型
-			if (
-				config === null ||
-				typeof config !== "object" ||
-				Array.isArray(config)
-			) {
-				throw new Error("Config must be an object");
-			}
-
-			return config;
-		}
-	} catch {
-		// 文件读取失败或 JSON 格式不正确，将在下面创建新的空配置文件
+export function getConfig(): Config {
+	if (runtimeConfig === null) {
+		initConfig();
 	}
-
-	// 文件不存在或读取失败，创建空配置文件
-	const emptyConfig: ConfigFile = {};
-	saveConfigFile(emptyConfig);
-	return emptyConfig;
+	return { ...runtimeConfig! };
 }
 
 /**
- * 保存配置到文件
+ * 更新配置并保存到文件
  */
-function saveConfigFile(config: ConfigFile): void {
-	const configPath = getConfigPath();
-	fs.writeFileSync(configPath, JSON.stringify(config, null, 4), "utf-8");
+export function updateConfig(updates: Partial<Config>): Config {
+	const currentConfig = getConfig();
+	const newConfig: Config = {
+		...currentConfig,
+		...updates,
+	};
+	runtimeConfig = newConfig;
+	saveConfigFile(newConfig);
+	return newConfig;
 }
 
 /**
@@ -88,25 +64,62 @@ export function initConfig(): Config {
 }
 
 /**
- * 获取当前配置（如果未初始化则自动初始化）
+ * 保存配置到文件，返回保存的配置
  */
-export function getConfig(): Config {
-	if (runtimeConfig === null) {
-		return initConfig();
-	}
-	return runtimeConfig;
+function saveConfigFile(config: ConfigFile): ConfigFile {
+	ensureConfigFileExists();
+	const configPath = getConfigPath();
+	fs.writeFileSync(configPath, JSON.stringify(config, null, 4), "utf-8");
+	return config;
 }
 
 /**
- * 更新配置并保存到文件
+ * 读取配置文件，如果不存在或格式不正确则返回空配置
  */
-export function updateConfig(updates: Partial<Config>): Config {
-	const currentConfig = getConfig();
-	const newConfig: Config = {
-		...currentConfig,
-		...updates,
-	};
-	runtimeConfig = newConfig;
-	saveConfigFile(newConfig);
-	return newConfig;
+function loadConfigFile(): ConfigFile {
+	const configPath = getConfigPath();
+
+	// 文件不存在，创建空配置文件并返回
+	if (!fs.existsSync(configPath)) {
+		return saveConfigFile({});
+	}
+
+	// 文件存在，尝试解析
+	try {
+		const content = fs.readFileSync(configPath, "utf-8");
+		const config = JSON.parse(content) as ConfigFile;
+
+		// 验证是否为对象类型
+		if (
+			config === null ||
+			typeof config !== "object" ||
+			Array.isArray(config)
+		) {
+			throw new Error("Config must be an object");
+		}
+
+		return config;
+	} catch {
+		// JSON 解析失败，重置为空配置文件
+		return saveConfigFile({});
+	}
+}
+
+/**
+ * 确保配置文件存在
+ */
+function ensureConfigFileExists(): void {
+	const configPath = getConfigPath();
+	if (!fs.existsSync(configPath)) {
+		fs.writeFileSync(configPath, JSON.stringify({}, null, 4), "utf-8");
+	}
+}
+
+/**
+ * 获取用户主目录下的配置文件路径
+ * 跨平台兼容：Windows 使用 C:\Users\%USERNAME%，Unix 使用 ~
+ */
+export function getConfigPath(): string {
+	const homeDir = os.homedir();
+	return path.join(homeDir, CONFIG_FILENAME);
 }
