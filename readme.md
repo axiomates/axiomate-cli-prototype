@@ -122,19 +122,19 @@ The input component supports multiple modes with structured input handling:
 
 ### Input Types
 
-| Type      | Description                              | Example                    |
-| --------- | ---------------------------------------- | -------------------------- |
-| `message` | Regular text input, sent to AI           | `hello world`              |
-| `command` | Slash commands, handled by the app       | `/model openai gpt-4`      |
+| Type      | Description                        | Example               |
+| --------- | ---------------------------------- | --------------------- |
+| `message` | Regular text input, sent to AI     | `hello world`         |
+| `command` | Slash commands, handled by the app | `/model openai gpt-4` |
 
 ### Input Modes (Internal State)
 
-| Mode      | Trigger      | Description                              |
-| --------- | ------------ | ---------------------------------------- |
-| `normal`  | Default      | Regular input with autocomplete          |
-| `history` | `↑` / `↓`    | Browse command history                   |
-| `slash`   | `/`          | Navigate hierarchical slash commands     |
-| `help`    | `?`          | Display keyboard shortcuts (overlay)     |
+| Mode      | Trigger   | Description                          |
+| --------- | --------- | ------------------------------------ |
+| `normal`  | Default   | Regular input with autocomplete      |
+| `history` | `↑` / `↓` | Browse command history               |
+| `slash`   | `/`       | Navigate hierarchical slash commands |
+| `help`    | `?`       | Display keyboard shortcuts (overlay) |
 
 When user submits input, it's converted to a structured `UserInput` object:
 

@@ -6,7 +6,11 @@ import Header from "./components/Header.js";
 import MessageOutput from "./components/MessageOutput.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
 import { SLASH_COMMANDS } from "./constants/commands.js";
-import { type UserInput, isMessageInput, isCommandInput } from "./models/input.js";
+import {
+	type UserInput,
+	isMessageInput,
+	isCommandInput,
+} from "./models/input.js";
 
 export default function App() {
 	const { exit } = useApp();
@@ -23,7 +27,10 @@ export default function App() {
 			const [cmd, ...args] = input.command;
 			switch (cmd) {
 				case "help":
-					setMessages((prev) => [...prev, "Available commands: /help, /exit, /clear, /version, /model"]);
+					setMessages((prev) => [
+						...prev,
+						"Available commands: /help, /exit, /clear, /version, /model",
+					]);
 					break;
 				case "version":
 					setMessages((prev) => [...prev, "axiomate-cli v0.1.0"]);
@@ -37,9 +44,15 @@ export default function App() {
 				case "model":
 					// 示例：处理 /model openai gpt-4
 					if (args.length > 0) {
-						setMessages((prev) => [...prev, `Model switched to: ${args.join(" ")}`]);
+						setMessages((prev) => [
+							...prev,
+							`Model switched to: ${args.join(" ")}`,
+						]);
 					} else {
-						setMessages((prev) => [...prev, "Usage: /model <provider> <model-name>"]);
+						setMessages((prev) => [
+							...prev,
+							"Usage: /model <provider> <model-name>",
+						]);
 					}
 					break;
 				default:

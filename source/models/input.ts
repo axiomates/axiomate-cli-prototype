@@ -63,7 +63,10 @@ export function createMessageInput(content: string): MessageInput {
 /**
  * 创建命令输入
  */
-export function createCommandInput(command: string[], raw: string): CommandInput {
+export function createCommandInput(
+	command: string[],
+	raw: string,
+): CommandInput {
 	return {
 		type: "command",
 		command,
