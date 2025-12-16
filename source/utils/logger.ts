@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import pino from "pino";
 import { getLogsPath } from "./appdata.js";
+import { getFlags } from "./flags.js";
 
 /**
  * 日志级别
@@ -37,8 +38,11 @@ export function getLogger(): pino.Logger {
  * 使用 pino-roll 实现日志轮转
  */
 function createLogger(): pino.Logger {
+	const flags = getFlags();
+	const level = flags.verbose ? "trace" : "warn";
+
 	return pino({
-		level: "info",
+		level,
 		transport: {
 			target: "pino-roll",
 			options: {

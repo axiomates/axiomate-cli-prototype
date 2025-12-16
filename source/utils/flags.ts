@@ -3,11 +3,13 @@
  */
 export type CliFlags = {
 	help: boolean | undefined;
+	verbose: boolean | undefined;
 };
 
 // 默认命令行参数
 const DEFAULT_FLAGS: CliFlags = {
 	help: undefined,
+	verbose: undefined,
 };
 
 // 运行时命令行参数（单例）

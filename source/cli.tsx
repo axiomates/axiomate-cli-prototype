@@ -21,6 +21,10 @@ const cli = meow({
 			type: "boolean",
 			shortFlag: "h",
 		},
+		verbose: {
+			type: "boolean",
+			shortFlag: "v",
+		},
 	},
 });
 
@@ -36,7 +40,8 @@ Usage:
   axiomate [options]
 
 Options:
-  -h, --help    Show this help message and exit
+  -h, --help       Show this help message and exit
+  -v, --verbose    Enable verbose logging (trace level)
 `);
 	process.exit(0);
 }

@@ -36,9 +36,10 @@ node dist/cli.js
 
 ### Command Line Options
 
-| Option       | Description                |
-| ------------ | -------------------------- |
-| `-h, --help` | Show help message and exit |
+| Option          | Description                          |
+| --------------- | ------------------------------------ |
+| `-h, --help`    | Show help message and exit           |
+| `-v, --verbose` | Enable verbose logging (trace level) |
 
 Example:
 
@@ -46,6 +47,10 @@ Example:
 # Show help information
 axiomate --help
 axiomate -h
+
+# Run with verbose logging
+axiomate --verbose
+axiomate -v
 ```
 
 ## Commands
