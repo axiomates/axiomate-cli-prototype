@@ -34,6 +34,20 @@ Or run directly:
 node dist/cli.js
 ```
 
+### Command Line Options
+
+| Option        | Description                        |
+| ------------- | ---------------------------------- |
+| `-h, --help`  | Show help message and exit         |
+
+Example:
+
+```bash
+# Show help information
+axiomate --help
+axiomate -h
+```
+
 ## Commands
 
 Type commands directly or use slash commands:

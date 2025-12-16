@@ -2,12 +2,12 @@
  * CLI 命令行参数
  */
 export type CliFlags = {
-	name: string | undefined;
+	help: boolean | undefined;
 };
 
 // 默认命令行参数
 const DEFAULT_FLAGS: CliFlags = {
-	name: undefined,
+	help: undefined,
 };
 
 // 运行时命令行参数（单例）

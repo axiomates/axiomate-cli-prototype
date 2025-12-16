@@ -15,14 +15,33 @@ const cli = meow({
 	autoHelp: false,
 	autoVersion: false,
 	flags: {
-		name: {
-			type: "string",
+		help: {
+			type: "boolean",
+			shortFlag: "h",
 		},
 	},
 });
 
 // 设置命令行参数
 setFlags(cli.flags);
+
+// 如果用户请求帮助，输出帮助信息后退出
+if (cli.flags.help) {
+	console.log(`
+axiomate-cli - A terminal-based CLI application
+
+Usage:
+  axiomate [options]
+
+Options:
+  -h, --help    Show this help message and exit
+
+Commands:
+  Type commands directly or use slash commands (prefix with /).
+  Type /help in the application for more information.
+`);
+	process.exit(0);
+}
 
 const { waitUntilExit } = render(<App />);
 
