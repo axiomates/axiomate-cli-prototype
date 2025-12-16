@@ -4,13 +4,23 @@
 
 import { useCallback } from "react";
 import { useInput, useApp } from "ink";
-import type { InputState, InputAction, SlashCommand } from "../types.js";
-import { isSlashMode, isHistoryMode, isHelpMode } from "../types.js";
+import type {
+	EditorState,
+	EditorAction,
+	SlashCommand,
+	InputInstance,
+} from "../types.js";
+import {
+	isSlashMode,
+	isHistoryMode,
+	isHelpMode,
+	buildCommandText,
+} from "../types.js";
 
 type UseInputHandlerOptions = {
-	state: InputState;
-	dispatch: React.Dispatch<InputAction>;
-	history: string[];
+	state: EditorState;
+	dispatch: React.Dispatch<EditorAction>;
+	history: InputInstance[];
 	filteredCommands: SlashCommand[];
 	effectiveSuggestion: string | null;
 	onSubmit: (value: string) => void;
@@ -31,13 +41,16 @@ export function useInputHandler({
 }: UseInputHandlerOptions): void {
 	const { exit } = useApp();
 
-	const { input, cursor, mode } = state;
-	const inSlashMode = isSlashMode(mode);
-	const inHistoryMode = isHistoryMode(mode);
-	const inHelpMode = isHelpMode(mode);
-	const selectedIndex = inSlashMode ? mode.selectedIndex : 0;
-	const slashPath = inSlashMode ? mode.path : [];
-	const historyIndex = inHistoryMode ? mode.index : -1;
+	// 从 instance 获取输入数据
+	const { instance, uiMode } = state;
+	const { text: input, cursor, commandPath } = instance;
+
+	// 模式判断
+	const inSlashMode = isSlashMode(uiMode);
+	const inHistoryMode = isHistoryMode(uiMode);
+	const inHelpMode = isHelpMode(uiMode);
+	const selectedIndex = inSlashMode ? uiMode.selectedIndex : 0;
+	const historyIndex = inHistoryMode ? uiMode.index : -1;
 
 	const handleExit = useCallback(() => {
 		if (onExit) {
@@ -62,7 +75,7 @@ export function useInputHandler({
 		// Ctrl+Enter 插入换行
 		if (key.ctrl && key.return) {
 			const newInput = input.slice(0, cursor) + "\n" + input.slice(cursor);
-			dispatch({ type: "SET_INPUT", input: newInput, cursor: cursor + 1 });
+			dispatch({ type: "SET_TEXT", text: newInput, cursor: cursor + 1 });
 			return;
 		}
 
@@ -90,9 +103,11 @@ export function useInputHandler({
 					if (selectedCmd.children && selectedCmd.children.length > 0) {
 						dispatch({ type: "ENTER_SLASH_LEVEL", name: selectedCmd.name });
 					} else {
-						// 否则直接提交（包含完整路径，使用 → 分隔符）
-						const fullPath = [...slashPath, selectedCmd.name];
-						const cmdText = "/" + fullPath.join(" → ");
+						// 选择最终命令：先更新 instance，再提交
+						const fullPath = [...commandPath, selectedCmd.name];
+						dispatch({ type: "SELECT_FINAL_COMMAND", name: selectedCmd.name });
+						// 使用 buildCommandText 计算提交文本（与 reducer 逻辑一致）
+						const cmdText = buildCommandText(fullPath, false);
 						onSubmit(cmdText);
 					}
 				}
@@ -115,7 +130,7 @@ export function useInputHandler({
 		if (key.tab && effectiveSuggestion) {
 			// Tab 确认补全
 			const newInput = input + effectiveSuggestion;
-			dispatch({ type: "SET_INPUT", input: newInput, cursor: newInput.length });
+			dispatch({ type: "SET_TEXT", text: newInput, cursor: newInput.length });
 			dispatch({ type: "SET_SUGGESTION", suggestion: null });
 			return;
 		}
@@ -123,7 +138,7 @@ export function useInputHandler({
 		if (key.backspace || key.delete) {
 			if (cursor > 0) {
 				const newInput = input.slice(0, cursor - 1) + input.slice(cursor);
-				dispatch({ type: "SET_INPUT", input: newInput, cursor: cursor - 1 });
+				dispatch({ type: "SET_TEXT", text: newInput, cursor: cursor - 1 });
 			}
 			return;
 		}
@@ -141,8 +156,8 @@ export function useInputHandler({
 				const newInput = input + effectiveSuggestion[0];
 				const remaining = effectiveSuggestion.slice(1) || null;
 				dispatch({
-					type: "SET_INPUT",
-					input: newInput,
+					type: "SET_TEXT",
+					text: newInput,
 					cursor: newInput.length,
 				});
 				if (!inSlashMode) {
@@ -160,22 +175,21 @@ export function useInputHandler({
 
 			if (key.upArrow) {
 				if (!inHistoryMode) {
-					// 第一次按上箭头，保存当前输入并切换到最新历史
-					const historyItem = history[history.length - 1]!;
+					// 第一次按上箭头，保存当前输入实例并切换到最新历史
+					const historyEntry = history[history.length - 1]!;
 					dispatch({
 						type: "ENTER_HISTORY",
 						index: history.length - 1,
-						savedInput: input,
-						historyInput: historyItem,
+						entry: historyEntry,
 					});
 				} else if (historyIndex > 0) {
 					// 继续向上浏览
 					const newIndex = historyIndex - 1;
-					const historyItem = history[newIndex]!;
+					const historyEntry = history[newIndex]!;
 					dispatch({
 						type: "NAVIGATE_HISTORY",
 						index: newIndex,
-						historyInput: historyItem,
+						entry: historyEntry,
 					});
 				}
 			} else if (key.downArrow) {
@@ -186,11 +200,11 @@ export function useInputHandler({
 				if (historyIndex < history.length - 1) {
 					// 继续向下浏览
 					const newIndex = historyIndex + 1;
-					const historyItem = history[newIndex]!;
+					const historyEntry = history[newIndex]!;
 					dispatch({
 						type: "NAVIGATE_HISTORY",
 						index: newIndex,
-						historyInput: historyItem,
+						entry: historyEntry,
 					});
 				} else {
 					// 回到原始输入
@@ -208,14 +222,14 @@ export function useInputHandler({
 		if (key.ctrl && inputChar === "u") {
 			// Ctrl+U 清除光标前的内容
 			const newInput = input.slice(cursor);
-			dispatch({ type: "SET_INPUT", input: newInput, cursor: 0 });
+			dispatch({ type: "SET_TEXT", text: newInput, cursor: 0 });
 			return;
 		}
 
 		if (key.ctrl && inputChar === "k") {
 			// Ctrl+K 清除光标后的内容
 			const newInput = input.slice(0, cursor);
-			dispatch({ type: "SET_INPUT", input: newInput, cursor: cursor });
+			dispatch({ type: "SET_TEXT", text: newInput, cursor: cursor });
 			return;
 		}
 
@@ -234,7 +248,7 @@ export function useInputHandler({
 		if (key.escape) {
 			// Escape 退出斜杠模式或清除建议
 			if (inSlashMode) {
-				dispatch({ type: "EXIT_SLASH" });
+				dispatch({ type: "EXIT_SLASH_LEVEL" });
 			} else {
 				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 			}
@@ -249,10 +263,11 @@ export function useInputHandler({
 				return;
 			}
 			// 插入字符
-			const newInput = input.slice(0, cursor) + inputChar + input.slice(cursor);
+			const newInput =
+				input.slice(0, cursor) + inputChar + input.slice(cursor);
 			dispatch({
-				type: "SET_INPUT",
-				input: newInput,
+				type: "SET_TEXT",
+				text: newInput,
 				cursor: cursor + inputChar.length,
 			});
 		}

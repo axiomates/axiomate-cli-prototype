@@ -5,35 +5,7 @@
 
 import { Box, Text } from "ink";
 import type { ReactNode } from "react";
-
-/**
- * 带颜色的文本片段
- * color 为 undefined 时使用默认颜色
- */
-export type ColoredSegment = {
-	text: string;
-	color?: string;
-};
-
-/**
- * 颜色区间（内部使用）
- */
-type ColorRange = { start: number; end: number; color: string | undefined };
-
-/**
- * 将 ColoredSegment[] 转换为位置区间映射
- */
-export function segmentsToRanges(segments: ColoredSegment[]): ColorRange[] {
-	const ranges: ColorRange[] = [];
-	let pos = 0;
-	for (const seg of segments) {
-		if (seg.text.length > 0) {
-			ranges.push({ start: pos, end: pos + seg.text.length, color: seg.color });
-			pos += seg.text.length;
-		}
-	}
-	return ranges;
-}
+import type { ColorRange } from "../../../models/richInput.js";
 
 type InputLineProps = {
 	/** 当前行文本 */

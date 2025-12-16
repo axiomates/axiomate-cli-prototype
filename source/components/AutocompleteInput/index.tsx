@@ -4,11 +4,16 @@
  */
 
 import { Box } from "ink";
-import { useReducer, useCallback, useState, useMemo, useRef, useEffect } from "react";
+import { useReducer, useCallback, useState, useMemo } from "react";
 import { useApp } from "ink";
 import useTerminalWidth from "../../hooks/useTerminalWidth.js";
 import { createMessageInput, createCommandInput } from "../../models/input.js";
-import { createCommandRichInput } from "../../models/richInput.js";
+import { segmentsToRanges } from "../../models/richInput.js";
+import {
+	createMessageInstance,
+	createCommandInstance,
+	type InputInstance,
+} from "../../models/inputInstance.js";
 
 // Types
 import type { AutocompleteInputProps } from "./types.js";
@@ -23,7 +28,7 @@ export type {
 export { isMessageInput, isCommandInput } from "./types.js";
 
 // Reducer
-import { inputReducer, initialState } from "./reducer.js";
+import { editorReducer, initialState } from "./reducer.js";
 
 // Hooks
 import { useAutocomplete } from "./hooks/useAutocomplete.js";
@@ -33,10 +38,9 @@ import { useInputHandler } from "./hooks/useInputHandler.js";
 import { processLines, getInputEndInfo } from "./utils/lineProcessor.js";
 
 // Components
-import { InputLine, segmentsToRanges } from "./components/InputLine.js";
+import { InputLine } from "./components/InputLine.js";
 import { SlashMenu } from "./components/SlashMenu.js";
 import { HelpPanel } from "./components/HelpPanel.js";
-
 
 export default function AutocompleteInput({
 	prompt = "> ",
@@ -46,32 +50,23 @@ export default function AutocompleteInput({
 	slashCommands = [],
 }: AutocompleteInputProps) {
 	const { exit } = useApp();
-	const [state, dispatch] = useReducer(inputReducer, initialState);
+	const [state, dispatch] = useReducer(editorReducer, initialState);
 	const columns = useTerminalWidth();
 
-	// 输入历史记录（独立于输入状态）
-	const [history, setHistory] = useState<string[]>([]);
+	// 输入历史记录（存储完整的 InputInstance）
+	const [history, setHistory] = useState<InputInstance[]>([]);
 
 	// 解构状态便于使用
-	const { input, mode } = state;
-
-	// 获取命令路径的引用（用于提交时）
-	const commandPathRef = useRef<string[]>([]);
+	const { instance, uiMode } = state;
+	const { text: input, cursor, segments, commandPath } = instance;
 
 	// 模式判断（派生状态）
-	const inSlashMode = isSlashMode(mode);
-	const inHelpMode = isHelpMode(mode);
-
-	// 获取当前 slash 模式的路径
-	const slashPath = useMemo(() => (isSlashMode(mode) ? mode.path : []), [mode]);
-
-	// 保持命令路径引用同步（用于提交时获取）
-	useEffect(() => {
-		commandPathRef.current = slashPath;
-	}, [slashPath]);
+	const inSlashMode = isSlashMode(uiMode);
+	const inHelpMode = isHelpMode(uiMode);
+	const inHistoryMode = isHistoryMode(uiMode);
 
 	// 获取当前选中的命令索引
-	const selectedIndex = isSlashMode(mode) ? mode.selectedIndex : 0;
+	const selectedIndex = isSlashMode(uiMode) ? uiMode.selectedIndex : 0;
 
 	// 自动补全 Hook
 	const { effectiveSuggestion, filteredCommands, slashSuggestion } =
@@ -86,28 +81,52 @@ export default function AutocompleteInput({
 		(value: string) => {
 			if (!value.trim()) return;
 
-			// 添加到历史记录（避免重复）
-			setHistory((prev) => {
-				const trimmed = value.trim();
-				const filtered = prev.filter((item) => item !== trimmed);
-				return [...filtered, trimmed];
-			});
+			// 添加到历史记录（存储完整的 InputInstance）
+			// "?" 输入不存入历史
+			if (value.trim() !== "?") {
+				setHistory((prev) => {
+					const trimmedText = value.trim();
+					// 基于 text 去重
+					const filtered = prev.filter(
+						(entry) => entry.text.trim() !== trimmedText,
+					);
+
+					// 创建新的 InputInstance 用于历史记录
+					// 注意：虽然 SELECT_FINAL_COMMAND 已更新 instance，但 dispatch 是异步的
+					// 所以这里仍需从 value 解析（value 由 buildCommandText 生成，逻辑一致）
+					let newEntry: InputInstance;
+					if (value.startsWith("/")) {
+						const parsedPath = value
+							.slice(1)
+							.split(/\s*→\s*/)
+							.map((s) => s.trim())
+							.filter(Boolean);
+						newEntry = createCommandInstance(parsedPath, false);
+					} else {
+						// 消息类型
+						newEntry = createMessageInstance(trimmedText);
+					}
+
+					return [...filtered, newEntry];
+				});
+			}
 
 			// 重置输入状态
 			dispatch({ type: "RESET" });
 
 			// 处理斜杠命令（内部命令）
 			if (value.startsWith("/")) {
-				// 使用保存的路径（通过 slash 模式导航得到）
-				// 如果路径为空（手动输入命令），则简单解析
-				const commandPath = commandPathRef.current.length > 0
-					? commandPathRef.current
-					: value.slice(1).split(/\s*→\s*/).map(s => s.trim()).filter(Boolean);
-				const userInput = createCommandInput(commandPath, value);
+				// 从 value 解析路径（value 由 buildCommandText 生成，与 instance 一致）
+				const path = value
+					.slice(1)
+					.split(/\s*→\s*/)
+					.map((s) => s.trim())
+					.filter(Boolean);
+				const userInput = createCommandInput(path, value);
 				onSubmit?.(userInput);
 
 				// 内置命令处理
-				const slashCmd = commandPath[0]?.toLowerCase();
+				const slashCmd = path[0]?.toLowerCase();
 				if (slashCmd === "exit") {
 					if (onExit) {
 						onExit();
@@ -152,7 +171,6 @@ export default function AutocompleteInput({
 
 	// 计算显示内容
 	const displayText = input;
-	const inHistoryMode = isHistoryMode(mode);
 	const suggestionText = inHistoryMode
 		? ""
 		: (input.startsWith("/") ? slashSuggestion : state.suggestion) || "";
@@ -161,14 +179,16 @@ export default function AutocompleteInput({
 	const { lines, lineOffsets, cursorLine, cursorCol, lineWidth } = processLines(
 		displayText,
 		suggestionText,
-		state.cursor,
+		cursor,
 		columns,
 		prompt.length,
 	);
 
-	// 构建颜色信息（使用 RichInput 模型）
-	const colorSegments = createCommandRichInput(slashPath, false).segments;
-	const colorRanges = segmentsToRanges(colorSegments);
+	// 直接使用 instance.segments 构建颜色信息
+	const colorRanges = useMemo(
+		() => segmentsToRanges(segments),
+		[segments],
+	);
 
 	// 计算输入文本结束位置
 	const inputEndInfo = getInputEndInfo(displayText, lineWidth);
@@ -205,7 +225,7 @@ export default function AutocompleteInput({
 				<SlashMenu
 					commands={filteredCommands}
 					selectedIndex={selectedIndex}
-					path={slashPath}
+					path={commandPath}
 					columns={columns}
 					promptIndent={promptIndent}
 				/>

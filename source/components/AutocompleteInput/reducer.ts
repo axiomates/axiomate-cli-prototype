@@ -1,180 +1,207 @@
 /**
  * AutocompleteInput 状态机 Reducer
+ * 基于 InputInstance 的数据驱动状态管理
  */
 
 import {
-	type InputState,
-	type InputAction,
-	type InputMode,
+	type EditorState,
+	type EditorAction,
+	type UIMode,
 	isNormalMode,
 	isHistoryMode,
 	isSlashMode,
 	isHelpMode,
+	createEmptyInstance,
+	updateInstanceFromText,
+	updateInstanceCursor,
+	enterCommandLevel,
+	exitCommandLevel,
+	createCommandInstance,
 } from "./types.js";
 
 /**
  * 初始状态
  */
-export const initialState: InputState = {
-	input: "",
-	cursor: 0,
+export const initialState: EditorState = {
+	instance: createEmptyInstance(),
+	uiMode: { type: "normal" },
 	suggestion: null,
-	mode: { type: "normal" },
 };
 
 /**
- * 根据 path 生成输入框文本
- * 使用 " → " 分隔符表达层级关系
+ * 编辑器状态 Reducer
  */
-export function buildInputFromPath(path: string[]): string {
-	if (path.length === 0) return "/";
-	return "/" + path.join(" → ") + " → ";
-}
-
-/**
- * 输入状态 Reducer
- */
-export function inputReducer(
-	state: InputState,
-	action: InputAction,
-): InputState {
+export function editorReducer(
+	state: EditorState,
+	action: EditorAction,
+): EditorState {
 	switch (action.type) {
-		case "SET_INPUT": {
-			const isSlash = action.input.startsWith("/");
-			const wasSlash = state.input.startsWith("/");
+		// ====================================================================
+		// 输入操作
+		// ====================================================================
 
-			// 从普通模式输入 /，进入 slash 模式
-			if (isSlash && !wasSlash && isNormalMode(state.mode)) {
+		case "SET_TEXT": {
+			const { text, cursor } = action;
+			const isSlash = text.startsWith("/");
+			const wasSlash = state.instance.text.startsWith("/");
+			const currentPath = state.instance.commandPath;
+
+			// 在历史模式下输入，退出历史模式
+			if (isHistoryMode(state.uiMode)) {
+				const newInstance = updateInstanceFromText(text, cursor, []);
+				const newMode: UIMode = isSlash
+					? { type: "slash", selectedIndex: 0 }
+					: { type: "normal" };
 				return {
 					...state,
-					input: action.input,
-					cursor: action.cursor,
+					instance: newInstance,
+					uiMode: newMode,
+				};
+			}
+
+			// 从普通模式输入 /，进入 slash 模式
+			if (isSlash && !wasSlash && isNormalMode(state.uiMode)) {
+				const newInstance = updateInstanceFromText(text, cursor, []);
+				return {
+					...state,
+					instance: newInstance,
 					suggestion: null,
-					mode: { type: "slash", path: [], selectedIndex: 0 },
+					uiMode: { type: "slash", selectedIndex: 0 },
 				};
 			}
 
 			// 从 slash 删除 /，回到普通模式
-			if (!isSlash && wasSlash && isSlashMode(state.mode)) {
+			if (!isSlash && wasSlash && isSlashMode(state.uiMode)) {
+				const newInstance = updateInstanceFromText(text, cursor, []);
 				return {
 					...state,
-					input: action.input,
-					cursor: action.cursor,
-					mode: { type: "normal" },
+					instance: newInstance,
+					uiMode: { type: "normal" },
 				};
 			}
 
-			// 在历史模式下输入，退出历史模式
-			if (isHistoryMode(state.mode)) {
-				const newMode: InputMode = isSlash
-					? { type: "slash", path: [], selectedIndex: 0 }
-					: { type: "normal" };
-				return {
-					...state,
-					input: action.input,
-					cursor: action.cursor,
-					mode: newMode,
-				};
-			}
-
+			// 普通文本更新
+			const newInstance = updateInstanceFromText(text, cursor, currentPath);
 			return {
 				...state,
-				input: action.input,
-				cursor: action.cursor,
+				instance: newInstance,
 			};
 		}
 
-		case "SET_CURSOR":
-			return { ...state, cursor: action.cursor };
+		case "SET_CURSOR": {
+			const newInstance = updateInstanceCursor(state.instance, action.cursor);
+			return { ...state, instance: newInstance };
+		}
 
 		case "SET_SUGGESTION":
 			return { ...state, suggestion: action.suggestion };
 
+		// ====================================================================
+		// 历史操作
+		// ====================================================================
+
 		case "ENTER_HISTORY":
 			return {
 				...state,
-				input: action.historyInput,
-				cursor: action.historyInput.length,
+				instance: action.entry,
 				suggestion: null,
-				mode: {
+				uiMode: {
 					type: "history",
 					index: action.index,
-					savedInput: action.savedInput,
+					savedInstance: state.instance,
 				},
 			};
 
 		case "NAVIGATE_HISTORY":
-			if (!isHistoryMode(state.mode)) return state;
+			if (!isHistoryMode(state.uiMode)) return state;
 			return {
 				...state,
-				input: action.historyInput,
-				cursor: action.historyInput.length,
-				mode: { ...state.mode, index: action.index },
+				instance: action.entry,
+				uiMode: { ...state.uiMode, index: action.index },
 			};
 
 		case "EXIT_HISTORY":
-			if (!isHistoryMode(state.mode)) return state;
+			if (!isHistoryMode(state.uiMode)) return state;
 			return {
 				...state,
-				input: state.mode.savedInput,
-				cursor: state.mode.savedInput.length,
-				mode: { type: "normal" },
+				instance: state.uiMode.savedInstance,
+				uiMode: { type: "normal" },
 			};
 
-		case "SELECT_SLASH":
-			if (!isSlashMode(state.mode)) return state;
+		// ====================================================================
+		// 斜杠命令操作
+		// ====================================================================
+
+		case "ENTER_SLASH": {
+			// 手动进入 slash 模式（通常由 SET_TEXT 自动处理）
+			const newInstance = createCommandInstance([], true);
 			return {
 				...state,
-				mode: { ...state.mode, selectedIndex: action.index },
+				instance: newInstance,
+				suggestion: null,
+				uiMode: { type: "slash", selectedIndex: 0 },
+			};
+		}
+
+		case "SELECT_SLASH":
+			if (!isSlashMode(state.uiMode)) return state;
+			return {
+				...state,
+				uiMode: { ...state.uiMode, selectedIndex: action.index },
 			};
 
 		case "ENTER_SLASH_LEVEL": {
-			if (!isSlashMode(state.mode)) return state;
-			const newPath = [...state.mode.path, action.name];
-			const newInput = buildInputFromPath(newPath);
+			if (!isSlashMode(state.uiMode)) return state;
+			const newInstance = enterCommandLevel(state.instance, action.name);
 			return {
 				...state,
-				input: newInput,
-				cursor: newInput.length,
-				mode: { type: "slash", path: newPath, selectedIndex: 0 },
+				instance: newInstance,
+				uiMode: { type: "slash", selectedIndex: 0 },
+			};
+		}
+
+		case "SELECT_FINAL_COMMAND": {
+			// 选择最终命令（无子命令），更新 instance 为完整路径（不带尾部箭头）
+			if (!isSlashMode(state.uiMode)) return state;
+			const finalPath = [...state.instance.commandPath, action.name];
+			const finalInstance = createCommandInstance(finalPath, false);
+			return {
+				...state,
+				instance: finalInstance,
+				// 保持 slash 模式，提交后会 RESET
 			};
 		}
 
 		case "EXIT_SLASH_LEVEL": {
-			if (!isSlashMode(state.mode)) return state;
-			if (state.mode.path.length === 0) {
+			if (!isSlashMode(state.uiMode)) return state;
+
+			if (state.instance.commandPath.length === 0) {
 				// 已经在根级，退出 slash 模式
 				return {
 					...state,
-					input: "",
-					cursor: 0,
-					mode: { type: "normal" },
+					instance: createEmptyInstance(),
+					uiMode: { type: "normal" },
 				};
 			}
+
 			// 返回上一级
-			const newPath = state.mode.path.slice(0, -1);
-			const newInput = buildInputFromPath(newPath);
+			const newInstance = exitCommandLevel(state.instance);
 			return {
 				...state,
-				input: newInput,
-				cursor: newInput.length,
-				mode: { type: "slash", path: newPath, selectedIndex: 0 },
+				instance: newInstance,
+				uiMode: { type: "slash", selectedIndex: 0 },
 			};
 		}
 
-		case "EXIT_SLASH":
-			return {
-				...state,
-				input: "",
-				cursor: 0,
-				mode: { type: "normal" },
-			};
+		// ====================================================================
+		// 其他操作
+		// ====================================================================
 
 		case "TOGGLE_HELP":
-			if (isHelpMode(state.mode)) {
-				return { ...state, mode: { type: "normal" } };
+			if (isHelpMode(state.uiMode)) {
+				return { ...state, uiMode: { type: "normal" } };
 			}
-			return { ...state, mode: { type: "help" } };
+			return { ...state, uiMode: { type: "help" } };
 
 		case "RESET":
 			return initialState;
@@ -183,3 +210,6 @@ export function inputReducer(
 			return state;
 	}
 }
+
+// 为了向后兼容，导出别名
+export const inputReducer = editorReducer;

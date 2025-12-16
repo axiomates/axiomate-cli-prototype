@@ -3,9 +3,8 @@
  */
 
 import { useCallback, useRef, useEffect, useMemo } from "react";
-import type { InputState, InputAction, SlashCommand } from "../types.js";
-import { isSlashMode, isHistoryMode } from "../types.js";
-import { buildInputFromPath } from "../reducer.js";
+import type { EditorState, EditorAction, SlashCommand } from "../types.js";
+import { isSlashMode, isHistoryMode, buildCommandText } from "../types.js";
 
 // 命令列表用于自动补全
 const COMMANDS = [
@@ -27,8 +26,8 @@ const COMMANDS = [
 ];
 
 type UseAutocompleteOptions = {
-	state: InputState;
-	dispatch: React.Dispatch<InputAction>;
+	state: EditorState;
+	dispatch: React.Dispatch<EditorAction>;
 	slashCommands: SlashCommand[];
 };
 
@@ -53,11 +52,14 @@ export function useAutocomplete({
 }: UseAutocompleteOptions): UseAutocompleteReturn {
 	const abortControllerRef = useRef<AbortController | null>(null);
 
-	const { input, suggestion, mode } = state;
-	const inSlashMode = isSlashMode(mode);
-	const inHistoryMode = isHistoryMode(mode);
-	const selectedIndex = isSlashMode(mode) ? mode.selectedIndex : 0;
-	const slashPath = useMemo(() => (isSlashMode(mode) ? mode.path : []), [mode]);
+	// 从 state 获取数据
+	const { instance, uiMode, suggestion } = state;
+	const { text: input, commandPath } = instance;
+
+	// 模式判断
+	const inSlashMode = isSlashMode(uiMode);
+	const inHistoryMode = isHistoryMode(uiMode);
+	const selectedIndex = isSlashMode(uiMode) ? uiMode.selectedIndex : 0;
 
 	// 根据当前 path 获取当前层级的命令列表
 	const currentLevelCommands = useMemo((): SlashCommand[] => {
@@ -65,7 +67,7 @@ export function useAutocomplete({
 
 		// 根据 path 导航到当前层级
 		let commands: SlashCommand[] = slashCommands;
-		for (const segment of slashPath) {
+		for (const segment of commandPath) {
 			const found = commands.find(
 				(c) => c.name.toLowerCase() === segment.toLowerCase(),
 			);
@@ -73,14 +75,14 @@ export function useAutocomplete({
 			commands = found.children;
 		}
 		return commands;
-	}, [inSlashMode, slashPath, slashCommands]);
+	}, [inSlashMode, commandPath, slashCommands]);
 
 	// 过滤匹配的命令（根据用户输入）
 	const filteredCommands = useMemo(() => {
 		if (!inSlashMode) return [];
 
 		// 计算当前层级的查询字符串
-		const prefix = buildInputFromPath(slashPath);
+		const prefix = buildCommandText(commandPath, true);
 		const query = input.startsWith(prefix)
 			? input.slice(prefix.length).toLowerCase()
 			: input.slice(1).toLowerCase(); // fallback for root level
@@ -88,7 +90,7 @@ export function useAutocomplete({
 		return currentLevelCommands.filter((cmd) =>
 			cmd.name.toLowerCase().startsWith(query),
 		);
-	}, [input, inSlashMode, slashPath, currentLevelCommands]);
+	}, [input, inSlashMode, commandPath, currentLevelCommands]);
 
 	// 斜杠命令模式下的自动补全建议
 	const slashSuggestion = useMemo(() => {
@@ -96,7 +98,7 @@ export function useAutocomplete({
 		const selectedCmd = filteredCommands[selectedIndex];
 		if (!selectedCmd) return null;
 
-		const prefix = buildInputFromPath(slashPath);
+		const prefix = buildCommandText(commandPath, true);
 		const query = input.startsWith(prefix)
 			? input.slice(prefix.length).toLowerCase()
 			: input.slice(1).toLowerCase();
@@ -106,7 +108,7 @@ export function useAutocomplete({
 			return selectedCmd.name.slice(query.length);
 		}
 		return null;
-	}, [inSlashMode, filteredCommands, selectedIndex, slashPath, input]);
+	}, [inSlashMode, filteredCommands, selectedIndex, commandPath, input]);
 
 	// 命令自动补全函数
 	const getCommandSuggestion = useCallback(
