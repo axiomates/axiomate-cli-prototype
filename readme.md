@@ -116,6 +116,36 @@ npm run lint
 npm run lint:fix
 ```
 
+## Input Modes
+
+The input component supports multiple modes with structured input handling:
+
+### Input Types
+
+| Type      | Description                              | Example                    |
+| --------- | ---------------------------------------- | -------------------------- |
+| `message` | Regular text input, sent to AI           | `hello world`              |
+| `command` | Slash commands, handled by the app       | `/model openai gpt-4`      |
+
+### Input Modes (Internal State)
+
+| Mode      | Trigger      | Description                              |
+| --------- | ------------ | ---------------------------------------- |
+| `normal`  | Default      | Regular input with autocomplete          |
+| `history` | `↑` / `↓`    | Browse command history                   |
+| `slash`   | `/`          | Navigate hierarchical slash commands     |
+| `help`    | `?`          | Display keyboard shortcuts (overlay)     |
+
+When user submits input, it's converted to a structured `UserInput` object:
+
+```typescript
+// Message input (for AI)
+{ type: "message", content: "hello world" }
+
+// Command input (internal handling)
+{ type: "command", command: ["model", "openai", "gpt-4"], raw: "/model openai gpt-4" }
+```
+
 ## Project Structure
 
 ```
@@ -123,12 +153,14 @@ source/
 ├── app.tsx                    # Main application component
 ├── cli.tsx                    # CLI entry point
 ├── constants/
-│   └── commands.ts            # Command configurations
+│   └── commands.ts            # Slash command definitions
 ├── components/
-│   ├── AutocompleteInput.tsx  # Input with autocomplete
+│   ├── AutocompleteInput.tsx  # Input with autocomplete & mode management
 │   ├── Divider.tsx            # Separator line
 │   ├── Header.tsx             # Title bar
 │   └── MessageOutput.tsx      # Message display area
+├── models/
+│   └── input.ts               # UserInput type definitions
 └── hooks/
     ├── useTerminalHeight.ts   # Terminal height hook
     └── useTerminalWidth.ts    # Terminal width hook

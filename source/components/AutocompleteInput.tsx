@@ -1,6 +1,16 @@
 import { Box, Text, useInput, useApp } from "ink";
 import { useReducer, useEffect, useRef, useCallback, useMemo, useState } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
+import {
+	type UserInput,
+	createMessageInput,
+	createCommandInput,
+	parseSlashCommand,
+} from "../models/input.js";
+
+// 重新导出类型供外部使用
+export type { UserInput } from "../models/input.js";
+export { isMessageInput, isCommandInput } from "../models/input.js";
 
 // 命令列表用于自动补全
 const COMMANDS = [
@@ -32,7 +42,8 @@ export type SlashCommand = {
 
 type Props = {
 	prompt?: string;
-	onMessage?: (message: string) => void;
+	/** 用户输入提交回调，提供结构化的输入信息 */
+	onSubmit?: (input: UserInput) => void;
 	onClear?: () => void;
 	onExit?: () => void;
 	slashCommands?: SlashCommand[];
@@ -268,7 +279,7 @@ function inputReducer(state: InputState, action: InputAction): InputState {
 
 export default function AutocompleteInput({
 	prompt = "> ",
-	onMessage,
+	onSubmit,
 	onClear,
 	onExit,
 	slashCommands = [],
@@ -294,8 +305,11 @@ export default function AutocompleteInput({
 	// 获取当前选中的命令索引（从 mode 中获取）
 	const selectedIndex = isSlashMode(mode) ? mode.selectedIndex : 0;
 
-	// 获取当前 slash 模式的路径
-	const slashPath = isSlashMode(mode) ? mode.path : [];
+	// 获取当前 slash 模式的路径（空数组作为默认值供非斜杠模式使用）
+	const slashPath = useMemo(
+		() => (isSlashMode(mode) ? mode.path : []),
+		[mode],
+	);
 
 	// 获取历史索引（从 mode 中获取）
 	const historyIndex = isHistoryMode(mode) ? mode.index : -1;
@@ -315,17 +329,15 @@ export default function AutocompleteInput({
 			// 重置输入状态
 			dispatch({ type: "RESET" });
 
-			// 可用命令列表（用于 help 显示）
-			const AVAILABLE_COMMANDS = ["help", "exit", "quit", "clear", "version"];
-
-			onMessage?.(`> ${value}`);
-
-			// 处理斜杠命令
+			// 处理斜杠命令（内部命令）
 			if (value.startsWith("/")) {
-				const slashCmd = value.slice(1).toLowerCase();
-				if (slashCmd === "help") {
-					onMessage?.("Available commands: " + AVAILABLE_COMMANDS.join(", "));
-				} else if (slashCmd === "exit") {
+				const commandPath = parseSlashCommand(value);
+				const userInput = createCommandInput(commandPath, value);
+				onSubmit?.(userInput);
+
+				// 内置命令处理
+				const slashCmd = commandPath[0]?.toLowerCase();
+				if (slashCmd === "exit") {
 					if (onExit) {
 						onExit();
 					} else {
@@ -333,23 +345,17 @@ export default function AutocompleteInput({
 					}
 				} else if (slashCmd === "clear") {
 					onClear?.();
-				} else if (slashCmd === "version") {
-					onMessage?.("axiomate-cli v1.0.0");
-				} else if (slashCmd === "config") {
-					onMessage?.("Config: (empty)");
-				} else if (slashCmd === "status") {
-					onMessage?.("Status: running");
-				} else {
-					onMessage?.(`Unknown slash command: ${value}`);
 				}
 				return;
 			}
 
-			// 处理普通命令
+			// 处理普通输入（消息类型）
+			const userInput = createMessageInput(value.trim());
+			onSubmit?.(userInput);
+
+			// 内置命令快捷方式（不带斜杠的命令）
 			const cmd = value.trim().toLowerCase();
-			if (cmd === "help") {
-				onMessage?.("Available commands: " + AVAILABLE_COMMANDS.join(", "));
-			} else if (cmd === "exit" || cmd === "quit") {
+			if (cmd === "exit" || cmd === "quit") {
 				if (onExit) {
 					onExit();
 				} else {
@@ -357,13 +363,9 @@ export default function AutocompleteInput({
 				}
 			} else if (cmd === "clear") {
 				onClear?.();
-			} else if (cmd === "version") {
-				onMessage?.("axiomate-cli v1.0.0");
-			} else {
-				onMessage?.(`Unknown command: ${value}`);
 			}
 		},
-		[onMessage, onClear, onExit, exit],
+		[onSubmit, onClear, onExit, exit],
 	);
 
 	// 根据当前 path 获取当前层级的命令列表
