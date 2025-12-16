@@ -1,5 +1,5 @@
 import { Box, Text, useInput, useApp } from "ink";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useReducer, useEffect, useRef, useCallback, useMemo, useState } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
 
 // 命令列表用于自动补全
@@ -34,24 +34,192 @@ type Props = {
 	slashCommands?: SlashCommand[];
 };
 
-// 统一的输入状态类型
+// ============================================================================
+// 状态机类型定义
+// ============================================================================
+
+/**
+ * 输入模式 - 互斥状态机
+ * - normal: 普通输入模式（带自动补全）
+ * - history: 历史浏览模式（上下键浏览历史记录）
+ * - slash: 斜杠命令选择模式
+ * - slash_sub: 斜杠命令子模式（预留，如 /model 后选择模型）
+ * - help: 快捷键帮助模式
+ */
+type InputMode =
+	| { type: "normal" }
+	| { type: "history"; index: number; savedInput: string }
+	| { type: "slash"; selectedIndex: number }
+	| { type: "slash_sub"; command: string; selectedIndex: number }
+	| { type: "help" };
+
+/**
+ * 统一的输入状态
+ */
 type InputState = {
 	input: string;
 	cursor: number;
-	historyIndex: number;
-	isBrowsingHistory: boolean;
-	savedInput: string;
 	suggestion: string | null;
+	mode: InputMode;
 };
 
-const initialInputState: InputState = {
+/**
+ * Reducer Action 类型
+ */
+type InputAction =
+	| { type: "SET_INPUT"; input: string; cursor: number }
+	| { type: "SET_CURSOR"; cursor: number }
+	| { type: "SET_SUGGESTION"; suggestion: string | null }
+	| { type: "ENTER_HISTORY"; index: number; savedInput: string; historyInput: string }
+	| { type: "NAVIGATE_HISTORY"; index: number; historyInput: string }
+	| { type: "EXIT_HISTORY" }
+	| { type: "SELECT_SLASH_COMMAND"; index: number }
+	| { type: "EXIT_SLASH" }
+	| { type: "TOGGLE_HELP" }
+	| { type: "RESET" };
+
+// ============================================================================
+// 模式判断 Helper 函数
+// ============================================================================
+
+const isNormalMode = (mode: InputMode): mode is { type: "normal" } =>
+	mode.type === "normal";
+
+const isHistoryMode = (
+	mode: InputMode,
+): mode is { type: "history"; index: number; savedInput: string } =>
+	mode.type === "history";
+
+const isSlashModeType = (
+	mode: InputMode,
+): mode is { type: "slash"; selectedIndex: number } => mode.type === "slash";
+
+const isHelpMode = (mode: InputMode): mode is { type: "help" } =>
+	mode.type === "help";
+
+// ============================================================================
+// Reducer 实现
+// ============================================================================
+
+const initialState: InputState = {
 	input: "",
 	cursor: 0,
-	historyIndex: -1,
-	isBrowsingHistory: false,
-	savedInput: "",
 	suggestion: null,
+	mode: { type: "normal" },
 };
+
+function inputReducer(state: InputState, action: InputAction): InputState {
+	switch (action.type) {
+		case "SET_INPUT": {
+			const isSlash = action.input.startsWith("/");
+			const wasSlash = state.input.startsWith("/");
+
+			// 从普通模式输入 /，进入 slash 模式
+			if (isSlash && !wasSlash && isNormalMode(state.mode)) {
+				return {
+					...state,
+					input: action.input,
+					cursor: action.cursor,
+					suggestion: null,
+					mode: { type: "slash", selectedIndex: 0 },
+				};
+			}
+
+			// 从 slash 删除 /，回到普通模式
+			if (!isSlash && wasSlash && isSlashModeType(state.mode)) {
+				return {
+					...state,
+					input: action.input,
+					cursor: action.cursor,
+					mode: { type: "normal" },
+				};
+			}
+
+			// 在历史模式下输入，退出历史模式
+			if (isHistoryMode(state.mode)) {
+				const newMode = isSlash
+					? { type: "slash" as const, selectedIndex: 0 }
+					: { type: "normal" as const };
+				return {
+					...state,
+					input: action.input,
+					cursor: action.cursor,
+					mode: newMode,
+				};
+			}
+
+			return {
+				...state,
+				input: action.input,
+				cursor: action.cursor,
+			};
+		}
+
+		case "SET_CURSOR":
+			return { ...state, cursor: action.cursor };
+
+		case "SET_SUGGESTION":
+			return { ...state, suggestion: action.suggestion };
+
+		case "ENTER_HISTORY":
+			return {
+				...state,
+				input: action.historyInput,
+				cursor: action.historyInput.length,
+				suggestion: null,
+				mode: {
+					type: "history",
+					index: action.index,
+					savedInput: action.savedInput,
+				},
+			};
+
+		case "NAVIGATE_HISTORY":
+			if (!isHistoryMode(state.mode)) return state;
+			return {
+				...state,
+				input: action.historyInput,
+				cursor: action.historyInput.length,
+				mode: { ...state.mode, index: action.index },
+			};
+
+		case "EXIT_HISTORY":
+			if (!isHistoryMode(state.mode)) return state;
+			return {
+				...state,
+				input: state.mode.savedInput,
+				cursor: state.mode.savedInput.length,
+				mode: { type: "normal" },
+			};
+
+		case "SELECT_SLASH_COMMAND":
+			if (!isSlashModeType(state.mode)) return state;
+			return {
+				...state,
+				mode: { ...state.mode, selectedIndex: action.index },
+			};
+
+		case "EXIT_SLASH":
+			return {
+				...state,
+				input: "",
+				cursor: 0,
+				mode: { type: "normal" },
+			};
+
+		case "TOGGLE_HELP":
+			if (isHelpMode(state.mode)) {
+				return { ...state, mode: { type: "normal" } };
+			}
+			return { ...state, mode: { type: "help" } };
+
+		case "RESET":
+			return initialState;
+
+		default:
+			return state;
+	}
+}
 
 export default function AutocompleteInput({
 	prompt = "> ",
@@ -61,22 +229,26 @@ export default function AutocompleteInput({
 	slashCommands = [],
 }: Props) {
 	const { exit } = useApp();
-	const [state, setState] = useState<InputState>(initialInputState);
-	const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
-	const [showShortcutHelp, setShowShortcutHelp] = useState(false);
+	const [state, dispatch] = useReducer(inputReducer, initialState);
 	const columns = useTerminalWidth();
 	const abortControllerRef = useRef<AbortController | null>(null);
 
 	// 输入历史记录（独立于输入状态）
 	const [history, setHistory] = useState<string[]>([]);
 
-	// 包装 setState，便于统一更新
-	const updateState = useCallback((updater: (s: InputState) => InputState) => {
-		setState((s) => updater(s));
-	}, []);
-
 	// 解构状态便于使用
-	const { input, cursor, historyIndex, isBrowsingHistory, suggestion } = state;
+	const { input, cursor, suggestion, mode } = state;
+
+	// 模式判断（派生状态）
+	const inSlashMode = isSlashModeType(mode) || input.startsWith("/");
+	const inHistoryMode = isHistoryMode(mode);
+	const inHelpMode = isHelpMode(mode);
+
+	// 获取当前选中的命令索引（从 mode 中获取）
+	const selectedCommandIndex = isSlashModeType(mode) ? mode.selectedIndex : 0;
+
+	// 获取历史索引（从 mode 中获取）
+	const historyIndex = isHistoryMode(mode) ? mode.index : -1;
 
 	// 处理提交
 	const handleSubmit = useCallback(
@@ -91,7 +263,7 @@ export default function AutocompleteInput({
 			});
 
 			// 重置输入状态
-			updateState(() => initialInputState);
+			dispatch({ type: "RESET" });
 
 			// 可用命令列表（用于 help 显示）
 			const AVAILABLE_COMMANDS = ["help", "exit", "quit", "clear", "version"];
@@ -141,29 +313,21 @@ export default function AutocompleteInput({
 				onMessage?.(`Unknown command: ${value}`);
 			}
 		},
-		[onMessage, onClear, onExit, exit, updateState],
+		[onMessage, onClear, onExit, exit],
 	);
-
-	// 检测是否在斜杠命令模式
-	const isSlashMode = input.startsWith("/");
 
 	// 过滤匹配的斜杠命令（只匹配命令名前缀）
 	const filteredCommands = useMemo(() => {
-		if (!isSlashMode) return [];
+		if (!inSlashMode) return [];
 		const query = input.slice(1).toLowerCase();
 		return slashCommands.filter((cmd) =>
 			cmd.name.toLowerCase().startsWith(query),
 		);
-	}, [input, isSlashMode, slashCommands]);
-
-	// 重置选中索引当命令列表变化时
-	useEffect(() => {
-		setSelectedCommandIndex(0);
-	}, [filteredCommands.length]);
+	}, [input, inSlashMode, slashCommands]);
 
 	// 斜杠命令模式下的自动补全建议
 	const slashSuggestion = useMemo(() => {
-		if (!isSlashMode || filteredCommands.length === 0) return null;
+		if (!inSlashMode || filteredCommands.length === 0) return null;
 		const selectedCmd = filteredCommands[selectedCommandIndex];
 		if (!selectedCmd) return null;
 		const query = input.slice(1).toLowerCase();
@@ -173,7 +337,7 @@ export default function AutocompleteInput({
 			return selectedCmd.name.slice(query.length);
 		}
 		return null;
-	}, [isSlashMode, filteredCommands, selectedCommandIndex, input]);
+	}, [inSlashMode, filteredCommands, selectedCommandIndex, input]);
 
 	// 命令自动补全函数
 	const getCommandSuggestion = useCallback(
@@ -216,7 +380,7 @@ export default function AutocompleteInput({
 
 			// 斜杠模式下使用 slashSuggestion，不触发异步补全
 			if (text.startsWith("/")) {
-				updateState((s) => ({ ...s, suggestion: null }));
+				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				return;
 			}
 
@@ -226,7 +390,7 @@ export default function AutocompleteInput({
 			}
 
 			if (!text) {
-				updateState((s) => ({ ...s, suggestion: null }));
+				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				return;
 			}
 
@@ -236,29 +400,28 @@ export default function AutocompleteInput({
 			try {
 				const result = await getCommandSuggestion(text, controller.signal);
 				if (!controller.signal.aborted) {
-					updateState((s) => ({ ...s, suggestion: result }));
+					dispatch({ type: "SET_SUGGESTION", suggestion: result });
 				}
 			} catch {
 				// 忽略取消错误
 				if (!controller.signal.aborted) {
-					updateState((s) => ({ ...s, suggestion: null }));
+					dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				}
 			}
 		},
-		[getCommandSuggestion, updateState],
+		[getCommandSuggestion],
 	);
 
 	// 当输入变化时触发自动补全
-	// 注意：直接从 state 读取，确保使用最新值
 	useEffect(() => {
-		triggerAutocomplete(state.input, state.isBrowsingHistory);
-	}, [state.input, state.isBrowsingHistory, triggerAutocomplete]);
+		triggerAutocomplete(state.input, inHistoryMode);
+	}, [state.input, inHistoryMode, triggerAutocomplete]);
 
 	// 合并建议：斜杠模式使用 slashSuggestion，普通模式使用 suggestion
 	// 历史浏览模式下不显示建议
-	const effectiveSuggestion = isBrowsingHistory
+	const effectiveSuggestion = inHistoryMode
 		? null
-		: isSlashMode
+		: inSlashMode
 			? slashSuggestion
 			: suggestion;
 
@@ -272,29 +435,38 @@ export default function AutocompleteInput({
 	}, []);
 
 	useInput((inputChar, key) => {
+		// Help 模式优先处理
+		if (inHelpMode) {
+			if (key.escape || inputChar) {
+				dispatch({ type: "TOGGLE_HELP" });
+			}
+			return;
+		}
+
 		// Ctrl+Enter 插入换行
 		if (key.ctrl && key.return) {
-			updateState((s) => ({
-				...s,
-				input: s.input.slice(0, s.cursor) + "\n" + s.input.slice(s.cursor),
-				cursor: s.cursor + 1,
-			}));
+			const newInput = input.slice(0, cursor) + "\n" + input.slice(cursor);
+			dispatch({ type: "SET_INPUT", input: newInput, cursor: cursor + 1 });
 			return;
 		}
 
 		// 斜杠命令模式下的特殊处理
-		if (isSlashMode && filteredCommands.length > 0) {
+		if (inSlashMode && filteredCommands.length > 0) {
 			if (key.upArrow) {
-				setSelectedCommandIndex((prev) =>
-					prev > 0 ? prev - 1 : filteredCommands.length - 1,
-				);
+				const newIndex =
+					selectedCommandIndex > 0
+						? selectedCommandIndex - 1
+						: filteredCommands.length - 1;
+				dispatch({ type: "SELECT_SLASH_COMMAND", index: newIndex });
 				return;
 			}
 
 			if (key.downArrow) {
-				setSelectedCommandIndex((prev) =>
-					prev < filteredCommands.length - 1 ? prev + 1 : 0,
-				);
+				const newIndex =
+					selectedCommandIndex < filteredCommands.length - 1
+						? selectedCommandIndex + 1
+						: 0;
+				dispatch({ type: "SELECT_SLASH_COMMAND", index: newIndex });
 				return;
 			}
 
@@ -304,7 +476,6 @@ export default function AutocompleteInput({
 				if (selectedCmd) {
 					const cmdText = "/" + selectedCmd.name;
 					handleSubmit(cmdText);
-					setSelectedCommandIndex(0);
 				}
 				return;
 			}
@@ -319,33 +490,22 @@ export default function AutocompleteInput({
 		if (key.tab && effectiveSuggestion) {
 			// Tab 确认补全
 			const newInput = input + effectiveSuggestion;
-			updateState((s) => ({
-				...s,
-				input: newInput,
-				cursor: newInput.length,
-				suggestion: null,
-			}));
+			dispatch({ type: "SET_INPUT", input: newInput, cursor: newInput.length });
+			dispatch({ type: "SET_SUGGESTION", suggestion: null });
 			return;
 		}
 
 		if (key.backspace || key.delete) {
 			if (cursor > 0) {
-				updateState((s) => ({
-					...s,
-					input: s.input.slice(0, s.cursor - 1) + s.input.slice(s.cursor),
-					cursor: s.cursor - 1,
-					// 退出历史浏览模式（有编辑操作）
-					isBrowsingHistory: false,
-					historyIndex: -1,
-					savedInput: "",
-				}));
+				const newInput = input.slice(0, cursor - 1) + input.slice(cursor);
+				dispatch({ type: "SET_INPUT", input: newInput, cursor: cursor - 1 });
 			}
 			return;
 		}
 
 		if (key.leftArrow) {
 			if (cursor > 0) {
-				updateState((s) => ({ ...s, cursor: s.cursor - 1 }));
+				dispatch({ type: "SET_CURSOR", cursor: cursor - 1 });
 			}
 			return;
 		}
@@ -355,47 +515,39 @@ export default function AutocompleteInput({
 				// 如果光标在末尾且有建议，向右移动接受一个字符
 				const newInput = input + effectiveSuggestion[0];
 				const remaining = effectiveSuggestion.slice(1) || null;
-				updateState((s) => ({
-					...s,
-					input: newInput,
-					cursor: newInput.length,
-					suggestion: isSlashMode ? s.suggestion : remaining,
-				}));
+				dispatch({ type: "SET_INPUT", input: newInput, cursor: newInput.length });
+				if (!inSlashMode) {
+					dispatch({ type: "SET_SUGGESTION", suggestion: remaining });
+				}
 			} else if (cursor < input.length) {
-				updateState((s) => ({ ...s, cursor: s.cursor + 1 }));
+				dispatch({ type: "SET_CURSOR", cursor: cursor + 1 });
 			}
 			return;
 		}
 
-		if (!isSlashMode && (key.upArrow || key.downArrow)) {
-			// 历史记录导航
+		// 非斜杠模式下的历史导航
+		if (!inSlashMode && (key.upArrow || key.downArrow)) {
 			if (history.length === 0) return;
 
 			if (key.upArrow) {
 				if (historyIndex === -1) {
 					// 第一次按上箭头，保存当前输入并切换到最新历史
 					const historyItem = history[history.length - 1]!;
-					updateState((s) => ({
-						...s,
-						isBrowsingHistory: true,
-						savedInput: s.input,
-						historyIndex: history.length - 1,
-						input: historyItem,
-						cursor: historyItem.length,
-						suggestion: null,
-					}));
+					dispatch({
+						type: "ENTER_HISTORY",
+						index: history.length - 1,
+						savedInput: input,
+						historyInput: historyItem,
+					});
 				} else if (historyIndex > 0) {
 					// 继续向上浏览
 					const newIndex = historyIndex - 1;
 					const historyItem = history[newIndex]!;
-					updateState((s) => ({
-						...s,
-						isBrowsingHistory: true,
-						historyIndex: newIndex,
-						input: historyItem,
-						cursor: historyItem.length,
-						suggestion: null,
-					}));
+					dispatch({
+						type: "NAVIGATE_HISTORY",
+						index: newIndex,
+						historyInput: historyItem,
+					});
 				}
 			} else if (key.downArrow) {
 				if (historyIndex === -1) {
@@ -405,25 +557,14 @@ export default function AutocompleteInput({
 					// 继续向下浏览
 					const newIndex = historyIndex + 1;
 					const historyItem = history[newIndex]!;
-					updateState((s) => ({
-						...s,
-						isBrowsingHistory: true,
-						historyIndex: newIndex,
-						input: historyItem,
-						cursor: historyItem.length,
-						suggestion: null,
-					}));
+					dispatch({
+						type: "NAVIGATE_HISTORY",
+						index: newIndex,
+						historyInput: historyItem,
+					});
 				} else {
 					// 回到原始输入
-					updateState((s) => ({
-						...s,
-						isBrowsingHistory: false,
-						historyIndex: -1,
-						input: s.savedInput,
-						cursor: s.savedInput.length,
-						savedInput: "",
-						suggestion: null,
-					}));
+					dispatch({ type: "EXIT_HISTORY" });
 				}
 			}
 			return;
@@ -440,45 +581,37 @@ export default function AutocompleteInput({
 
 		if (key.ctrl && inputChar === "u") {
 			// Ctrl+U 清除光标前的内容
-			updateState((s) => ({
-				...s,
-				input: s.input.slice(s.cursor),
-				cursor: 0,
-			}));
+			const newInput = input.slice(cursor);
+			dispatch({ type: "SET_INPUT", input: newInput, cursor: 0 });
 			return;
 		}
 
 		if (key.ctrl && inputChar === "k") {
 			// Ctrl+K 清除光标后的内容
-			updateState((s) => ({
-				...s,
-				input: s.input.slice(0, s.cursor),
-			}));
+			const newInput = input.slice(0, cursor);
+			dispatch({ type: "SET_INPUT", input: newInput, cursor: cursor });
 			return;
 		}
 
 		if (key.ctrl && inputChar === "a") {
 			// Ctrl+A 移动到行首
-			updateState((s) => ({ ...s, cursor: 0 }));
+			dispatch({ type: "SET_CURSOR", cursor: 0 });
 			return;
 		}
 
 		if (key.ctrl && inputChar === "e") {
 			// Ctrl+E 移动到行尾
-			updateState((s) => ({ ...s, cursor: s.input.length }));
+			dispatch({ type: "SET_CURSOR", cursor: input.length });
 			return;
 		}
 
 		if (key.escape) {
-			// Escape 清除建议或退出斜杠模式或关闭快捷键帮助
-			if (showShortcutHelp) {
-				setShowShortcutHelp(false);
-				return;
+			// Escape 退出斜杠模式或清除建议
+			if (inSlashMode) {
+				dispatch({ type: "EXIT_SLASH" });
+			} else {
+				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 			}
-			if (isSlashMode) {
-				updateState((s) => ({ ...s, input: "", cursor: 0 }));
-			}
-			updateState((s) => ({ ...s, suggestion: null }));
 			return;
 		}
 
@@ -486,29 +619,22 @@ export default function AutocompleteInput({
 		if (inputChar && !key.ctrl && !key.meta) {
 			// 输入 ? 时显示快捷键帮助（仅当输入框为空时）
 			if (inputChar === "?" && input === "") {
-				setShowShortcutHelp(true);
+				dispatch({ type: "TOGGLE_HELP" });
 				return;
 			}
-			// 关闭快捷键帮助
-			if (showShortcutHelp) {
-				setShowShortcutHelp(false);
-			}
-			// 插入字符并退出历史浏览模式
-			updateState((s) => ({
-				...s,
-				input: s.input.slice(0, s.cursor) + inputChar + s.input.slice(s.cursor),
-				cursor: s.cursor + inputChar.length,
-				// 退出历史浏览模式（有新输入）
-				isBrowsingHistory: false,
-				historyIndex: -1,
-				savedInput: "",
-			}));
+			// 插入字符
+			const newInput = input.slice(0, cursor) + inputChar + input.slice(cursor);
+			dispatch({
+				type: "SET_INPUT",
+				input: newInput,
+				cursor: cursor + inputChar.length,
+			});
 		}
 	});
 
 	// 计算显示内容，支持手动换行和自动换行
 	const displayText = state.input;
-	const suggestionText = state.isBrowsingHistory
+	const suggestionText = inHistoryMode
 		? ""
 		: (state.input.startsWith("/") ? slashSuggestion : state.suggestion) || "";
 
@@ -684,7 +810,7 @@ export default function AutocompleteInput({
 			})}
 
 			{/* 斜杠命令列表 */}
-			{isSlashMode && filteredCommands.length > 0 && (
+			{inSlashMode && filteredCommands.length > 0 && (
 				<Box flexDirection="column">
 					<Text color="gray">{"─".repeat(columns)}</Text>
 					{filteredCommands.map((cmd, index) => (
@@ -705,7 +831,7 @@ export default function AutocompleteInput({
 			)}
 
 			{/* 快捷键帮助 */}
-			{showShortcutHelp && (
+			{inHelpMode && (
 				<Box flexDirection="column">
 					<Text color="gray">{"─".repeat(columns)}</Text>
 					<Box flexDirection="row" flexWrap="wrap">
