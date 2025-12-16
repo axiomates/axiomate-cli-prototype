@@ -4,6 +4,9 @@ node_modules/
 package-lock.json
 /bundle/
 
+# Generated files
+source/constants/meta.ts
+
 # IDEs
 .vscode/*
 !.vscode/launch.json

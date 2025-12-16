@@ -10,7 +10,9 @@
 		"node": ">=20"
 	},
 	"scripts": {
+		"prebuild": "jiti scripts/gen-meta.ts",
 		"build": "tsc",
+		"predev": "jiti scripts/gen-meta.ts",
 		"dev": "tsc --watch",
 		"start": "node dist/cli.js",
 		"bundle": "jiti scripts/bundle.ts",

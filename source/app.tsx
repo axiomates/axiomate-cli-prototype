@@ -6,6 +6,7 @@ import Header from "./components/Header.js";
 import MessageOutput from "./components/MessageOutput.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
 import { SLASH_COMMANDS } from "./constants/commands.js";
+import { VERSION, APP_NAME } from "./constants/meta.js";
 import {
 	type UserInput,
 	isMessageInput,
@@ -33,7 +34,7 @@ export default function App() {
 					]);
 					break;
 				case "version":
-					setMessages((prev) => [...prev, "axiomate-cli v0.1.0"]);
+					setMessages((prev) => [...prev, `${APP_NAME} v${VERSION}`]);
 					break;
 				case "config":
 					setMessages((prev) => [...prev, "Config: (empty)"]);
