@@ -40,7 +40,6 @@ export function initAppData(): void {
 	ensureAppDataDirExists();
 }
 
-
 /**
  * 确保应用数据目录及子目录存在
  */

@@ -7,11 +7,29 @@ import { getLogsPath } from "./appdata.js";
  */
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
 
+// 单例 logger
+let loggerInstance: pino.Logger | null = null;
+
 /**
- * 获取日志文件路径
+ * 便捷日志方法
  */
-function getLogFilePath(): string {
-	return path.join(getLogsPath(), "app");
+export const logger = {
+	trace: (msg: string, obj?: object) => getLogger().trace(obj, msg),
+	debug: (msg: string, obj?: object) => getLogger().debug(obj, msg),
+	info: (msg: string, obj?: object) => getLogger().info(obj, msg),
+	warn: (msg: string, obj?: object) => getLogger().warn(obj, msg),
+	error: (msg: string, obj?: object) => getLogger().error(obj, msg),
+	fatal: (msg: string, obj?: object) => getLogger().fatal(obj, msg),
+};
+
+/**
+ * 获取 logger 实例
+ */
+export function getLogger(): pino.Logger {
+	if (loggerInstance === null) {
+		loggerInstance = createLogger();
+	}
+	return loggerInstance;
 }
 
 /**
@@ -34,27 +52,9 @@ function createLogger(): pino.Logger {
 	});
 }
 
-// 单例 logger
-let loggerInstance: pino.Logger | null = null;
-
 /**
- * 获取 logger 实例
+ * 获取日志文件路径
  */
-export function getLogger(): pino.Logger {
-	if (loggerInstance === null) {
-		loggerInstance = createLogger();
-	}
-	return loggerInstance;
+function getLogFilePath(): string {
+	return path.join(getLogsPath(), "app");
 }
-
-/**
- * 便捷日志方法
- */
-export const logger = {
-	trace: (msg: string, obj?: object) => getLogger().trace(obj, msg),
-	debug: (msg: string, obj?: object) => getLogger().debug(obj, msg),
-	info: (msg: string, obj?: object) => getLogger().info(obj, msg),
-	warn: (msg: string, obj?: object) => getLogger().warn(obj, msg),
-	error: (msg: string, obj?: object) => getLogger().error(obj, msg),
-	fatal: (msg: string, obj?: object) => getLogger().fatal(obj, msg),
-};

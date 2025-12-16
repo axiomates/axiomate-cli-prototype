@@ -36,9 +36,9 @@ node dist/cli.js
 
 ### Command Line Options
 
-| Option        | Description                        |
-| ------------- | ---------------------------------- |
-| `-h, --help`  | Show help message and exit         |
+| Option       | Description                |
+| ------------ | -------------------------- |
+| `-h, --help` | Show help message and exit |
 
 Example:
 
