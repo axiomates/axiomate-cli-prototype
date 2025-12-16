@@ -74,17 +74,3 @@ export function createCommandInput(
 	};
 }
 
-/**
- * 从斜杠命令字符串解析命令路径
- * @example parseSlashCommand("/model openai gpt-4") => ["model", "openai", "gpt-4"]
- */
-export function parseSlashCommand(input: string): string[] {
-	const trimmed = input.trim();
-	if (!trimmed.startsWith("/")) {
-		return [];
-	}
-	return trimmed
-		.slice(1)
-		.split(/\s+/)
-		.filter((s) => s.length > 0);
-}

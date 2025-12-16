@@ -4,7 +4,6 @@ import {
 	isCommandInput,
 	createMessageInput,
 	createCommandInput,
-	parseSlashCommand,
 	type MessageInput,
 	type CommandInput,
 } from "../../source/models/input.js";
@@ -83,45 +82,4 @@ describe("models/input", () => {
 		});
 	});
 
-	describe("parseSlashCommand", () => {
-		it("parses single command", () => {
-			expect(parseSlashCommand("/help")).toEqual(["help"]);
-		});
-
-		it("parses command with arguments", () => {
-			expect(parseSlashCommand("/model openai gpt-4")).toEqual([
-				"model",
-				"openai",
-				"gpt-4",
-			]);
-		});
-
-		it("handles extra whitespace", () => {
-			expect(parseSlashCommand("/model   openai   gpt-4")).toEqual([
-				"model",
-				"openai",
-				"gpt-4",
-			]);
-		});
-
-		it("handles leading/trailing whitespace", () => {
-			expect(parseSlashCommand("  /help  ")).toEqual(["help"]);
-		});
-
-		it("returns empty array for non-slash input", () => {
-			expect(parseSlashCommand("hello")).toEqual([]);
-		});
-
-		it("returns empty array for empty input", () => {
-			expect(parseSlashCommand("")).toEqual([]);
-		});
-
-		it("handles slash only", () => {
-			expect(parseSlashCommand("/")).toEqual([]);
-		});
-
-		it("handles slash with only spaces", () => {
-			expect(parseSlashCommand("/   ")).toEqual([]);
-		});
-	});
 });

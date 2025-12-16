@@ -90,9 +90,9 @@ export function useInputHandler({
 					if (selectedCmd.children && selectedCmd.children.length > 0) {
 						dispatch({ type: "ENTER_SLASH_LEVEL", name: selectedCmd.name });
 					} else {
-						// 否则直接提交（包含完整路径）
+						// 否则直接提交（包含完整路径，使用 → 分隔符）
 						const fullPath = [...slashPath, selectedCmd.name];
-						const cmdText = "/" + fullPath.join(" ");
+						const cmdText = "/" + fullPath.join(" → ");
 						onSubmit(cmdText);
 					}
 				}

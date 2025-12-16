@@ -6,6 +6,8 @@
 export type ProcessedLines = {
 	/** 处理后的显示行数组 */
 	lines: string[];
+	/** 每行在原始文本中的起始偏移量 */
+	lineOffsets: number[];
 	/** 光标所在行索引 */
 	cursorLine: number;
 	/** 光标所在列索引 */
@@ -53,6 +55,7 @@ export function processLines(
 	// 先按手动换行符分割
 	const manualLines = fullText.split("\n");
 	const allLines: string[] = [];
+	const lineOffsets: number[] = [];
 
 	// 记录每个手动行的起始位置（用于计算光标位置）
 	let charCount = 0;
@@ -66,10 +69,13 @@ export function processLines(
 
 		for (let j = 0; j < wrappedLines.length; j++) {
 			const line = wrappedLines[j]!;
+			const lineStart = charCount;
+
+			// 记录该行在原始文本中的起始偏移
+			lineOffsets.push(lineStart);
 
 			// 计算光标位置
 			if (!foundCursor) {
-				const lineStart = charCount;
 				const lineEnd = charCount + line.length;
 
 				if (cursorPos >= lineStart && cursorPos <= lineEnd) {
@@ -95,7 +101,7 @@ export function processLines(
 		cursorCol = allLines[cursorLine]?.length || 0;
 	}
 
-	return { lines: allLines, cursorLine, cursorCol, lineWidth };
+	return { lines: allLines, lineOffsets, cursorLine, cursorCol, lineWidth }
 }
 
 /**

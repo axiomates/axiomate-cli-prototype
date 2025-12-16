@@ -24,10 +24,11 @@ export const initialState: InputState = {
 
 /**
  * 根据 path 生成输入框文本
+ * 使用 " → " 分隔符表达层级关系
  */
 export function buildInputFromPath(path: string[]): string {
 	if (path.length === 0) return "/";
-	return "/" + path.join(" ") + " ";
+	return "/" + path.join(" → ") + " → ";
 }
 
 /**

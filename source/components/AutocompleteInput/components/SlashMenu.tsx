@@ -34,9 +34,16 @@ export function SlashMenu({
 			<Text color="gray">{"─".repeat(columns)}</Text>
 			{/* 显示当前路径（如果不在根级） */}
 			{path.length > 0 && (
-				<Text color="gray">
-					{promptIndent}← /{path.join(" ")}
-				</Text>
+				<Box>
+					<Text color="gray">{promptIndent}← </Text>
+					<Text color="#e5c07b">/</Text>
+					{path.map((name, i) => (
+						<Text key={name}>
+							<Text color="#e5c07b">{name}</Text>
+							{i < path.length - 1 && <Text color="gray"> → </Text>}
+						</Text>
+					))}
+				</Box>
 			)}
 			{commands.map((cmd, index) => (
 				<Box key={cmd.name}>
