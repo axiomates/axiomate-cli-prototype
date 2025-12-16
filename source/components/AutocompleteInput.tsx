@@ -21,15 +21,13 @@ const COMMANDS = [
 	"version",
 ];
 
-export type SlashCommandOption = {
-	name: string;
-	description?: string;
-};
-
+/**
+ * 斜杠命令类型（支持递归嵌套）
+ */
 export type SlashCommand = {
 	name: string;
-	description: string;
-	subOptions?: SlashCommandOption[];
+	description?: string;
+	children?: SlashCommand[];
 };
 
 type Props = {
@@ -48,15 +46,13 @@ type Props = {
  * 输入模式 - 互斥状态机
  * - normal: 普通输入模式（带自动补全）
  * - history: 历史浏览模式（上下键浏览历史记录）
- * - slash: 斜杠命令选择模式
- * - slash_sub: 斜杠命令子模式（预留，如 /model 后选择模型）
+ * - slash: 斜杠命令选择模式（支持多层级，path 记录选择路径）
  * - help: 快捷键帮助模式
  */
 type InputMode =
 	| { type: "normal" }
 	| { type: "history"; index: number; savedInput: string }
-	| { type: "slash"; selectedIndex: number }
-	| { type: "slash_sub"; command: string; selectedIndex: number }
+	| { type: "slash"; path: string[]; selectedIndex: number }
 	| { type: "help" };
 
 /**
@@ -79,11 +75,10 @@ type InputAction =
 	| { type: "ENTER_HISTORY"; index: number; savedInput: string; historyInput: string }
 	| { type: "NAVIGATE_HISTORY"; index: number; historyInput: string }
 	| { type: "EXIT_HISTORY" }
-	| { type: "SELECT_SLASH_COMMAND"; index: number }
+	| { type: "SELECT_SLASH"; index: number }
+	| { type: "ENTER_SLASH_LEVEL"; name: string }
+	| { type: "EXIT_SLASH_LEVEL" }
 	| { type: "EXIT_SLASH" }
-	| { type: "ENTER_SLASH_SUB"; command: string }
-	| { type: "SELECT_SLASH_SUB"; index: number }
-	| { type: "EXIT_SLASH_SUB" }
 	| { type: "TOGGLE_HELP" }
 	| { type: "RESET" };
 
@@ -99,14 +94,10 @@ const isHistoryMode = (
 ): mode is { type: "history"; index: number; savedInput: string } =>
 	mode.type === "history";
 
-const isSlashModeType = (
+const isSlashMode = (
 	mode: InputMode,
-): mode is { type: "slash"; selectedIndex: number } => mode.type === "slash";
-
-const isSlashSubMode = (
-	mode: InputMode,
-): mode is { type: "slash_sub"; command: string; selectedIndex: number } =>
-	mode.type === "slash_sub";
+): mode is { type: "slash"; path: string[]; selectedIndex: number } =>
+	mode.type === "slash";
 
 const isHelpMode = (mode: InputMode): mode is { type: "help" } =>
 	mode.type === "help";
@@ -122,6 +113,12 @@ const initialState: InputState = {
 	mode: { type: "normal" },
 };
 
+// 根据 path 生成输入框文本
+function buildInputFromPath(path: string[]): string {
+	if (path.length === 0) return "/";
+	return "/" + path.join(" ") + " ";
+}
+
 function inputReducer(state: InputState, action: InputAction): InputState {
 	switch (action.type) {
 		case "SET_INPUT": {
@@ -135,12 +132,12 @@ function inputReducer(state: InputState, action: InputAction): InputState {
 					input: action.input,
 					cursor: action.cursor,
 					suggestion: null,
-					mode: { type: "slash", selectedIndex: 0 },
+					mode: { type: "slash", path: [], selectedIndex: 0 },
 				};
 			}
 
 			// 从 slash 删除 /，回到普通模式
-			if (!isSlash && wasSlash && isSlashModeType(state.mode)) {
+			if (!isSlash && wasSlash && isSlashMode(state.mode)) {
 				return {
 					...state,
 					input: action.input,
@@ -152,7 +149,7 @@ function inputReducer(state: InputState, action: InputAction): InputState {
 			// 在历史模式下输入，退出历史模式
 			if (isHistoryMode(state.mode)) {
 				const newMode = isSlash
-					? { type: "slash" as const, selectedIndex: 0 }
+					? { type: "slash" as const, path: [] as string[], selectedIndex: 0 }
 					: { type: "normal" as const };
 				return {
 					...state,
@@ -206,37 +203,48 @@ function inputReducer(state: InputState, action: InputAction): InputState {
 				mode: { type: "normal" },
 			};
 
-		case "SELECT_SLASH_COMMAND":
-			if (!isSlashModeType(state.mode)) return state;
+		case "SELECT_SLASH":
+			if (!isSlashMode(state.mode)) return state;
 			return {
 				...state,
 				mode: { ...state.mode, selectedIndex: action.index },
 			};
+
+		case "ENTER_SLASH_LEVEL": {
+			if (!isSlashMode(state.mode)) return state;
+			const newPath = [...state.mode.path, action.name];
+			const newInput = buildInputFromPath(newPath);
+			return {
+				...state,
+				input: newInput,
+				cursor: newInput.length,
+				mode: { type: "slash", path: newPath, selectedIndex: 0 },
+			};
+		}
+
+		case "EXIT_SLASH_LEVEL": {
+			if (!isSlashMode(state.mode)) return state;
+			if (state.mode.path.length === 0) {
+				// 已经在根级，退出 slash 模式
+				return {
+					...state,
+					input: "",
+					cursor: 0,
+					mode: { type: "normal" },
+				};
+			}
+			// 返回上一级
+			const newPath = state.mode.path.slice(0, -1);
+			const newInput = buildInputFromPath(newPath);
+			return {
+				...state,
+				input: newInput,
+				cursor: newInput.length,
+				mode: { type: "slash", path: newPath, selectedIndex: 0 },
+			};
+		}
 
 		case "EXIT_SLASH":
-			return {
-				...state,
-				input: "",
-				cursor: 0,
-				mode: { type: "normal" },
-			};
-
-		case "ENTER_SLASH_SUB":
-			return {
-				...state,
-				input: "/" + action.command + " ",
-				cursor: action.command.length + 2,
-				mode: { type: "slash_sub", command: action.command, selectedIndex: 0 },
-			};
-
-		case "SELECT_SLASH_SUB":
-			if (!isSlashSubMode(state.mode)) return state;
-			return {
-				...state,
-				mode: { ...state.mode, selectedIndex: action.index },
-			};
-
-		case "EXIT_SLASH_SUB":
 			return {
 				...state,
 				input: "",
@@ -279,19 +287,15 @@ export default function AutocompleteInput({
 	// 模式判断（派生状态）
 	// 注意：inSlashMode 只在真正的 slash 模式下为 true
 	// 历史模式下即使输入以 / 开头也不算 slash 模式
-	const inSlashMode = isSlashModeType(mode);
-	const inSlashSubMode = isSlashSubMode(mode);
+	const inSlashMode = isSlashMode(mode);
 	const inHistoryMode = isHistoryMode(mode);
 	const inHelpMode = isHelpMode(mode);
 
 	// 获取当前选中的命令索引（从 mode 中获取）
-	const selectedCommandIndex = isSlashModeType(mode) ? mode.selectedIndex : 0;
+	const selectedIndex = isSlashMode(mode) ? mode.selectedIndex : 0;
 
-	// 获取 slash_sub 模式的选中索引
-	const selectedSubIndex = isSlashSubMode(mode) ? mode.selectedIndex : 0;
-
-	// 获取当前 slash_sub 模式的命令名
-	const currentSubCommand = isSlashSubMode(mode) ? mode.command : null;
+	// 获取当前 slash 模式的路径
+	const slashPath = isSlashMode(mode) ? mode.path : [];
 
 	// 获取历史索引（从 mode 中获取）
 	const historyIndex = isHistoryMode(mode) ? mode.index : -1;
@@ -362,66 +366,54 @@ export default function AutocompleteInput({
 		[onMessage, onClear, onExit, exit],
 	);
 
-	// 过滤匹配的斜杠命令（只匹配命令名前缀）
+	// 根据当前 path 获取当前层级的命令列表
+	const currentLevelCommands = useMemo((): SlashCommand[] => {
+		if (!inSlashMode) return [];
+
+		// 根据 path 导航到当前层级
+		let commands: SlashCommand[] = slashCommands;
+		for (const segment of slashPath) {
+			const found = commands.find(
+				(c) => c.name.toLowerCase() === segment.toLowerCase(),
+			);
+			if (!found?.children) return [];
+			commands = found.children;
+		}
+		return commands;
+	}, [inSlashMode, slashPath, slashCommands]);
+
+	// 过滤匹配的命令（根据用户输入）
 	const filteredCommands = useMemo(() => {
 		if (!inSlashMode) return [];
-		const query = input.slice(1).toLowerCase();
-		return slashCommands.filter((cmd) =>
-			cmd.name.toLowerCase().startsWith(query),
-		);
-	}, [input, inSlashMode, slashCommands]);
 
-	// 获取当前 slash_sub 模式的子选项列表
-	const currentSubOptions = useMemo(() => {
-		if (!inSlashSubMode || !currentSubCommand) return [];
-		const cmd = slashCommands.find(
-			(c) => c.name.toLowerCase() === currentSubCommand.toLowerCase(),
-		);
-		if (!cmd?.subOptions) return [];
-
-		// 获取用户在 /command 后输入的查询字符串
-		const prefix = "/" + currentSubCommand + " ";
+		// 计算当前层级的查询字符串
+		const prefix = buildInputFromPath(slashPath);
 		const query = input.startsWith(prefix)
 			? input.slice(prefix.length).toLowerCase()
-			: "";
+			: input.slice(1).toLowerCase(); // fallback for root level
 
-		// 过滤匹配的子选项
-		return cmd.subOptions.filter((opt) =>
-			opt.name.toLowerCase().startsWith(query),
+		return currentLevelCommands.filter((cmd) =>
+			cmd.name.toLowerCase().startsWith(query),
 		);
-	}, [inSlashSubMode, currentSubCommand, slashCommands, input]);
+	}, [input, inSlashMode, slashPath, currentLevelCommands]);
 
 	// 斜杠命令模式下的自动补全建议
 	const slashSuggestion = useMemo(() => {
 		if (!inSlashMode || filteredCommands.length === 0) return null;
-		const selectedCmd = filteredCommands[selectedCommandIndex];
+		const selectedCmd = filteredCommands[selectedIndex];
 		if (!selectedCmd) return null;
-		const query = input.slice(1).toLowerCase();
+
+		const prefix = buildInputFromPath(slashPath);
+		const query = input.startsWith(prefix)
+			? input.slice(prefix.length).toLowerCase()
+			: input.slice(1).toLowerCase();
 		const cmdName = selectedCmd.name.toLowerCase();
-		// 只有当命令名以查询开头时才显示补全
+
 		if (cmdName.startsWith(query) && cmdName !== query) {
 			return selectedCmd.name.slice(query.length);
 		}
 		return null;
-	}, [inSlashMode, filteredCommands, selectedCommandIndex, input]);
-
-	// slash_sub 模式下的自动补全建议
-	const slashSubSuggestion = useMemo(() => {
-		if (!inSlashSubMode || currentSubOptions.length === 0) return null;
-		const selectedOpt = currentSubOptions[selectedSubIndex];
-		if (!selectedOpt) return null;
-
-		const prefix = "/" + currentSubCommand + " ";
-		const query = input.startsWith(prefix)
-			? input.slice(prefix.length).toLowerCase()
-			: "";
-		const optName = selectedOpt.name.toLowerCase();
-
-		if (optName.startsWith(query) && optName !== query) {
-			return selectedOpt.name.slice(query.length);
-		}
-		return null;
-	}, [inSlashSubMode, currentSubOptions, selectedSubIndex, currentSubCommand, input]);
+	}, [inSlashMode, filteredCommands, selectedIndex, slashPath, input]);
 
 	// 命令自动补全函数
 	const getCommandSuggestion = useCallback(
@@ -501,15 +493,13 @@ export default function AutocompleteInput({
 		triggerAutocomplete(state.input, inHistoryMode);
 	}, [state.input, inHistoryMode, triggerAutocomplete]);
 
-	// 合并建议：斜杠模式使用 slashSuggestion，slash_sub 模式使用 slashSubSuggestion，普通模式使用 suggestion
+	// 合并建议：斜杠模式使用 slashSuggestion，普通模式使用 suggestion
 	// 历史浏览模式下不显示建议
 	const effectiveSuggestion = inHistoryMode
 		? null
-		: inSlashSubMode
-			? slashSubSuggestion
-			: inSlashMode
-				? slashSuggestion
-				: suggestion;
+		: inSlashMode
+			? slashSuggestion
+			: suggestion;
 
 	// 清理
 	useEffect(() => {
@@ -536,76 +526,46 @@ export default function AutocompleteInput({
 			return;
 		}
 
-		// slash_sub 模式下的特殊处理（优先于 slash 模式）
-		if (inSlashSubMode && currentSubOptions.length > 0) {
-			if (key.upArrow) {
-				const newIndex =
-					selectedSubIndex > 0
-						? selectedSubIndex - 1
-						: currentSubOptions.length - 1;
-				dispatch({ type: "SELECT_SLASH_SUB", index: newIndex });
-				return;
-			}
-
-			if (key.downArrow) {
-				const newIndex =
-					selectedSubIndex < currentSubOptions.length - 1
-						? selectedSubIndex + 1
-						: 0;
-				dispatch({ type: "SELECT_SLASH_SUB", index: newIndex });
-				return;
-			}
-
-			if (key.return) {
-				// 选中子选项并提交
-				const selectedOpt = currentSubOptions[selectedSubIndex];
-				if (selectedOpt && currentSubCommand) {
-					const cmdText = "/" + currentSubCommand + " " + selectedOpt.name;
-					handleSubmit(cmdText);
-				}
-				return;
-			}
-
-			if (key.escape) {
-				// Escape 退出 slash_sub 模式
-				dispatch({ type: "EXIT_SLASH_SUB" });
-				return;
-			}
-		}
-
-		// 斜杠命令模式下的特殊处理
+		// 斜杠命令模式下的特殊处理（统一处理所有层级）
 		if (inSlashMode && filteredCommands.length > 0) {
 			if (key.upArrow) {
 				const newIndex =
-					selectedCommandIndex > 0
-						? selectedCommandIndex - 1
+					selectedIndex > 0
+						? selectedIndex - 1
 						: filteredCommands.length - 1;
-				dispatch({ type: "SELECT_SLASH_COMMAND", index: newIndex });
+				dispatch({ type: "SELECT_SLASH", index: newIndex });
 				return;
 			}
 
 			if (key.downArrow) {
 				const newIndex =
-					selectedCommandIndex < filteredCommands.length - 1
-						? selectedCommandIndex + 1
+					selectedIndex < filteredCommands.length - 1
+						? selectedIndex + 1
 						: 0;
-				dispatch({ type: "SELECT_SLASH_COMMAND", index: newIndex });
+				dispatch({ type: "SELECT_SLASH", index: newIndex });
 				return;
 			}
 
 			if (key.return) {
 				// 选中命令
-				const selectedCmd = filteredCommands[selectedCommandIndex];
+				const selectedCmd = filteredCommands[selectedIndex];
 				if (selectedCmd) {
-					// 如果命令有子选项，进入 slash_sub 模式
-					if (selectedCmd.subOptions && selectedCmd.subOptions.length > 0) {
-						dispatch({ type: "ENTER_SLASH_SUB", command: selectedCmd.name });
+					// 如果命令有子选项，进入下一层级
+					if (selectedCmd.children && selectedCmd.children.length > 0) {
+						dispatch({ type: "ENTER_SLASH_LEVEL", name: selectedCmd.name });
 					} else {
-						// 否则直接提交
-						const cmdText = "/" + selectedCmd.name;
+						// 否则直接提交（包含完整路径）
+						const fullPath = [...slashPath, selectedCmd.name];
+						const cmdText = "/" + fullPath.join(" ");
 						handleSubmit(cmdText);
 					}
 				}
+				return;
+			}
+
+			if (key.escape) {
+				// Escape 返回上一层或退出
+				dispatch({ type: "EXIT_SLASH_LEVEL" });
 				return;
 			}
 		}
@@ -938,47 +898,33 @@ export default function AutocompleteInput({
 				);
 			})}
 
-			{/* 斜杠命令列表 */}
+			{/* 斜杠命令列表（统一渲染所有层级） */}
 			{inSlashMode && filteredCommands.length > 0 && (
 				<Box flexDirection="column">
 					<Text color="gray">{"─".repeat(columns)}</Text>
+					{/* 显示当前路径（如果不在根级） */}
+					{slashPath.length > 0 && (
+						<Text color="gray">
+							{promptIndent}← /{slashPath.join(" ")}
+						</Text>
+					)}
 					{filteredCommands.map((cmd, index) => (
 						<Box key={cmd.name}>
 							<Text
 								backgroundColor={
-									index === selectedCommandIndex ? "blue" : undefined
+									index === selectedIndex ? "blue" : undefined
 								}
-								color={index === selectedCommandIndex ? "white" : undefined}
+								color={index === selectedIndex ? "white" : undefined}
 							>
-								{`${promptIndent}/`}
+								{promptIndent}
+								{slashPath.length === 0 ? "/" : "  "}
 								{cmd.name}
 							</Text>
-							<Text color="gray"> - {cmd.description}</Text>
-							{cmd.subOptions && cmd.subOptions.length > 0 && (
-								<Text color="gray"> →</Text>
+							{cmd.description && (
+								<Text color="gray"> - {cmd.description}</Text>
 							)}
-						</Box>
-					))}
-				</Box>
-			)}
-
-			{/* slash_sub 子选项列表 */}
-			{inSlashSubMode && currentSubOptions.length > 0 && (
-				<Box flexDirection="column">
-					<Text color="gray">{"─".repeat(columns)}</Text>
-					{currentSubOptions.map((opt, index) => (
-						<Box key={opt.name}>
-							<Text
-								backgroundColor={
-									index === selectedSubIndex ? "blue" : undefined
-								}
-								color={index === selectedSubIndex ? "white" : undefined}
-							>
-								{`${promptIndent}  `}
-								{opt.name}
-							</Text>
-							{opt.description && (
-								<Text color="gray"> - {opt.description}</Text>
+							{cmd.children && cmd.children.length > 0 && (
+								<Text color="gray"> →</Text>
 							)}
 						</Box>
 					))}
