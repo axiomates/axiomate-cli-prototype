@@ -58,10 +58,34 @@ export function editorReducer(
 
 			// 在历史模式下输入，退出历史模式
 			if (isHistoryMode(state.uiMode)) {
-				const newInstance = updateInstanceFromText(text, cursor, [], []);
 				const newMode: UIMode = isSlash
 					? { type: "slash", selectedIndex: 0 }
 					: { type: "normal" };
+				// 保留 selectedFiles，更新位置并重建 segments
+				const oldSelectedFiles = state.instance.selectedFiles;
+				if (oldSelectedFiles.length > 0) {
+					const updatedSelectedFiles = updateSelectedFilesPositions(
+						text,
+						oldSelectedFiles,
+					);
+					const newSegments = rebuildSegmentsWithFiles(text, updatedSelectedFiles);
+					const newInstance: InputInstance = {
+						text,
+						cursor,
+						type: "message",
+						segments: newSegments,
+						commandPath: [],
+						filePath: [],
+						selectedFiles: updatedSelectedFiles,
+					};
+					return {
+						...state,
+						instance: newInstance,
+						uiMode: newMode,
+					};
+				}
+				// 没有已选择的文件，使用原有逻辑
+				const newInstance = updateInstanceFromText(text, cursor, [], []);
 				return {
 					...state,
 					instance: newInstance,
