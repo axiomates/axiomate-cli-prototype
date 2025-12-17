@@ -75,8 +75,6 @@ Type `/` to see available slash commands. Use arrow keys to select and Enter to 
 | `/clear`      | Clear the screen         |
 | `/exit`       | Exit the application     |
 | `/version`    | Show version information |
-| `/config`     | Show configuration       |
-| `/status`     | Show current status      |
 
 Slash commands support nested hierarchy (e.g., `/model → openai → gpt-4`) with colored path display.
 

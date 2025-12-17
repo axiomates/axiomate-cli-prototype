@@ -8,21 +8,8 @@ import { isSlashMode, isHistoryMode, buildCommandText } from "../types.js";
 
 // 命令列表用于自动补全
 const COMMANDS = [
-	"help",
-	"exit",
-	"quit",
-	"clear",
-	"history",
-	"config",
-	"config set",
-	"config get",
-	"config list",
-	"status",
-	"start",
-	"stop",
-	"restart",
-	"logs",
-	"version",
+	"git add",
+	"git commit -m",
 ];
 
 type UseAutocompleteOptions = {

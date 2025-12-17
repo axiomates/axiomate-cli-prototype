@@ -84,11 +84,14 @@ async function main() {
 
 	console.log(`✓ 正在编译为可执行文件: ${outputFilename}...`);
 
-	const result = spawnSync(
-		"bun",
-		["build", bunEntryPath, "--compile", "--outfile", outputPath],
-		{ stdio: "inherit" }
-	);
+	const args = ["build", bunEntryPath, "--compile", "--outfile", outputPath];
+
+	// Windows 专用: 设置图标
+	if (platform() === "win32") {
+		args.push("--windows-icon=assets/icon.ico");
+	}
+
+	const result = spawnSync("bun", args, { stdio: "inherit" });
 
 	if (result.status !== 0) {
 		console.error("❌ Bun 编译失败");

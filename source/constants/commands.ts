@@ -2,40 +2,7 @@ import type { SlashCommand } from "../components/AutocompleteInput/index.js";
 
 // 斜杠命令列表
 export const SLASH_COMMANDS: SlashCommand[] = [
-	{
-		name: "help",
-		description: "Show available commands",
-		action: { type: "internal", handler: "help" },
-	},
-	{
-		name: "clear",
-		description: "Clear the screen",
-		action: { type: "internal", handler: "clear" },
-	},
-	{
-		name: "exit",
-		description: "Exit the application",
-		action: { type: "internal", handler: "exit" },
-	},
-	{
-		name: "version",
-		description: "Show version information",
-		action: { type: "internal", handler: "version" },
-	},
-	{
-		name: "config",
-		description: "Show configuration",
-		action: { type: "internal", handler: "config" },
-	},
-	{
-		name: "compact",
-		description: "Summarize conversation context",
-		action: {
-			type: "prompt",
-			template: "请帮我总结上面的对话内容，提取关键信息。",
-		},
-	},
-	{
+    {
 		name: "model",
 		description: "Select AI model",
 		children: [
@@ -118,5 +85,33 @@ export const SLASH_COMMANDS: SlashCommand[] = [
 				action: { type: "config", key: "model" },
 			},
 		],
+	},
+    {
+		name: "compact",
+		description: "Summarize conversation context",
+		action: {
+			type: "prompt",
+			template: "请帮我总结上面的对话内容，提取关键信息。",
+		},
+	},
+	{
+		name: "help",
+		description: "Show available commands",
+		action: { type: "internal", handler: "help" },
+	},
+	{
+		name: "clear",
+		description: "Clear the screen",
+		action: { type: "internal", handler: "clear" },
+	},
+    {
+		name: "version",
+		description: "Show version information",
+		action: { type: "internal", handler: "version" },
+	},
+	{
+		name: "exit",
+		description: "Exit the application",
+		action: { type: "internal", handler: "exit" },
 	},
 ];

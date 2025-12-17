@@ -66,11 +66,6 @@ const internalHandlers: Record<string, InternalHandler> = {
 		content: `${ctx.appName} v${ctx.version}`,
 	}),
 
-	config: () => ({
-		type: "message",
-		content: "Config: (empty)",
-	}),
-
 	clear: () => ({
 		type: "action",
 		action: "clear",

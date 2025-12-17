@@ -15,6 +15,7 @@
 		"predev": "jiti scripts/gen-meta.ts",
 		"dev": "tsc --watch",
 		"start": "node dist/cli.js",
+        "prebundle": "jiti scripts/gen-meta.ts",
 		"bundle": "jiti scripts/bundle.ts",
 		"package": "jiti scripts/package.ts",
 		"test": "vitest run",
