@@ -15,6 +15,7 @@ import {
 	type InputInstance,
 	type HistoryEntry,
 } from "../../models/inputInstance.js";
+import { PATH_SEPARATOR } from "../../constants/platform.js";
 import { isMessageInput } from "../../models/input.js";
 
 // Types
@@ -79,7 +80,7 @@ export default function AutocompleteInput({
 	// basePath 现在从 instance.filePath 获取
 	const fileBasePath = useMemo(() => {
 		if (!isFileMode(uiMode)) return "";
-		return instance.filePath.join("\\") || ".";
+		return instance.filePath.join(PATH_SEPARATOR) || ".";
 	}, [uiMode, instance.filePath]);
 
 	// 过滤文本从路径前缀之后提取
@@ -92,8 +93,9 @@ export default function AutocompleteInput({
 		// 提取完整前缀之后的文本作为过滤条件
 		if (input.length > fullPrefix.length) {
 			const afterPath = input.slice(fullPrefix.length);
-			// 匹配到空格或反斜杠为止
-			const match = afterPath.match(/^[^\s\\]*/);
+			// 匹配到空格或路径分隔符为止
+			const separatorRegex = PATH_SEPARATOR === "\\" ? /^[^\s\\]*/ : /^[^\s/]*/;
+			const match = afterPath.match(separatorRegex);
 			return match ? match[0] : "";
 		}
 		return "";

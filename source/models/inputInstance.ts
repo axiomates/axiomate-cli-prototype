@@ -5,6 +5,7 @@
 
 import type { ColoredSegment } from "./richInput.js";
 import { PATH_COLOR, ARROW_COLOR, FILE_AT_COLOR } from "../constants/colors.js";
+import { PATH_SEPARATOR } from "../constants/platform.js";
 import type { UserInput, MessageInput, CommandInput } from "./input.js";
 
 /**
@@ -267,15 +268,15 @@ export function buildCommandSegments(
 /**
  * 根据文件路径构建文本
  * @param path 文件路径数组，如 ["src", "components"]
- * @param trailing 是否包含尾部反斜杠
- * @returns 文本，如 "@src\components\"
+ * @param trailing 是否包含尾部分隔符
+ * @returns 文本，如 "@src/components/" (Linux) 或 "@src\components\" (Windows)
  */
 export function buildFileText(path: string[], trailing: boolean): string {
 	if (path.length === 0) {
 		return "@";
 	}
-	const base = "@" + path.join("\\");
-	return trailing ? base + "\\" : base;
+	const base = "@" + path.join(PATH_SEPARATOR);
+	return trailing ? base + PATH_SEPARATOR : base;
 }
 
 /**
@@ -302,9 +303,9 @@ export function buildFileSegments(
 
 	for (let i = 0; i < path.length; i++) {
 		segments.push({ text: path[i]!, color: PATH_COLOR }); // 目录名为金黄色
-		// 中间的反斜杠，或者尾部反斜杠（如果 trailing=true）
+		// 中间的分隔符，或者尾部分隔符（如果 trailing=true）
 		if (i < path.length - 1 || trailing) {
-			segments.push({ text: "\\", color: ARROW_COLOR });
+			segments.push({ text: PATH_SEPARATOR, color: ARROW_COLOR });
 		}
 	}
 

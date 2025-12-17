@@ -5,6 +5,7 @@
 import { Box, Text } from "ink";
 import type { FileItem } from "../hooks/useFileSelect.js";
 import { FILE_COLOR, DIR_COLOR } from "../../../constants/colors.js";
+import { PATH_SEPARATOR } from "../../../constants/platform.js";
 
 type FileMenuProps = {
 	/** 文件列表 */
@@ -54,7 +55,7 @@ export function FileMenu({
 			{path.length > 0 && (
 				<Box>
 					<Text color="gray">{promptIndent}← </Text>
-					<Text color={DIR_COLOR}>{path.join("\\")}</Text>
+					<Text color={DIR_COLOR}>{path.join(PATH_SEPARATOR)}</Text>
 				</Box>
 			)}
 			{/* 文件列表（最多显示 9 个，窗口跟随选中项） */}

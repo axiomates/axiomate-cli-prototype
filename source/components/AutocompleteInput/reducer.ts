@@ -27,6 +27,7 @@ import {
 	rebuildSegmentsWithFiles,
 	removeSelectedFile,
 } from "./types.js";
+import { PATH_SEPARATOR } from "../../constants/platform.js";
 
 /**
  * 初始状态
@@ -403,7 +404,7 @@ export function editorReducer(
 
 			// 新添加的文件
 			const newSelectedFile = {
-				path: finalPath.join("\\"),
+				path: finalPath.join(PATH_SEPARATOR),
 				isDirectory: false,
 				atPosition,
 				endPosition: prefix.length + fileText.length,
@@ -457,7 +458,7 @@ export function editorReducer(
 
 			// 新添加的文件夹
 			const newSelectedFile = {
-				path: folderPath.join("\\"),
+				path: folderPath.join(PATH_SEPARATOR),
 				isDirectory: true,
 				atPosition,
 				endPosition: prefix.length + fileText.length,
