@@ -14,13 +14,10 @@ import {
 	isFileMode,
 	isHelpMode,
 	createEmptyInstance,
-	createFileInstance,
 	updateInstanceFromText,
 	updateInstanceCursor,
 	enterCommandLevel,
 	exitCommandLevel,
-	enterFileLevel,
-	exitFileLevel,
 	createCommandInstance,
 	buildFileText,
 	buildFileSegments,
@@ -28,6 +25,7 @@ import {
 	fromHistoryEntry,
 	updateSelectedFilesPositions,
 	rebuildSegmentsWithFiles,
+	removeSelectedFile,
 } from "./types.js";
 
 /**
@@ -100,11 +98,15 @@ export function editorReducer(
 				// 提取过滤文本（路径之后的输入）
 				const filterText =
 					text.length > fullPrefix.length ? text.slice(fullPrefix.length) : "";
-				// 构建彩色分段
+				// 过滤掉位于 suffix 中的 selectedFiles
+				const relevantSelectedFiles = state.instance.selectedFiles.filter(
+					(f) => f.endPosition <= prefix.length,
+				);
+				// 重建 prefix 的 segments（保留已选择文件的颜色）
+				const prefixSegments = rebuildSegmentsWithFiles(prefix, relevantSelectedFiles);
+				// 构建当前文件路径的彩色分段
 				const fileSegments = buildFileSegments(currentFilePath, true, filterText);
-				const newSegments = prefix
-					? [{ text: prefix }, ...fileSegments]
-					: fileSegments;
+				const newSegments = [...prefixSegments, ...fileSegments];
 				const newInstance: InputInstance = {
 					text,
 					cursor,
@@ -277,11 +279,17 @@ export function editorReducer(
 
 		case "ENTER_FILE": {
 			// 创建文件选择模式实例，保留 @ 之前的前缀和之后的后缀
-			const { prefix, suffix } = action;
+			const { prefix } = action;
 			const filePathText = buildFileText([], true); // "@"
 			const newText = prefix + filePathText;
+			// 过滤掉位于 suffix 中的 selectedFiles（它们现在不在 newText 中）
+			const relevantSelectedFiles = state.instance.selectedFiles.filter(
+				(f) => f.endPosition <= prefix.length,
+			);
+			// 重建 prefix 的 segments（保留已选择文件的颜色）
+			const prefixSegments = rebuildSegmentsWithFiles(prefix, relevantSelectedFiles);
 			const fileSegments = buildFileSegments([], true);
-			const newSegments = prefix ? [{ text: prefix }, ...fileSegments] : fileSegments;
+			const newSegments = [...prefixSegments, ...fileSegments];
 			const newInstance: InputInstance = {
 				text: newText,
 				cursor: newText.length,
@@ -319,8 +327,14 @@ export function editorReducer(
 			const newPath = [...state.instance.filePath, action.dirName];
 			const filePathText = buildFileText(newPath, true);
 			const newText = prefix + filePathText;
+			// 过滤掉位于 suffix 中的 selectedFiles
+			const relevantSelectedFiles = state.instance.selectedFiles.filter(
+				(f) => f.endPosition <= prefix.length,
+			);
+			// 重建 prefix 的 segments（保留已选择文件的颜色）
+			const prefixSegments = rebuildSegmentsWithFiles(prefix, relevantSelectedFiles);
 			const fileSegments = buildFileSegments(newPath, true);
-			const newSegments = prefix ? [{ text: prefix }, ...fileSegments] : fileSegments;
+			const newSegments = [...prefixSegments, ...fileSegments];
 			const newInstance: InputInstance = {
 				text: newText,
 				cursor: newText.length,
@@ -345,25 +359,39 @@ export function editorReducer(
 			// 构建完整文件路径，保留前缀和后缀
 			const { prefix, suffix, atPosition } = state.uiMode;
 			const finalPath = [...state.instance.filePath, action.fileName];
-			// 构建彩色分段（无尾部反斜杠，因为是最终文件）
-			const fileSegments = buildFileSegments(finalPath, false);
-			// 分段：prefix + fileSegments + suffix（如果有）
-			const allSegments = [
-				...(prefix ? [{ text: prefix }] : []),
-				...fileSegments,
-				...(suffix ? [{ text: suffix }] : []),
-			];
-			// 最终文本：前缀 + @ + 文件路径 + 后缀
 			const fileText = buildFileText(finalPath, false);
 			const newText = prefix + fileText + suffix;
 			const newCursor = prefix.length + fileText.length; // 光标在文件路径后，后缀前
-			// 添加到 selectedFiles
+
+			// 新添加的文件
 			const newSelectedFile = {
 				path: finalPath.join("\\"),
 				isDirectory: false,
 				atPosition,
 				endPosition: prefix.length + fileText.length,
 			};
+
+			// 更新所有 selectedFiles 的位置：
+			// - prefix 中的文件位置不变
+			// - suffix 中的文件位置需要向后移动 (fileText.length)
+			const updatedSelectedFiles = state.instance.selectedFiles.map((f) => {
+				if (f.atPosition >= prefix.length) {
+					// 在 suffix 中的文件，位置向后移动
+					return {
+						...f,
+						atPosition: f.atPosition + fileText.length,
+						endPosition: f.endPosition + fileText.length,
+					};
+				}
+				return f;
+			});
+
+			// 添加新文件到列表
+			const allSelectedFiles = [...updatedSelectedFiles, newSelectedFile];
+
+			// 使用 rebuildSegmentsWithFiles 构建所有 segments
+			const allSegments = rebuildSegmentsWithFiles(newText, allSelectedFiles);
+
 			const newInstance: InputInstance = {
 				text: newText,
 				cursor: newCursor,
@@ -371,7 +399,7 @@ export function editorReducer(
 				segments: allSegments,
 				commandPath: [],
 				filePath: [], // 退出文件模式，清空 filePath
-				selectedFiles: [...state.instance.selectedFiles, newSelectedFile],
+				selectedFiles: allSelectedFiles,
 			};
 			return {
 				...state,
@@ -385,25 +413,39 @@ export function editorReducer(
 			if (!isFileMode(state.uiMode)) return state;
 			const { prefix, suffix, atPosition } = state.uiMode;
 			const folderPath = state.instance.filePath;
-			// 构建彩色分段（无尾部反斜杠，因为是最终文件夹）
-			const fileSegments = buildFileSegments(folderPath, false);
-			// 分段：prefix + fileSegments + suffix（如果有）
-			const allSegments = [
-				...(prefix ? [{ text: prefix }] : []),
-				...fileSegments,
-				...(suffix ? [{ text: suffix }] : []),
-			];
-			// 最终文本：前缀 + @ + 文件夹路径 + 后缀
 			const fileText = buildFileText(folderPath, false);
 			const newText = prefix + fileText + suffix;
 			const newCursor = prefix.length + fileText.length; // 光标在文件路径后，后缀前
-			// 添加到 selectedFiles
+
+			// 新添加的文件夹
 			const newSelectedFile = {
 				path: folderPath.join("\\"),
 				isDirectory: true,
 				atPosition,
 				endPosition: prefix.length + fileText.length,
 			};
+
+			// 更新所有 selectedFiles 的位置：
+			// - prefix 中的文件位置不变
+			// - suffix 中的文件位置需要向后移动 (fileText.length)
+			const updatedSelectedFiles = state.instance.selectedFiles.map((f) => {
+				if (f.atPosition >= prefix.length) {
+					// 在 suffix 中的文件，位置向后移动
+					return {
+						...f,
+						atPosition: f.atPosition + fileText.length,
+						endPosition: f.endPosition + fileText.length,
+					};
+				}
+				return f;
+			});
+
+			// 添加新文件到列表
+			const allSelectedFiles = [...updatedSelectedFiles, newSelectedFile];
+
+			// 使用 rebuildSegmentsWithFiles 构建所有 segments
+			const allSegments = rebuildSegmentsWithFiles(newText, allSelectedFiles);
+
 			const newInstance: InputInstance = {
 				text: newText,
 				cursor: newCursor,
@@ -411,7 +453,7 @@ export function editorReducer(
 				segments: allSegments,
 				commandPath: [],
 				filePath: [], // 退出文件模式，清空 filePath
-				selectedFiles: [...state.instance.selectedFiles, newSelectedFile],
+				selectedFiles: allSelectedFiles,
 			};
 			return {
 				...state,
@@ -429,8 +471,14 @@ export function editorReducer(
 				const newPath = filePath.slice(0, -1);
 				const filePathText = buildFileText(newPath, true);
 				const newText = prefix + filePathText;
+				// 过滤掉位于 suffix 中的 selectedFiles
+				const relevantSelectedFiles = state.instance.selectedFiles.filter(
+					(f) => f.endPosition <= prefix.length,
+				);
+				// 重建 prefix 的 segments（保留已选择文件的颜色）
+				const prefixSegments = rebuildSegmentsWithFiles(prefix, relevantSelectedFiles);
 				const fileSegments = buildFileSegments(newPath, true);
-				const newSegments = prefix ? [{ text: prefix }, ...fileSegments] : fileSegments;
+				const newSegments = [...prefixSegments, ...fileSegments];
 				const newInstance: InputInstance = {
 					text: newText,
 					cursor: newText.length,
@@ -451,11 +499,20 @@ export function editorReducer(
 			}
 			// 在根级，退出文件模式，恢复前缀 + 后缀
 			const restoredText = prefix + suffix;
-			const exitInstance = restoredText
-				? updateInstanceFromText(restoredText, prefix.length, [], [])
-				: createEmptyInstance();
-			// 保留已选择的文件
-			exitInstance.selectedFiles = state.instance.selectedFiles;
+			// 使用 rebuildSegmentsWithFiles 重建 segments
+			const exitSegments = rebuildSegmentsWithFiles(
+				restoredText,
+				state.instance.selectedFiles,
+			);
+			const exitInstance: InputInstance = {
+				text: restoredText,
+				cursor: prefix.length,
+				type: "message",
+				segments: exitSegments,
+				commandPath: [],
+				filePath: [],
+				selectedFiles: state.instance.selectedFiles,
+			};
 			return {
 				...state,
 				instance: exitInstance,
@@ -469,18 +526,47 @@ export function editorReducer(
 			const { suffix } = state.uiMode;
 			// 将当前路径文本 + suffix 转换为普通消息
 			const currentText = state.instance.text + suffix;
-			const exitInstance = updateInstanceFromText(
+			// 使用 rebuildSegmentsWithFiles 重建 segments
+			const exitSegments = rebuildSegmentsWithFiles(
 				currentText,
-				state.instance.text.length, // 光标在原位置
-				[],
-				[],
+				state.instance.selectedFiles,
 			);
-			// 保留已选择的文件
-			exitInstance.selectedFiles = state.instance.selectedFiles;
+			const exitInstance: InputInstance = {
+				text: currentText,
+				cursor: state.instance.text.length, // 光标在原位置
+				type: "message",
+				segments: exitSegments,
+				commandPath: [],
+				filePath: [],
+				selectedFiles: state.instance.selectedFiles,
+			};
 			return {
 				...state,
 				instance: exitInstance,
 				uiMode: { type: "normal" },
+			};
+		}
+
+		case "REMOVE_SELECTED_FILE": {
+			// 删除已选择的文件（整体删除）
+			const { file } = action;
+			const result = removeSelectedFile(
+				state.instance.text,
+				file,
+				state.instance.selectedFiles,
+			);
+			const newInstance: InputInstance = {
+				text: result.text,
+				cursor: result.cursor,
+				type: "message",
+				segments: result.segments,
+				commandPath: [],
+				filePath: [],
+				selectedFiles: result.selectedFiles,
+			};
+			return {
+				...state,
+				instance: newInstance,
 			};
 		}
 

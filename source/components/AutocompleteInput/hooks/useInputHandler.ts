@@ -18,6 +18,9 @@ import {
 	isHelpMode,
 	buildFileText,
 	createCommandInstance,
+	findSelectedFileAtCursor,
+	findSelectedFileEndingAt,
+	findSelectedFileStartingAt,
 } from "../types.js";
 import type { FileItem } from "./useFileSelect.js";
 
@@ -114,10 +117,12 @@ export function useInputHandler({
 					if (selectedCmd.children && selectedCmd.children.length > 0) {
 						dispatch({ type: "ENTER_SLASH_LEVEL", name: selectedCmd.name });
 					} else {
-						// 选择最终命令：先更新 instance，再提交
+						// 选择最终命令并提交
+						// 注意：这里先 dispatch 更新状态（用于显示），然后创建相同的 instance 提交
+						// 提交后 handleSubmit 会 RESET 状态，所以两者创建的 instance 必须一致
 						const fullPath = [...commandPath, selectedCmd.name];
 						dispatch({ type: "SELECT_FINAL_COMMAND", name: selectedCmd.name });
-						// 创建命令实例并提交（包含彩色分段）
+						// 使用相同参数创建 instance 确保与 reducer 一致
 						const cmdInstance = createCommandInstance(fullPath, false);
 						onSubmit(cmdInstance);
 					}
@@ -138,8 +143,18 @@ export function useInputHandler({
 			const { filePath } = instance;
 			const { prefix } = uiMode;
 
-			// 处理 backspace
+			// 处理 backspace（使用相同的检测逻辑）
 			if (key.backspace || key.delete) {
+				// Windows 上 backspace 可能触发 key.delete，通过检查 inputChar 区分
+				const isBackspace =
+					key.backspace ||
+					(key.delete && (inputChar === "" || inputChar === "\b" || inputChar === "\x7f"));
+
+				// 只处理退格，不处理 delete 键
+				if (!isBackspace) {
+					return;
+				}
+
 				// 计算完整前缀长度（包括 @ 之前的文本 + 文件路径部分，如 "hello @assets\"）
 				const filePathText = buildFileText(filePath, true);
 				const fullPrefixLength = prefix.length + filePathText.length;
@@ -233,16 +248,69 @@ export function useInputHandler({
 		}
 
 		if (key.backspace || key.delete) {
-			if (cursor > 0) {
+			const { selectedFiles } = instance;
+			// Windows 上 backspace 可能触发 key.delete，通过检查 inputChar 区分
+			// Backspace: inputChar 是 '\b' (ASCII 8) 或 '\x7f' (ASCII 127) 或空字符串
+			// Delete: inputChar 通常是转义序列或特定字符
+			const isBackspace =
+				key.backspace ||
+				(key.delete && (inputChar === "" || inputChar === "\b" || inputChar === "\x7f"));
+			const isDelete = key.delete && !isBackspace;
+
+			if (isBackspace && cursor > 0) {
+				// 检查光标是否在某个已选择文件的末尾
+				const fileAtEnd = findSelectedFileEndingAt(cursor, selectedFiles, input);
+				if (fileAtEnd) {
+					// 整体删除该文件
+					dispatch({ type: "REMOVE_SELECTED_FILE", file: fileAtEnd });
+					return;
+				}
+				// 检查光标是否在某个已选择文件的内部（不应该发生，但防御性处理）
+				const fileAtCursor = findSelectedFileAtCursor(cursor, selectedFiles, input);
+				if (fileAtCursor) {
+					// 整体删除该文件
+					dispatch({ type: "REMOVE_SELECTED_FILE", file: fileAtCursor });
+					return;
+				}
+				// 普通退格
 				const newInput = input.slice(0, cursor - 1) + input.slice(cursor);
 				dispatch({ type: "SET_TEXT", text: newInput, cursor: cursor - 1 });
+				return;
+			}
+
+			if (isDelete && cursor < input.length) {
+				// 检查光标是否在某个已选择文件的开头
+				const fileAtStart = findSelectedFileStartingAt(cursor, selectedFiles, input);
+				if (fileAtStart) {
+					// 整体删除该文件
+					dispatch({ type: "REMOVE_SELECTED_FILE", file: fileAtStart });
+					return;
+				}
+				// 检查光标后一位是否在文件内部
+				const fileAtNext = findSelectedFileAtCursor(cursor + 1, selectedFiles, input);
+				if (fileAtNext) {
+					// 整体删除该文件
+					dispatch({ type: "REMOVE_SELECTED_FILE", file: fileAtNext });
+					return;
+				}
+				// 普通删除
+				const newInput = input.slice(0, cursor) + input.slice(cursor + 1);
+				dispatch({ type: "SET_TEXT", text: newInput, cursor });
+				return;
 			}
 			return;
 		}
 
 		if (key.leftArrow) {
 			if (cursor > 0) {
-				dispatch({ type: "SET_CURSOR", cursor: cursor - 1 });
+				const { selectedFiles } = instance;
+				let newCursor = cursor - 1;
+				// 检查新光标位置是否在某个文件区域内，如果是则跳到文件开头
+				const fileAtNewCursor = findSelectedFileAtCursor(newCursor, selectedFiles, input);
+				if (fileAtNewCursor) {
+					newCursor = fileAtNewCursor.atPosition;
+				}
+				dispatch({ type: "SET_CURSOR", cursor: newCursor });
 			}
 			return;
 		}
@@ -261,7 +329,14 @@ export function useInputHandler({
 					dispatch({ type: "SET_SUGGESTION", suggestion: remaining });
 				}
 			} else if (cursor < input.length) {
-				dispatch({ type: "SET_CURSOR", cursor: cursor + 1 });
+				const { selectedFiles } = instance;
+				let newCursor = cursor + 1;
+				// 检查新光标位置是否在某个文件区域内，如果是则跳到文件末尾
+				const fileAtNewCursor = findSelectedFileAtCursor(newCursor, selectedFiles, input);
+				if (fileAtNewCursor) {
+					newCursor = fileAtNewCursor.endPosition;
+				}
+				dispatch({ type: "SET_CURSOR", cursor: newCursor });
 			}
 			return;
 		}

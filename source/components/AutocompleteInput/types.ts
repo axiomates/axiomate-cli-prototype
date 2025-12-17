@@ -3,7 +3,7 @@
  */
 
 import type { UserInput } from "../../models/input.js";
-import type { InputInstance, HistoryEntry } from "../../models/inputInstance.js";
+import type { InputInstance, HistoryEntry, SelectedFile } from "../../models/inputInstance.js";
 
 // 重新导出 UserInput 相关类型
 export type { UserInput };
@@ -15,13 +15,10 @@ export {
 	createEmptyInstance,
 	createMessageInstance,
 	createCommandInstance,
-	createFileInstance,
 	updateInstanceFromText,
 	updateInstanceCursor,
 	enterCommandLevel,
 	exitCommandLevel,
-	enterFileLevel,
-	exitFileLevel,
 	buildCommandText,
 	buildCommandSegments,
 	buildFileText,
@@ -31,6 +28,10 @@ export {
 	toUserInput,
 	updateSelectedFilesPositions,
 	rebuildSegmentsWithFiles,
+	findSelectedFileAtCursor,
+	findSelectedFileEndingAt,
+	findSelectedFileStartingAt,
+	removeSelectedFile,
 } from "../../models/inputInstance.js";
 
 /**
@@ -110,6 +111,7 @@ export type EditorAction =
 	| { type: "CONFIRM_FOLDER" } // 选择当前文件夹（"." 条目）
 	| { type: "EXIT_FILE" }
 	| { type: "EXIT_FILE_KEEP_AT" } // 退出文件模式但保留 @ 符号
+	| { type: "REMOVE_SELECTED_FILE"; file: SelectedFile } // 删除已选择的文件（整体删除）
 	// 其他
 	| { type: "TOGGLE_HELP" }
 	| { type: "RESET" };

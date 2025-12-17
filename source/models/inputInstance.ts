@@ -115,27 +115,6 @@ export function createCommandInstance(
 	};
 }
 
-/**
- * 创建文件选择模式输入实例
- * @param path 文件路径，如 ["src", "components"]
- * @param trailing 是否包含尾部斜杠（表示目录）
- */
-export function createFileInstance(
-	path: string[] = [],
-	trailing: boolean = true,
-): InputInstance {
-	const text = buildFileText(path, trailing);
-	return {
-		text,
-		cursor: text.length,
-		type: "message",
-		segments: buildFileSegments(path, trailing),
-		commandPath: [],
-		filePath: path,
-		selectedFiles: [],
-	};
-}
-
 // ============================================================================
 // 更新函数
 // ============================================================================
@@ -237,47 +216,6 @@ export function exitCommandLevel(instance: InputInstance): InputInstance {
 		commandPath: newPath,
 		filePath: [],
 		selectedFiles: [],
-	};
-}
-
-/**
- * 进入下一级文件目录
- */
-export function enterFileLevel(
-	instance: InputInstance,
-	dirName: string,
-): InputInstance {
-	const newPath = [...instance.filePath, dirName];
-	const text = buildFileText(newPath, true);
-	return {
-		text,
-		cursor: text.length,
-		type: "message",
-		segments: buildFileSegments(newPath, true),
-		commandPath: [],
-		filePath: newPath,
-		selectedFiles: instance.selectedFiles,
-	};
-}
-
-/**
- * 退出当前文件目录级别
- */
-export function exitFileLevel(instance: InputInstance): InputInstance {
-	if (instance.filePath.length === 0) {
-		// 已经在根级，返回只有 @ 的状态
-		return createFileInstance([], true);
-	}
-	const newPath = instance.filePath.slice(0, -1);
-	const text = buildFileText(newPath, true);
-	return {
-		text,
-		cursor: text.length,
-		type: "message",
-		segments: buildFileSegments(newPath, true),
-		commandPath: [],
-		filePath: newPath,
-		selectedFiles: instance.selectedFiles,
 	};
 }
 
@@ -410,6 +348,124 @@ export function updateSelectedFilesPositions(
 			};
 		})
 		.filter((f): f is SelectedFile => f !== null);
+}
+
+/**
+ * 查找光标位置对应的 selectedFile
+ * @param text 当前文本（用于验证位置是否有效）
+ * @returns 如果光标在某个文件路径区域内（包括 @），返回该文件；否则返回 null
+ */
+export function findSelectedFileAtCursor(
+	cursor: number,
+	selectedFiles: SelectedFile[],
+	text: string,
+): SelectedFile | null {
+	for (const file of selectedFiles) {
+		// 检查光标是否在文件路径区域内（atPosition 是 @ 的位置，endPosition 是路径结束位置）
+		if (cursor > file.atPosition && cursor < file.endPosition) {
+			// 验证位置是否有效（文本在该位置确实是 @path）
+			const expectedText = "@" + file.path;
+			const actualText = text.substring(file.atPosition, file.endPosition);
+			if (expectedText === actualText) {
+				return file;
+			}
+		}
+	}
+	return null;
+}
+
+/**
+ * 检查光标是否紧邻某个 selectedFile 的末尾（用于退格删除判断）
+ * @param text 当前文本（用于验证位置是否有效）
+ * @returns 如果光标紧邻文件路径末尾，返回该文件；否则返回 null
+ */
+export function findSelectedFileEndingAt(
+	cursor: number,
+	selectedFiles: SelectedFile[],
+	text: string,
+): SelectedFile | null {
+	for (const file of selectedFiles) {
+		if (cursor === file.endPosition) {
+			// 验证位置是否有效（文本在该位置确实是 @path）
+			const expectedText = "@" + file.path;
+			const actualText = text.substring(file.atPosition, file.endPosition);
+			if (expectedText === actualText) {
+				return file;
+			}
+		}
+	}
+	return null;
+}
+
+/**
+ * 检查光标是否紧邻某个 selectedFile 的开头（用于删除键判断）
+ * @param text 当前文本（用于验证位置是否有效）
+ * @returns 如果光标紧邻文件路径开头（@ 位置），返回该文件；否则返回 null
+ */
+export function findSelectedFileStartingAt(
+	cursor: number,
+	selectedFiles: SelectedFile[],
+	text: string,
+): SelectedFile | null {
+	for (const file of selectedFiles) {
+		if (cursor === file.atPosition) {
+			// 验证位置是否有效（文本在该位置确实是 @path）
+			const expectedText = "@" + file.path;
+			const actualText = text.substring(file.atPosition, file.endPosition);
+			if (expectedText === actualText) {
+				return file;
+			}
+		}
+	}
+	return null;
+}
+
+/**
+ * 删除指定的 selectedFile 并重建文本和 segments
+ * @returns 新的 text, cursor, selectedFiles, segments
+ */
+export function removeSelectedFile(
+	text: string,
+	fileToRemove: SelectedFile,
+	selectedFiles: SelectedFile[],
+): {
+	text: string;
+	cursor: number;
+	selectedFiles: SelectedFile[];
+	segments: ColoredSegment[];
+} {
+	// 从文本中删除该文件路径（从 atPosition 到 endPosition）
+	const newText =
+		text.slice(0, fileToRemove.atPosition) + text.slice(fileToRemove.endPosition);
+
+	// 计算新光标位置（删除后光标在原文件位置）
+	const newCursor = fileToRemove.atPosition;
+
+	// 从 selectedFiles 中移除该文件，并更新其他文件的位置
+	const removedLength = fileToRemove.endPosition - fileToRemove.atPosition;
+	const newSelectedFiles = selectedFiles
+		.filter((f) => f !== fileToRemove)
+		.map((f) => {
+			if (f.atPosition > fileToRemove.atPosition) {
+				// 在被删除文件之后的文件，位置需要向前移动
+				return {
+					...f,
+					atPosition: f.atPosition - removedLength,
+					endPosition: f.endPosition - removedLength,
+				};
+			}
+			return f;
+		});
+
+	// 重建 segments
+	const newSegments = rebuildSegmentsWithFiles(newText, newSelectedFiles);
+
+	return {
+		text: newText,
+		cursor: newCursor,
+		selectedFiles: newSelectedFiles,
+		segments: newSegments,
+	};
 }
 
 /**
