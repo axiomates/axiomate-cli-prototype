@@ -15,8 +15,8 @@ import {
 	isHistoryMode,
 	isFileMode,
 	isHelpMode,
-	buildCommandText,
 	buildFileText,
+	createCommandInstance,
 } from "../types.js";
 import type { FileItem } from "./useFileSelect.js";
 
@@ -27,7 +27,7 @@ type UseInputHandlerOptions = {
 	filteredCommands: SlashCommand[];
 	filteredFiles: FileItem[];
 	effectiveSuggestion: string | null;
-	onSubmit: (value: string) => void;
+	onSubmit: (instance: InputInstance) => void;
 	onExit?: () => void;
 };
 
@@ -116,9 +116,9 @@ export function useInputHandler({
 						// 选择最终命令：先更新 instance，再提交
 						const fullPath = [...commandPath, selectedCmd.name];
 						dispatch({ type: "SELECT_FINAL_COMMAND", name: selectedCmd.name });
-						// 使用 buildCommandText 计算提交文本（与 reducer 逻辑一致）
-						const cmdText = buildCommandText(fullPath, false);
-						onSubmit(cmdText);
+						// 创建命令实例并提交（包含彩色分段）
+						const cmdInstance = createCommandInstance(fullPath, false);
+						onSubmit(cmdInstance);
 					}
 				}
 				return;
@@ -218,8 +218,8 @@ export function useInputHandler({
 		}
 
 		if (key.return) {
-			// 回车提交
-			onSubmit(input);
+			// 回车提交（传递完整的 InputInstance）
+			onSubmit(instance);
 			return;
 		}
 

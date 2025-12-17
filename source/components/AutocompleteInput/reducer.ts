@@ -88,14 +88,27 @@ export function editorReducer(
 				};
 			}
 
-			// 文件模式下更新，保持文件路径
+			// 文件模式下更新，保持文件路径并构建彩色分段
 			if (isFileMode(state.uiMode)) {
-				const newInstance = updateInstanceFromText(
+				const { prefix } = state.uiMode;
+				const filePathText = buildFileText(currentFilePath, true);
+				const fullPrefix = prefix + filePathText;
+				// 提取过滤文本（路径之后的输入）
+				const filterText =
+					text.length > fullPrefix.length ? text.slice(fullPrefix.length) : "";
+				// 构建彩色分段
+				const fileSegments = buildFileSegments(currentFilePath, true, filterText);
+				const newSegments = prefix
+					? [{ text: prefix }, ...fileSegments]
+					: fileSegments;
+				const newInstance: InputInstance = {
 					text,
 					cursor,
-					[],
-					currentFilePath,
-				);
+					type: "message",
+					segments: newSegments,
+					commandPath: [],
+					filePath: currentFilePath,
+				};
 				return {
 					...state,
 					instance: newInstance,
@@ -301,11 +314,22 @@ export function editorReducer(
 			// 构建完整文件路径，保留前缀
 			const { prefix } = state.uiMode;
 			const finalPath = [...state.instance.filePath, action.fileName];
-			const filePath = finalPath.join("\\");
-			// 最终文本：前缀 + 文件路径（不带 @，因为这是最终选择的文件）
-			const newText = prefix + filePath;
+			// 构建彩色分段（无尾部反斜杠，因为是最终文件）
+			const fileSegments = buildFileSegments(finalPath, false);
+			const newSegments = prefix
+				? [{ text: prefix }, ...fileSegments]
+				: fileSegments;
+			// 最终文本：前缀 + @ + 文件路径
+			const newText = prefix + buildFileText(finalPath, false);
 			const newCursor = newText.length;
-			const newInstance = updateInstanceFromText(newText, newCursor, [], []);
+			const newInstance: InputInstance = {
+				text: newText,
+				cursor: newCursor,
+				type: "message",
+				segments: newSegments,
+				commandPath: [],
+				filePath: [], // 退出文件模式，清空 filePath
+			};
 			return {
 				...state,
 				instance: newInstance,
@@ -317,12 +341,23 @@ export function editorReducer(
 			// 选择当前文件夹（"." 条目）
 			if (!isFileMode(state.uiMode)) return state;
 			const { prefix } = state.uiMode;
-			// 使用当前 filePath，不追加任何文件名
-			const folderPath = state.instance.filePath.join("\\");
-			// 最终文本：前缀 + 文件夹路径
-			const newText = prefix + folderPath;
+			const folderPath = state.instance.filePath;
+			// 构建彩色分段（无尾部反斜杠，因为是最终文件夹）
+			const fileSegments = buildFileSegments(folderPath, false);
+			const newSegments = prefix
+				? [{ text: prefix }, ...fileSegments]
+				: fileSegments;
+			// 最终文本：前缀 + @ + 文件夹路径
+			const newText = prefix + buildFileText(folderPath, false);
 			const newCursor = newText.length;
-			const newInstance = updateInstanceFromText(newText, newCursor, [], []);
+			const newInstance: InputInstance = {
+				text: newText,
+				cursor: newCursor,
+				type: "message",
+				segments: newSegments,
+				commandPath: [],
+				filePath: [], // 退出文件模式，清空 filePath
+			};
 			return {
 				...state,
 				instance: newInstance,

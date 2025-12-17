@@ -120,6 +120,23 @@ User Action → dispatch(EditorAction) → Reducer updates EditorState
                                     Render uses instance.segments directly
 ```
 
+#### InputInstance 唯一真相来源原则
+
+**规则：InputInstance 是输入系统的唯一真相来源**
+
+所有导致输入框内容变化的用户操作必须：
+1. 首先更新内存中的 `InputInstance`
+2. 然后基于 `InputInstance.segments` 进行渲染
+
+这确保了：
+- 历史记录存储实际的 instance（带彩色分段）
+- 从历史恢复时显示与原始输入完全一致
+- 不需要从文本重新解析来重建状态
+
+**禁止**从文本解析创建显示状态 - 始终从 `InputInstance` 派生。
+
+示例：提交时传递完整的 `InputInstance` 而非文本字符串，历史记录直接存储该实例。
+
 ### Editor State
 
 Defined in `AutocompleteInput/types.ts`:

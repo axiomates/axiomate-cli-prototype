@@ -311,15 +311,21 @@ export function buildFileText(path: string[], trailing: boolean): string {
  * 根据文件路径构建带颜色的分段
  * @param path 文件路径数组
  * @param trailing 是否包含尾部反斜杠
+ * @param filterText 可选的过滤文本（路径后的输入）
  */
 export function buildFileSegments(
 	path: string[],
 	trailing: boolean,
+	filterText?: string,
 ): ColoredSegment[] {
 	// 始终以 @ 开头（浅蓝色）
 	const segments: ColoredSegment[] = [{ text: "@", color: FILE_AT_COLOR }];
 
 	if (path.length === 0) {
+		// 如果有过滤文本，追加为普通文本
+		if (filterText) {
+			segments.push({ text: filterText });
+		}
 		return segments;
 	}
 
@@ -329,6 +335,11 @@ export function buildFileSegments(
 		if (i < path.length - 1 || trailing) {
 			segments.push({ text: "\\", color: ARROW_COLOR });
 		}
+	}
+
+	// 如果有过滤文本，追加为普通文本
+	if (filterText) {
+		segments.push({ text: filterText });
 	}
 
 	return segments;

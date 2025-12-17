@@ -10,8 +10,6 @@ import useTerminalWidth from "../../hooks/useTerminalWidth.js";
 import { createMessageInput, createCommandInput } from "../../models/input.js";
 import { segmentsToRanges } from "../../models/richInput.js";
 import {
-	createMessageInstance,
-	createCommandInstance,
 	buildFileText,
 	type InputInstance,
 } from "../../models/inputInstance.js";
@@ -112,12 +110,13 @@ export default function AutocompleteInput({
 		fileFilter,
 	);
 
-	// 处理提交
+	// 处理提交（接收完整的 InputInstance，保留彩色分段）
 	const handleSubmit = useCallback(
-		(value: string) => {
+		(submittedInstance: InputInstance) => {
+			const value = submittedInstance.text;
 			if (!value.trim()) return;
 
-			// 添加到历史记录（存储完整的 InputInstance）
+			// 添加到历史记录 - 直接存储 instance，保留彩色分段
 			// "?" 输入不存入历史
 			if (value.trim() !== "?") {
 				setHistory((prev) => {
@@ -126,24 +125,8 @@ export default function AutocompleteInput({
 					const filtered = prev.filter(
 						(entry) => entry.text.trim() !== trimmedText,
 					);
-
-					// 创建新的 InputInstance 用于历史记录
-					// 注意：虽然 SELECT_FINAL_COMMAND 已更新 instance，但 dispatch 是异步的
-					// 所以这里仍需从 value 解析（value 由 buildCommandText 生成，逻辑一致）
-					let newEntry: InputInstance;
-					if (value.startsWith("/")) {
-						const parsedPath = value
-							.slice(1)
-							.split(/\s*→\s*/)
-							.map((s) => s.trim())
-							.filter(Boolean);
-						newEntry = createCommandInstance(parsedPath, false);
-					} else {
-						// 消息类型
-						newEntry = createMessageInstance(trimmedText);
-					}
-
-					return [...filtered, newEntry];
+					// 直接使用传入的 instance（已包含正确的 segments）
+					return [...filtered, submittedInstance];
 				});
 			}
 
@@ -152,12 +135,15 @@ export default function AutocompleteInput({
 
 			// 处理斜杠命令（内部命令）
 			if (value.startsWith("/")) {
-				// 从 value 解析路径（value 由 buildCommandText 生成，与 instance 一致）
-				const path = value
-					.slice(1)
-					.split(/\s*→\s*/)
-					.map((s) => s.trim())
-					.filter(Boolean);
+				// 使用 instance.commandPath（如果有）或从文本解析
+				const path =
+					submittedInstance.commandPath.length > 0
+						? submittedInstance.commandPath
+						: value
+								.slice(1)
+								.split(/\s*→\s*/)
+								.map((s) => s.trim())
+								.filter(Boolean);
 				const userInput = createCommandInput(path, value);
 				onSubmit?.(userInput);
 
