@@ -4,7 +4,7 @@ This file provides guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-axiomate-cli is a terminal-based AI agent application built with React + Ink. It provides an interactive CLI interface with autocomplete, slash commands, and structured input handling using a data-driven architecture.
+axiomate-cli is a terminal-based AI agent application built with React + Ink. It provides an interactive CLI interface with autocomplete, slash commands, file selection, and structured input handling using a data-driven architecture.
 
 ## Tech Stack
 
@@ -23,6 +23,7 @@ npm start          # Run the CLI
 npm test           # Run tests
 npm run lint       # Check code style
 npm run lint:fix   # Auto-fix lint issues
+npm run package    # Build standalone executable (requires Bun)
 ```
 
 ## Project Structure
@@ -38,12 +39,14 @@ source/
 │   │   ├── reducer.ts         # State machine reducer (editorReducer)
 │   │   ├── hooks/
 │   │   │   ├── useAutocomplete.ts  # Autocomplete logic
-│   │   │   └── useInputHandler.ts  # Keyboard input handling
+│   │   │   ├── useInputHandler.ts  # Keyboard input handling
+│   │   │   └── useFileSelect.ts    # File system reading for @ selection
 │   │   ├── utils/
 │   │   │   └── lineProcessor.ts    # Line wrapping calculations
 │   │   └── components/
 │   │       ├── InputLine.tsx       # Input line rendering with colors
 │   │       ├── SlashMenu.tsx       # Slash command menu
+│   │       ├── FileMenu.tsx        # File selection menu (@ trigger)
 │   │       └── HelpPanel.tsx       # Keyboard shortcuts help
 │   ├── Divider.tsx            # Horizontal divider
 │   ├── Header.tsx             # App header
@@ -59,6 +62,25 @@ source/
 ├── hooks/                     # React hooks (useTerminalWidth/Height)
 ├── utils/                     # Utilities (config, logger, appdata)
 └── types/                     # .d.ts type declarations for untyped libs
+```
+
+## Application Layout
+
+The application is divided into four vertical sections:
+
+```
+┌─────────────────────────────┐
+│ Header (标题栏)              │
+├─────────────────────────────┤
+│ Output Area (输出区域)       │
+├─────────────────────────────┤
+│ Input Area (输入区域)        │
+├─────────────────────────────┤
+│ Selection List (选择列表)    │  ← Mode-dependent content
+│   - SlashMenu (/ commands)  │
+│   - FileMenu  (@ files)     │
+│   - HelpPanel (? help)      │
+└─────────────────────────────┘
 ```
 
 ## Key Architecture
@@ -113,6 +135,7 @@ type UIMode =
   | { type: "normal" }
   | { type: "history"; index: number; savedInstance: InputInstance }
   | { type: "slash"; selectedIndex: number }
+  | { type: "file"; selectedIndex: number; basePath: string; atPosition: number }
   | { type: "help" };
 ```
 
@@ -123,7 +146,20 @@ type UIMode =
 | `normal`  | default | Regular input with autocomplete      |
 | `history` | ↑/↓     | Browse command history (restores full InputInstance) |
 | `slash`   | `/`     | Navigate hierarchical commands       |
+| `file`    | `@`     | Navigate file system for selection   |
 | `help`    | `?`     | Display shortcuts overlay            |
+
+### Selection List System
+
+Both slash commands and file selection share similar interaction patterns:
+
+| Feature | Slash Mode (`/`) | File Mode (`@`) |
+|---------|------------------|-----------------|
+| Data Source | Static command config | Async file system |
+| Enter | Next level / Execute | Enter directory / Select file |
+| Escape | Back one level / Exit | Back one level / Exit |
+| ↑/↓ | Navigate commands | Navigate files |
+| Component | `SlashMenu` | `FileMenu` |
 
 ### History System
 
@@ -167,6 +203,40 @@ type CommandAction =
 
 Example: `/model → openai → gpt-4` with path `["model", "openai", "gpt-4"]`
 
+### File Selection
+
+File selection is triggered by `@` and provides hierarchical navigation:
+
+```typescript
+// useFileSelect hook returns
+type FileItem = {
+  name: string;
+  isDirectory: boolean;
+  path: string;
+};
+
+// File mode state
+type FileUIMode = {
+  type: "file";
+  selectedIndex: number;
+  basePath: string;      // Current directory path
+  atPosition: number;    // Position of @ in input text
+};
+```
+
+**File Selection Flow:**
+```
+User types @
+    ↓
+ENTER_FILE action → file mode activated
+    ↓
+useFileSelect reads current directory
+    ↓
+User navigates with ↑/↓, enters directories
+    ↓
+CONFIRM_FILE → file path inserted at @ position
+```
+
 ### Command Handler
 
 Command execution is handled by `services/commandHandler.ts`:
@@ -183,19 +253,6 @@ type CommandResult =
 executeCommand(path: string[], context: CommandContext): CommandResult
 ```
 
-**Command Flow:**
-```
-User selects /compact
-    ↓
-CommandInput { command: ["compact"] }
-    ↓
-executeCommand() finds action = { type: "prompt", template: "..." }
-    ↓
-Returns { type: "prompt", content: "请帮我总结..." }
-    ↓
-App calls sendToAI(content)
-```
-
 ### Color Rendering
 
 Colors are stored in `InputInstance.segments` and converted to `ColorRange[]` for rendering:
@@ -208,6 +265,10 @@ type ColorRange = { start: number; end: number; color?: string };
 Color constants (in `richInput.ts`):
 - `PATH_COLOR = "#ffd700"` - Command path color (gold)
 - `ARROW_COLOR = "gray"` - Arrow separator color
+
+File colors (in `FileMenu.tsx`):
+- `FILE_COLOR = "#87ceeb"` - File color (light blue)
+- `DIR_COLOR = "#ffd700"` - Directory color (gold)
 
 ### Component Communication
 
@@ -244,11 +305,15 @@ AutocompleteInput
 3. Update `editorReducer` in `reducer.ts` to handle transitions
 4. Add mode detection helper in `types.ts` (e.g., `isNewMode()`)
 5. Handle keyboard events in `hooks/useInputHandler.ts`
+6. Create selection menu component in `components/` if needed
+7. Add hook for data fetching if needed (e.g., `useFileSelect.ts`)
+8. Integrate in `AutocompleteInput/index.tsx`
 
 ### Modifying input handling
 
 - Keyboard logic: `AutocompleteInput/hooks/useInputHandler.ts`
 - Autocomplete logic: `AutocompleteInput/hooks/useAutocomplete.ts`
+- File selection: `AutocompleteInput/hooks/useFileSelect.ts`
 - State transitions: `AutocompleteInput/reducer.ts`
 - Command execution: `services/commandHandler.ts`
 - Submit handling: `App.tsx` `handleSubmit` callback
@@ -266,5 +331,10 @@ AutocompleteInput
 | `ENTER_SLASH_LEVEL` | Enter next command level (has children) |
 | `SELECT_FINAL_COMMAND` | Select leaf command (no children) |
 | `EXIT_SLASH_LEVEL` | Go back one level or exit slash mode |
+| `ENTER_FILE` | Enter file selection mode |
+| `SELECT_FILE` | Navigate file list |
+| `ENTER_FILE_DIR` | Enter subdirectory |
+| `CONFIRM_FILE` | Select file and insert path |
+| `EXIT_FILE` | Go back one level or exit file mode |
 | `TOGGLE_HELP` | Toggle help panel |
 | `RESET` | Reset to initial state |

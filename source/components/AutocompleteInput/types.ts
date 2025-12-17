@@ -50,12 +50,14 @@ export type SlashCommand = {
  * - normal: 普通输入模式（带自动补全）
  * - history: 历史浏览模式（上下键浏览历史记录）
  * - slash: 斜杠命令选择模式（选择索引存在这里）
+ * - file: 文件选择模式（@ 触发）
  * - help: 快捷键帮助模式
  */
 export type UIMode =
 	| { type: "normal" }
 	| { type: "history"; index: number; savedInstance: InputInstance }
 	| { type: "slash"; selectedIndex: number }
+	| { type: "file"; selectedIndex: number; basePath: string; atPosition: number }
 	| { type: "help" };
 
 /**
@@ -90,6 +92,12 @@ export type EditorAction =
 	| { type: "ENTER_SLASH_LEVEL"; name: string }
 	| { type: "SELECT_FINAL_COMMAND"; name: string } // 选择最终命令（无子命令）
 	| { type: "EXIT_SLASH_LEVEL" }
+	// 文件选择操作
+	| { type: "ENTER_FILE"; basePath: string; atPosition: number }
+	| { type: "SELECT_FILE"; index: number }
+	| { type: "ENTER_FILE_DIR"; dirName: string }
+	| { type: "CONFIRM_FILE"; fileName: string }
+	| { type: "EXIT_FILE" }
 	// 其他
 	| { type: "TOGGLE_HELP" }
 	| { type: "RESET" };
@@ -121,6 +129,11 @@ export const isHistoryMode = (
 export const isSlashMode = (
 	mode: UIMode,
 ): mode is { type: "slash"; selectedIndex: number } => mode.type === "slash";
+
+export const isFileMode = (
+	mode: UIMode,
+): mode is { type: "file"; selectedIndex: number; basePath: string; atPosition: number } =>
+	mode.type === "file";
 
 export const isHelpMode = (mode: UIMode): mode is { type: "help" } =>
 	mode.type === "help";

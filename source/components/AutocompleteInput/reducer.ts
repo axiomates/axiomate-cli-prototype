@@ -10,6 +10,7 @@ import {
 	isNormalMode,
 	isHistoryMode,
 	isSlashMode,
+	isFileMode,
 	isHelpMode,
 	createEmptyInstance,
 	updateInstanceFromText,
@@ -18,6 +19,7 @@ import {
 	exitCommandLevel,
 	createCommandInstance,
 } from "./types.js";
+import { join, dirname } from "path";
 
 /**
  * 初始状态
@@ -202,6 +204,95 @@ export function editorReducer(
 				return { ...state, uiMode: { type: "normal" } };
 			}
 			return { ...state, uiMode: { type: "help" } };
+
+		// ====================================================================
+		// 文件选择操作
+		// ====================================================================
+
+		case "ENTER_FILE":
+			return {
+				...state,
+				suggestion: null,
+				uiMode: {
+					type: "file",
+					selectedIndex: 0,
+					basePath: action.basePath,
+					atPosition: action.atPosition,
+				},
+			};
+
+		case "SELECT_FILE":
+			if (!isFileMode(state.uiMode)) return state;
+			return {
+				...state,
+				uiMode: { ...state.uiMode, selectedIndex: action.index },
+			};
+
+		case "ENTER_FILE_DIR": {
+			if (!isFileMode(state.uiMode)) return state;
+			const newBasePath = state.uiMode.basePath
+				? join(state.uiMode.basePath, action.dirName)
+				: action.dirName;
+			return {
+				...state,
+				uiMode: {
+					...state.uiMode,
+					selectedIndex: 0,
+					basePath: newBasePath,
+				},
+			};
+		}
+
+		case "CONFIRM_FILE": {
+			if (!isFileMode(state.uiMode)) return state;
+			// 构建完整文件路径
+			const filePath = state.uiMode.basePath
+				? join(state.uiMode.basePath, action.fileName)
+				: action.fileName;
+			// 将文件路径插入到 @ 位置
+			const { atPosition } = state.uiMode;
+			const beforeAt = state.instance.text.slice(0, atPosition);
+			const afterAt = state.instance.text.slice(atPosition + 1); // +1 跳过 @
+			// 查找 @ 后的过滤文本结束位置（空格或末尾）
+			const filterEndMatch = afterAt.match(/^[^\s]*/);
+			const filterLength = filterEndMatch ? filterEndMatch[0].length : 0;
+			const afterFilter = afterAt.slice(filterLength);
+			const newText = beforeAt + filePath + afterFilter;
+			const newCursor = beforeAt.length + filePath.length;
+			const newInstance = updateInstanceFromText(newText, newCursor, []);
+			return {
+				...state,
+				instance: newInstance,
+				uiMode: { type: "normal" },
+			};
+		}
+
+		case "EXIT_FILE": {
+			if (!isFileMode(state.uiMode)) return state;
+			// 如果有父目录，返回上一级；否则退出文件模式
+			const { basePath, atPosition } = state.uiMode;
+			if (basePath && basePath !== ".") {
+				const parentPath = dirname(basePath);
+				return {
+					...state,
+					uiMode: {
+						...state.uiMode,
+						selectedIndex: 0,
+						basePath: parentPath === "." ? "" : parentPath,
+					},
+				};
+			}
+			// 退出文件模式，移除 @ 符号
+			const beforeAt = state.instance.text.slice(0, atPosition);
+			const afterAt = state.instance.text.slice(atPosition + 1);
+			const newText = beforeAt + afterAt;
+			const newInstance = updateInstanceFromText(newText, atPosition, []);
+			return {
+				...state,
+				instance: newInstance,
+				uiMode: { type: "normal" },
+			};
+		}
 
 		case "RESET":
 			return initialState;

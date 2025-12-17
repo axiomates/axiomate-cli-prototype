@@ -13,15 +13,18 @@ import type {
 import {
 	isSlashMode,
 	isHistoryMode,
+	isFileMode,
 	isHelpMode,
 	buildCommandText,
 } from "../types.js";
+import type { FileItem } from "./useFileSelect.js";
 
 type UseInputHandlerOptions = {
 	state: EditorState;
 	dispatch: React.Dispatch<EditorAction>;
 	history: InputInstance[];
 	filteredCommands: SlashCommand[];
+	filteredFiles: FileItem[];
 	effectiveSuggestion: string | null;
 	onSubmit: (value: string) => void;
 	onExit?: () => void;
@@ -35,6 +38,7 @@ export function useInputHandler({
 	dispatch,
 	history,
 	filteredCommands,
+	filteredFiles,
 	effectiveSuggestion,
 	onSubmit,
 	onExit,
@@ -48,8 +52,13 @@ export function useInputHandler({
 	// 模式判断
 	const inSlashMode = isSlashMode(uiMode);
 	const inHistoryMode = isHistoryMode(uiMode);
+	const inFileMode = isFileMode(uiMode);
 	const inHelpMode = isHelpMode(uiMode);
-	const selectedIndex = inSlashMode ? uiMode.selectedIndex : 0;
+	const selectedIndex = inSlashMode
+		? uiMode.selectedIndex
+		: inFileMode
+			? uiMode.selectedIndex
+			: 0;
 	const historyIndex = inHistoryMode ? uiMode.index : -1;
 
 	const handleExit = useCallback(() => {
@@ -117,6 +126,43 @@ export function useInputHandler({
 			if (key.escape) {
 				// Escape 返回上一层或退出
 				dispatch({ type: "EXIT_SLASH_LEVEL" });
+				return;
+			}
+		}
+
+		// 文件选择模式下的特殊处理
+		if (inFileMode && filteredFiles.length > 0) {
+			if (key.upArrow) {
+				const newIndex =
+					selectedIndex > 0 ? selectedIndex - 1 : filteredFiles.length - 1;
+				dispatch({ type: "SELECT_FILE", index: newIndex });
+				return;
+			}
+
+			if (key.downArrow) {
+				const newIndex =
+					selectedIndex < filteredFiles.length - 1 ? selectedIndex + 1 : 0;
+				dispatch({ type: "SELECT_FILE", index: newIndex });
+				return;
+			}
+
+			if (key.return) {
+				const selectedFile = filteredFiles[selectedIndex];
+				if (selectedFile) {
+					if (selectedFile.isDirectory) {
+						// 进入子目录
+						dispatch({ type: "ENTER_FILE_DIR", dirName: selectedFile.name });
+					} else {
+						// 确认选择文件
+						dispatch({ type: "CONFIRM_FILE", fileName: selectedFile.name });
+					}
+				}
+				return;
+			}
+
+			if (key.escape) {
+				// Escape 返回上一层或退出文件模式
+				dispatch({ type: "EXIT_FILE" });
 				return;
 			}
 		}
@@ -262,6 +308,26 @@ export function useInputHandler({
 				dispatch({ type: "TOGGLE_HELP" });
 				return;
 			}
+
+			// 输入 @ 时进入文件选择模式（不在斜杠模式或文件模式时）
+			if (inputChar === "@" && !inSlashMode && !inFileMode) {
+				// 先插入 @ 字符
+				const newInput =
+					input.slice(0, cursor) + inputChar + input.slice(cursor);
+				dispatch({
+					type: "SET_TEXT",
+					text: newInput,
+					cursor: cursor + 1,
+				});
+				// 进入文件选择模式
+				dispatch({
+					type: "ENTER_FILE",
+					basePath: "",
+					atPosition: cursor,
+				});
+				return;
+			}
+
 			// 插入字符
 			const newInput = input.slice(0, cursor) + inputChar + input.slice(cursor);
 			dispatch({

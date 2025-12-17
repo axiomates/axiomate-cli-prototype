@@ -17,7 +17,7 @@ import {
 
 // Types
 import type { AutocompleteInputProps } from "./types.js";
-import { isSlashMode, isHistoryMode, isHelpMode } from "./types.js";
+import { isSlashMode, isHistoryMode, isFileMode, isHelpMode } from "./types.js";
 
 // Re-exports
 export type {
@@ -34,6 +34,7 @@ import { editorReducer, initialState } from "./reducer.js";
 // Hooks
 import { useAutocomplete } from "./hooks/useAutocomplete.js";
 import { useInputHandler } from "./hooks/useInputHandler.js";
+import { useFileSelect } from "./hooks/useFileSelect.js";
 
 // Utils
 import { processLines, getInputEndInfo } from "./utils/lineProcessor.js";
@@ -41,6 +42,7 @@ import { processLines, getInputEndInfo } from "./utils/lineProcessor.js";
 // Components
 import { InputLine } from "./components/InputLine.js";
 import { SlashMenu } from "./components/SlashMenu.js";
+import { FileMenu } from "./components/FileMenu.js";
 import { HelpPanel } from "./components/HelpPanel.js";
 
 export default function AutocompleteInput({
@@ -63,11 +65,24 @@ export default function AutocompleteInput({
 
 	// 模式判断（派生状态）
 	const inSlashMode = isSlashMode(uiMode);
+	const inFileMode = isFileMode(uiMode);
 	const inHelpMode = isHelpMode(uiMode);
 	const inHistoryMode = isHistoryMode(uiMode);
 
 	// 获取当前选中的命令索引
 	const selectedIndex = isSlashMode(uiMode) ? uiMode.selectedIndex : 0;
+	const fileSelectedIndex = isFileMode(uiMode) ? uiMode.selectedIndex : 0;
+
+	// 文件选择相关状态
+	const fileBasePath = isFileMode(uiMode) ? uiMode.basePath : "";
+	const fileFilter = useMemo(() => {
+		if (!isFileMode(uiMode)) return "";
+		// 提取 @ 后面的过滤文本
+		const atPos = uiMode.atPosition;
+		const afterAt = input.slice(atPos + 1);
+		const match = afterAt.match(/^[^\s]*/);
+		return match ? match[0] : "";
+	}, [uiMode, input]);
 
 	// 自动补全 Hook
 	const { effectiveSuggestion, filteredCommands, slashSuggestion } =
@@ -76,6 +91,12 @@ export default function AutocompleteInput({
 			dispatch,
 			slashCommands,
 		});
+
+	// 文件选择 Hook
+	const { files: filteredFiles, loading: filesLoading } = useFileSelect(
+		fileBasePath,
+		fileFilter,
+	);
 
 	// 处理提交
 	const handleSubmit = useCallback(
@@ -165,6 +186,7 @@ export default function AutocompleteInput({
 		dispatch,
 		history,
 		filteredCommands,
+		filteredFiles,
 		effectiveSuggestion,
 		onSubmit: handleSubmit,
 		onExit,
@@ -226,6 +248,18 @@ export default function AutocompleteInput({
 					path={commandPath}
 					columns={columns}
 					promptIndent={promptIndent}
+				/>
+			)}
+
+			{/* 文件选择列表 */}
+			{inFileMode && (
+				<FileMenu
+					files={filteredFiles}
+					selectedIndex={fileSelectedIndex}
+					basePath={fileBasePath}
+					columns={columns}
+					promptIndent={promptIndent}
+					loading={filesLoading}
 				/>
 			)}
 

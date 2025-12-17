@@ -1,13 +1,14 @@
 # axiomate-cli
 
-A terminal-based CLI application built with [Ink](https://github.com/vadimdemedes/ink) and React, featuring a data-driven input system with colored slash commands and history support.
+A terminal-based CLI application built with [Ink](https://github.com/vadimdemedes/ink) and React, featuring a data-driven input system with slash commands, file selection, and history support.
 
 ## Features
 
-- Interactive terminal UI with fixed layout
+- Interactive terminal UI with fixed layout (Header, Output, Input, Selection List)
 - **Data-driven input system** with `InputInstance` model
 - Auto-completion support with async provider
 - Hierarchical slash commands with colored rendering (`/model → openai → gpt-4`)
+- **File selection** with `@` trigger for quick file path insertion
 - Command history with full state restoration (including colors)
 - Keyboard shortcuts (Ctrl+C, Ctrl+U, Ctrl+K, etc.)
 - Responsive layout that adapts to terminal size
@@ -15,6 +16,7 @@ A terminal-based CLI application built with [Ink](https://github.com/vadimdemede
 ## Requirements
 
 - Node.js >= 20
+- Bun (optional, for building standalone executable)
 
 ## Install
 
@@ -34,6 +36,16 @@ Or run directly:
 ```bash
 node dist/cli.js
 ```
+
+### Standalone Executable
+
+Build a standalone executable (requires [Bun](https://bun.sh)):
+
+```bash
+npm run package
+```
+
+This creates `bundle/axiomate-cli.exe` (Windows) or `bundle/axiomate-cli` (macOS/Linux).
 
 ### Command Line Options
 
@@ -78,21 +90,32 @@ Type `/` to see available slash commands. Use arrow keys to select and Enter to 
 
 Slash commands support nested hierarchy (e.g., `/model → openai → gpt-4`) with colored path display.
 
+### File Selection
+
+Type `@` to open the file selection menu. Navigate directories and select files to insert their paths into your input.
+
+- Use `↑/↓` to navigate files and folders
+- Press `Enter` to enter a directory or select a file
+- Press `Escape` to go back one level or exit file mode
+- Folders are shown with 📁 icon, files with 📄 icon
+
 ## Keyboard Shortcuts
 
 | Shortcut     | Action                                             |
 | ------------ | -------------------------------------------------- |
+| `/`          | Open slash command menu                            |
+| `@`          | Open file selection menu                           |
 | `Tab`        | Accept autocomplete suggestion                     |
 | `→`          | Accept one character from suggestion               |
 | `←` / `→`    | Move cursor left/right                             |
-| `↑` / `↓`    | Navigate command history / slash command list      |
+| `↑` / `↓`    | Navigate history / command list / file list        |
 | `Ctrl+Enter` | Insert new line                                    |
 | `Ctrl+A`     | Move cursor to line start                          |
 | `Ctrl+E`     | Move cursor to line end                            |
 | `Ctrl+U`     | Clear text before cursor                           |
 | `Ctrl+K`     | Clear text after cursor                            |
 | `Ctrl+C`     | Exit application                                   |
-| `Escape`     | Clear suggestion / exit slash mode / close help    |
+| `Escape`     | Clear suggestion / exit current mode / close help  |
 | `?`          | Show keyboard shortcuts help (when input is empty) |
 
 ## Development
@@ -115,9 +138,29 @@ npm run lint
 
 # Fix lint issues
 npm run lint:fix
+
+# Build standalone executable
+npm run package
 ```
 
 ## Architecture
+
+### Application Layout
+
+```
+┌─────────────────────────────┐
+│ Header                      │
+├─────────────────────────────┤
+│ Output Area                 │
+├─────────────────────────────┤
+│ Input Area                  │
+├─────────────────────────────┤
+│ Selection List              │  ← Changes based on mode
+│   - SlashMenu (/ commands)  │
+│   - FileMenu  (@ files)     │
+│   - HelpPanel (? help)      │
+└─────────────────────────────┘
+```
 
 ### Input System
 
@@ -149,6 +192,7 @@ All user operations first update the `InputInstance`, then rendering reads from 
 | `normal`  | Default   | Regular input with autocomplete              |
 | `history` | `↑` / `↓` | Browse history (restores full InputInstance) |
 | `slash`   | `/`       | Navigate hierarchical slash commands         |
+| `file`    | `@`       | Navigate file system for selection           |
 | `help`    | `?`       | Display keyboard shortcuts (overlay)         |
 
 ### History System
@@ -183,9 +227,9 @@ source/
 │   │   ├── index.tsx          # Main component
 │   │   ├── types.ts           # EditorState, UIMode, EditorAction
 │   │   ├── reducer.ts         # State machine (editorReducer)
-│   │   ├── hooks/             # useAutocomplete, useInputHandler
+│   │   ├── hooks/             # useAutocomplete, useInputHandler, useFileSelect
 │   │   ├── utils/             # lineProcessor
-│   │   └── components/        # InputLine, SlashMenu, HelpPanel
+│   │   └── components/        # InputLine, SlashMenu, FileMenu, HelpPanel
 │   ├── Divider.tsx            # Separator line
 │   ├── Header.tsx             # Title bar
 │   └── MessageOutput.tsx      # Message display area
@@ -205,3 +249,4 @@ source/
 - [meow](https://github.com/sindresorhus/meow) - CLI argument parsing
 - [TypeScript](https://www.typescriptlang.org/) - Type safety
 - [Vitest](https://vitest.dev/) - Testing framework
+- [Bun](https://bun.sh/) - Standalone executable packaging (optional)
