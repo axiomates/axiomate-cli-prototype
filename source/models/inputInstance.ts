@@ -4,7 +4,7 @@
  */
 
 import type { ColoredSegment } from "./richInput.js";
-import { PATH_COLOR, ARROW_COLOR } from "./richInput.js";
+import { PATH_COLOR, ARROW_COLOR, FILE_AT_COLOR } from "./richInput.js";
 
 /**
  * 输入类型
@@ -30,6 +30,9 @@ export type InputInstance = {
 
 	/** 命令路径（仅 type='command' 时有意义） */
 	commandPath: string[];
+
+	/** 文件路径（文件选择模式下的导航路径） */
+	filePath: string[];
 };
 
 // ============================================================================
@@ -46,6 +49,7 @@ export function createEmptyInstance(): InputInstance {
 		type: "message",
 		segments: [],
 		commandPath: [],
+		filePath: [],
 	};
 }
 
@@ -62,6 +66,7 @@ export function createMessageInstance(
 		type: "message",
 		segments: text ? [{ text }] : [],
 		commandPath: [],
+		filePath: [],
 	};
 }
 
@@ -81,6 +86,27 @@ export function createCommandInstance(
 		type: "command",
 		segments: buildCommandSegments(path, trailing),
 		commandPath: path,
+		filePath: [],
+	};
+}
+
+/**
+ * 创建文件选择模式输入实例
+ * @param path 文件路径，如 ["src", "components"]
+ * @param trailing 是否包含尾部斜杠（表示目录）
+ */
+export function createFileInstance(
+	path: string[] = [],
+	trailing: boolean = true,
+): InputInstance {
+	const text = buildFileText(path, trailing);
+	return {
+		text,
+		cursor: text.length,
+		type: "message",
+		segments: buildFileSegments(path, trailing),
+		commandPath: [],
+		filePath: path,
 	};
 }
 
@@ -93,11 +119,13 @@ export function createCommandInstance(
  * @param text 新的文本内容
  * @param cursor 光标位置
  * @param currentPath 当前命令路径（用于命令模式）
+ * @param currentFilePath 当前文件路径（用于文件选择模式）
  */
 export function updateInstanceFromText(
 	text: string,
 	cursor: number,
 	currentPath: string[] = [],
+	currentFilePath: string[] = [],
 ): InputInstance {
 	if (text.startsWith("/")) {
 		// 命令模式：保持现有路径，segments 基于路径生成
@@ -107,6 +135,18 @@ export function updateInstanceFromText(
 			type: "command",
 			segments: buildCommandSegments(currentPath, false),
 			commandPath: currentPath,
+			filePath: [],
+		};
+	}
+	// 文件选择模式：保持现有文件路径，segments 基于路径生成
+	if (currentFilePath.length > 0) {
+		return {
+			text,
+			cursor,
+			type: "message",
+			segments: buildFileSegments(currentFilePath, true),
+			commandPath: [],
+			filePath: currentFilePath,
 		};
 	}
 	// 消息模式
@@ -116,6 +156,7 @@ export function updateInstanceFromText(
 		type: "message",
 		segments: text ? [{ text }] : [],
 		commandPath: [],
+		filePath: [],
 	};
 }
 
@@ -144,6 +185,7 @@ export function enterCommandLevel(
 		type: "command",
 		segments: buildCommandSegments(newPath, true),
 		commandPath: newPath,
+		filePath: [],
 	};
 }
 
@@ -163,6 +205,46 @@ export function exitCommandLevel(instance: InputInstance): InputInstance {
 		type: "command",
 		segments: buildCommandSegments(newPath, true),
 		commandPath: newPath,
+		filePath: [],
+	};
+}
+
+/**
+ * 进入下一级文件目录
+ */
+export function enterFileLevel(
+	instance: InputInstance,
+	dirName: string,
+): InputInstance {
+	const newPath = [...instance.filePath, dirName];
+	const text = buildFileText(newPath, true);
+	return {
+		text,
+		cursor: text.length,
+		type: "message",
+		segments: buildFileSegments(newPath, true),
+		commandPath: [],
+		filePath: newPath,
+	};
+}
+
+/**
+ * 退出当前文件目录级别
+ */
+export function exitFileLevel(instance: InputInstance): InputInstance {
+	if (instance.filePath.length === 0) {
+		// 已经在根级，返回只有 @ 的状态
+		return createFileInstance([], true);
+	}
+	const newPath = instance.filePath.slice(0, -1);
+	const text = buildFileText(newPath, true);
+	return {
+		text,
+		cursor: text.length,
+		type: "message",
+		segments: buildFileSegments(newPath, true),
+		commandPath: [],
+		filePath: newPath,
 	};
 }
 
@@ -205,6 +287,47 @@ export function buildCommandSegments(
 		// 中间的箭头，或者尾部箭头（如果 trailing=true）
 		if (i < path.length - 1 || trailing) {
 			segments.push({ text: " → ", color: ARROW_COLOR });
+		}
+	}
+
+	return segments;
+}
+
+/**
+ * 根据文件路径构建文本
+ * @param path 文件路径数组，如 ["src", "components"]
+ * @param trailing 是否包含尾部斜杠
+ * @returns 文本，如 "@src/components/"
+ */
+export function buildFileText(path: string[], trailing: boolean): string {
+	if (path.length === 0) {
+		return "@";
+	}
+	const base = "@" + path.join("/");
+	return trailing ? base + "/" : base;
+}
+
+/**
+ * 根据文件路径构建带颜色的分段
+ * @param path 文件路径数组
+ * @param trailing 是否包含尾部斜杠
+ */
+export function buildFileSegments(
+	path: string[],
+	trailing: boolean,
+): ColoredSegment[] {
+	// 始终以 @ 开头（浅蓝色）
+	const segments: ColoredSegment[] = [{ text: "@", color: FILE_AT_COLOR }];
+
+	if (path.length === 0) {
+		return segments;
+	}
+
+	for (let i = 0; i < path.length; i++) {
+		segments.push({ text: path[i]!, color: PATH_COLOR }); // 目录名为金黄色
+		// 中间的斜杠，或者尾部斜杠（如果 trailing=true）
+		if (i < path.length - 1 || trailing) {
+			segments.push({ text: "/", color: ARROW_COLOR });
 		}
 	}
 

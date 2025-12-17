@@ -10,8 +10,8 @@ type FileMenuProps = {
 	files: FileItem[];
 	/** 当前选中的索引 */
 	selectedIndex: number;
-	/** 当前路径 */
-	basePath: string;
+	/** 当前路径数组（面包屑导航） */
+	path: string[];
 	/** 终端宽度 */
 	columns: number;
 	/** prompt 缩进 */
@@ -28,7 +28,7 @@ const DIR_COLOR = "#ffd700"; // 金色
 export function FileMenu({
 	files,
 	selectedIndex,
-	basePath,
+	path,
 	columns,
 	promptIndent,
 	loading = false,
@@ -54,11 +54,11 @@ export function FileMenu({
 	return (
 		<Box flexDirection="column">
 			<Text color="gray">{"─".repeat(columns)}</Text>
-			{/* 显示当前路径 */}
-			{basePath && basePath !== "." && (
+			{/* 显示当前路径（面包屑导航） */}
+			{path.length > 0 && (
 				<Box>
 					<Text color="gray">{promptIndent}← </Text>
-					<Text color={DIR_COLOR}>{basePath}</Text>
+					<Text color={DIR_COLOR}>{path.join("/")}</Text>
 				</Box>
 			)}
 			{/* 文件列表（最多显示 10 个） */}

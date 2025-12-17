@@ -13,13 +13,16 @@ import {
 	isFileMode,
 	isHelpMode,
 	createEmptyInstance,
+	createFileInstance,
 	updateInstanceFromText,
 	updateInstanceCursor,
 	enterCommandLevel,
 	exitCommandLevel,
+	enterFileLevel,
+	exitFileLevel,
 	createCommandInstance,
+	buildFileText,
 } from "./types.js";
-import { join, dirname } from "path";
 
 /**
  * 初始状态
@@ -47,10 +50,11 @@ export function editorReducer(
 			const isSlash = text.startsWith("/");
 			const wasSlash = state.instance.text.startsWith("/");
 			const currentPath = state.instance.commandPath;
+			const currentFilePath = state.instance.filePath;
 
 			// 在历史模式下输入，退出历史模式
 			if (isHistoryMode(state.uiMode)) {
-				const newInstance = updateInstanceFromText(text, cursor, []);
+				const newInstance = updateInstanceFromText(text, cursor, [], []);
 				const newMode: UIMode = isSlash
 					? { type: "slash", selectedIndex: 0 }
 					: { type: "normal" };
@@ -63,7 +67,7 @@ export function editorReducer(
 
 			// 从普通模式输入 /，进入 slash 模式
 			if (isSlash && !wasSlash && isNormalMode(state.uiMode)) {
-				const newInstance = updateInstanceFromText(text, cursor, []);
+				const newInstance = updateInstanceFromText(text, cursor, [], []);
 				return {
 					...state,
 					instance: newInstance,
@@ -74,7 +78,7 @@ export function editorReducer(
 
 			// 从 slash 删除 /，回到普通模式
 			if (!isSlash && wasSlash && isSlashMode(state.uiMode)) {
-				const newInstance = updateInstanceFromText(text, cursor, []);
+				const newInstance = updateInstanceFromText(text, cursor, [], []);
 				return {
 					...state,
 					instance: newInstance,
@@ -82,8 +86,27 @@ export function editorReducer(
 				};
 			}
 
+			// 文件模式下更新，保持文件路径
+			if (isFileMode(state.uiMode)) {
+				const newInstance = updateInstanceFromText(
+					text,
+					cursor,
+					[],
+					currentFilePath,
+				);
+				return {
+					...state,
+					instance: newInstance,
+				};
+			}
+
 			// 普通文本更新
-			const newInstance = updateInstanceFromText(text, cursor, currentPath);
+			const newInstance = updateInstanceFromText(
+				text,
+				cursor,
+				currentPath,
+				[],
+			);
 			return {
 				...state,
 				instance: newInstance,
@@ -209,17 +232,20 @@ export function editorReducer(
 		// 文件选择操作
 		// ====================================================================
 
-		case "ENTER_FILE":
+		case "ENTER_FILE": {
+			// 创建文件选择模式实例
+			const newInstance = createFileInstance([], true);
 			return {
 				...state,
+				instance: newInstance,
 				suggestion: null,
 				uiMode: {
 					type: "file",
 					selectedIndex: 0,
-					basePath: action.basePath,
 					atPosition: action.atPosition,
 				},
 			};
+		}
 
 		case "SELECT_FILE":
 			if (!isFileMode(state.uiMode)) return state;
@@ -230,15 +256,14 @@ export function editorReducer(
 
 		case "ENTER_FILE_DIR": {
 			if (!isFileMode(state.uiMode)) return state;
-			const newBasePath = state.uiMode.basePath
-				? join(state.uiMode.basePath, action.dirName)
-				: action.dirName;
+			// 使用 enterFileLevel 更新 instance（包括 text、segments、filePath）
+			const newInstance = enterFileLevel(state.instance, action.dirName);
 			return {
 				...state,
+				instance: newInstance,
 				uiMode: {
 					...state.uiMode,
 					selectedIndex: 0,
-					basePath: newBasePath,
 				},
 			};
 		}
@@ -246,20 +271,25 @@ export function editorReducer(
 		case "CONFIRM_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
 			// 构建完整文件路径
-			const filePath = state.uiMode.basePath
-				? join(state.uiMode.basePath, action.fileName)
-				: action.fileName;
-			// 将文件路径插入到 @ 位置
+			const finalPath = [...state.instance.filePath, action.fileName];
+			const filePath = finalPath.join("/");
+			// 将文件路径插入到 @ 位置，保留上下文
 			const { atPosition } = state.uiMode;
-			const beforeAt = state.instance.text.slice(0, atPosition);
-			const afterAt = state.instance.text.slice(atPosition + 1); // +1 跳过 @
-			// 查找 @ 后的过滤文本结束位置（空格或末尾）
-			const filterEndMatch = afterAt.match(/^[^\s]*/);
-			const filterLength = filterEndMatch ? filterEndMatch[0].length : 0;
-			const afterFilter = afterAt.slice(filterLength);
-			const newText = beforeAt + filePath + afterFilter;
-			const newCursor = beforeAt.length + filePath.length;
-			const newInstance = updateInstanceFromText(newText, newCursor, []);
+			// 计算当前路径前缀长度（包括可能的过滤文本）
+			const pathPrefix = buildFileText(state.instance.filePath, true);
+			const currentText = state.instance.text;
+			// 找到过滤文本结束位置（空格或末尾）
+			const afterPathPrefix = currentText.slice(pathPrefix.length);
+			const filterMatch = afterPathPrefix.match(/^[^\s/]*/);
+			const filterLength = filterMatch ? filterMatch[0].length : 0;
+			// 获取 @ 之前的文本（通过 atPosition）
+			// 注意：由于我们重建了 instance.text，需要通过 atPosition 计算
+			// atPosition 是原始输入中 @ 的位置，但现在 text 已经被替换为路径格式
+			// 所以这里需要重新构建最终文本
+			// 简化处理：直接用文件路径替换整个输入（因为进入文件模式后 text 就变成了 @path/）
+			const newText = filePath;
+			const newCursor = newText.length;
+			const newInstance = updateInstanceFromText(newText, newCursor, [], []);
 			return {
 				...state,
 				instance: newInstance,
@@ -269,36 +299,42 @@ export function editorReducer(
 
 		case "EXIT_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
-			// 如果有父目录，返回上一级；否则退出文件模式
-			const { basePath, atPosition } = state.uiMode;
-			if (basePath && basePath !== ".") {
-				const parentPath = dirname(basePath);
+			// 使用 exitFileLevel 返回上一级或退出
+			const filePath = state.instance.filePath;
+			if (filePath.length > 0) {
+				// 有父目录，返回上一级
+				const newInstance = exitFileLevel(state.instance);
 				return {
 					...state,
+					instance: newInstance,
 					uiMode: {
 						...state.uiMode,
 						selectedIndex: 0,
-						basePath: parentPath === "." ? "" : parentPath,
 					},
 				};
 			}
-			// 退出文件模式，移除 @ 符号
-			const beforeAt = state.instance.text.slice(0, atPosition);
-			const afterAt = state.instance.text.slice(atPosition + 1);
-			const newText = beforeAt + afterAt;
-			const newInstance = updateInstanceFromText(newText, atPosition, []);
+			// 在根级，退出文件模式并清空
 			return {
 				...state,
-				instance: newInstance,
+				instance: createEmptyInstance(),
 				uiMode: { type: "normal" },
 			};
 		}
 
 		case "EXIT_FILE_KEEP_AT": {
-			// 退出文件模式但保留 @ 符号
+			// 退出文件模式但保留当前文本（包括 @path/）
 			if (!isFileMode(state.uiMode)) return state;
+			// 将当前路径文本转换为普通消息
+			const currentText = state.instance.text;
+			const newInstance = updateInstanceFromText(
+				currentText,
+				currentText.length,
+				[],
+				[],
+			);
 			return {
 				...state,
+				instance: newInstance,
 				uiMode: { type: "normal" },
 			};
 		}

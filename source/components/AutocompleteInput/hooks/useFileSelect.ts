@@ -86,10 +86,10 @@ export function useFileSelect(
 
 		try {
 			const items = readDirectory(basePath);
-			// 应用过滤
+			// 应用过滤（前缀匹配）
 			const filtered = filter
 				? items.filter((item) =>
-						item.name.toLowerCase().includes(filter.toLowerCase()),
+						item.name.toLowerCase().startsWith(filter.toLowerCase()),
 					)
 				: items;
 			setFiles(filtered);

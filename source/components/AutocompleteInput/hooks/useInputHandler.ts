@@ -16,6 +16,7 @@ import {
 	isFileMode,
 	isHelpMode,
 	buildCommandText,
+	buildFileText,
 } from "../types.js";
 import type { FileItem } from "./useFileSelect.js";
 
@@ -132,14 +133,28 @@ export function useInputHandler({
 
 		// 文件选择模式下的特殊处理
 		if (inFileMode) {
-			// 在根级别按 backspace，退出文件模式但保留 @
+			// 处理 backspace
 			if (key.backspace || key.delete) {
-				const basePath = uiMode.basePath;
-				if (!basePath || basePath === ".") {
+				const { filePath } = instance;
+				// 计算路径前缀长度（如 "@assets/" 的长度）
+				const pathPrefix = buildFileText(filePath, true);
+				// 检查是否有过滤文本（光标位置 > 路径前缀长度）
+				const hasFilterText = cursor > pathPrefix.length;
+
+				if (hasFilterText) {
+					// 有过滤文本，删除一个字符，保持文件选择模式
+					const newInput = input.slice(0, cursor - 1) + input.slice(cursor);
+					dispatch({ type: "SET_TEXT", text: newInput, cursor: cursor - 1 });
+					return;
+				}
+
+				// 没有过滤文本
+				if (filePath.length === 0) {
+					// 在根级别，退出文件模式但保留 @
 					dispatch({ type: "EXIT_FILE_KEEP_AT" });
 					return;
 				}
-				// 在子目录中按 backspace，返回上一级
+				// 在子目录中，返回上一级
 				dispatch({ type: "EXIT_FILE" });
 				return;
 			}
@@ -325,18 +340,9 @@ export function useInputHandler({
 
 			// 输入 @ 时进入文件选择模式（不在斜杠模式或文件模式时）
 			if (inputChar === "@" && !inSlashMode && !inFileMode) {
-				// 先插入 @ 字符
-				const newInput =
-					input.slice(0, cursor) + inputChar + input.slice(cursor);
-				dispatch({
-					type: "SET_TEXT",
-					text: newInput,
-					cursor: cursor + 1,
-				});
-				// 进入文件选择模式
+				// 进入文件选择模式（reducer 会创建带 @ 的 instance）
 				dispatch({
 					type: "ENTER_FILE",
-					basePath: "",
 					atPosition: cursor,
 				});
 				return;

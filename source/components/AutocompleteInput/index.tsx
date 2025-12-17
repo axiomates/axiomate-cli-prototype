@@ -12,6 +12,7 @@ import { segmentsToRanges } from "../../models/richInput.js";
 import {
 	createMessageInstance,
 	createCommandInstance,
+	buildFileText,
 	type InputInstance,
 } from "../../models/inputInstance.js";
 
@@ -74,15 +75,26 @@ export default function AutocompleteInput({
 	const fileSelectedIndex = isFileMode(uiMode) ? uiMode.selectedIndex : 0;
 
 	// 文件选择相关状态
-	const fileBasePath = isFileMode(uiMode) ? uiMode.basePath : "";
+	// basePath 现在从 instance.filePath 获取
+	const fileBasePath = useMemo(() => {
+		if (!isFileMode(uiMode)) return "";
+		return instance.filePath.join("/") || ".";
+	}, [uiMode, instance.filePath]);
+
+	// 过滤文本从路径前缀之后提取
 	const fileFilter = useMemo(() => {
 		if (!isFileMode(uiMode)) return "";
-		// 提取 @ 后面的过滤文本
-		const atPos = uiMode.atPosition;
-		const afterAt = input.slice(atPos + 1);
-		const match = afterAt.match(/^[^\s]*/);
-		return match ? match[0] : "";
-	}, [uiMode, input]);
+		// 计算路径前缀（如 "@assets/"）
+		const pathPrefix = buildFileText(instance.filePath, true);
+		// 提取路径前缀之后的文本作为过滤条件
+		if (input.length > pathPrefix.length) {
+			const afterPath = input.slice(pathPrefix.length);
+			// 匹配到空格或斜杠为止
+			const match = afterPath.match(/^[^\s/]*/);
+			return match ? match[0] : "";
+		}
+		return "";
+	}, [uiMode, input, instance.filePath]);
 
 	// 自动补全 Hook
 	const { effectiveSuggestion, filteredCommands, slashSuggestion } =
@@ -256,7 +268,7 @@ export default function AutocompleteInput({
 				<FileMenu
 					files={filteredFiles}
 					selectedIndex={fileSelectedIndex}
-					basePath={fileBasePath}
+					path={instance.filePath}
 					columns={columns}
 					promptIndent={promptIndent}
 					loading={filesLoading}
