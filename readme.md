@@ -1,15 +1,15 @@
 # axiomate-cli
 
-A terminal-based CLI application built with [Ink](https://github.com/vadimdemedes/ink) and React, featuring a data-driven input system with slash commands, file selection, and history support.
+A terminal-based CLI application built with [Ink](https://github.com/vadimdemedes/ink) and React, featuring a data-driven input system with slash commands, multi-file selection, and history support.
 
 ## Features
 
 - Interactive terminal UI with fixed layout (Header, Output, Input, Selection List)
-- **Data-driven input system** with `InputInstance` model
+- **Data-driven input system** with `InputInstance` as single source of truth
 - Auto-completion support with async provider
 - Hierarchical slash commands with colored rendering (`/model → openai → gpt-4`)
-- **File selection** with `@` trigger for quick file path insertion
-- Command history with full state restoration (including colors)
+- **Multi-file selection** with `@` trigger for quick file path insertion
+- Command history with full state restoration (including colors and selected files)
 - Keyboard shortcuts (Ctrl+C, Ctrl+U, Ctrl+K, etc.)
 - Responsive layout that adapts to terminal size
 
@@ -97,7 +97,13 @@ Type `@` to open the file selection menu. Navigate directories and select files 
 - Use `↑/↓` to navigate files and folders
 - Press `Enter` to enter a directory or select a file
 - Press `Escape` to go back one level or exit file mode
-- Folders are shown with 📁 icon, files with 📄 icon
+- Type to filter files by name
+- Select `.` to choose the current folder
+- **Multi-file support**: Select multiple files in a single input (e.g., `请分析 @src/a.ts 和 @src/b.ts`)
+
+File paths are treated as atomic blocks:
+- Cursor skips over `@path` blocks when moving left/right
+- Backspace/Delete removes the entire `@path` block at once
 
 ## Keyboard Shortcuts
 
@@ -107,7 +113,7 @@ Type `@` to open the file selection menu. Navigate directories and select files 
 | `@`          | Open file selection menu                           |
 | `Tab`        | Accept autocomplete suggestion                     |
 | `→`          | Accept one character from suggestion               |
-| `←` / `→`    | Move cursor left/right                             |
+| `←` / `→`    | Move cursor left/right (skips over @file blocks)   |
 | `↑` / `↓`    | Navigate history / command list / file list        |
 | `Ctrl+Enter` | Insert new line                                    |
 | `Ctrl+A`     | Move cursor to line start                          |
@@ -164,41 +170,55 @@ npm run package
 
 ### Input System
 
-The input system uses a **data-driven architecture** with a unified `InputInstance` model:
+The input system uses a **data-driven architecture** with a unified `InputInstance` model as the single source of truth:
 
 ```typescript
 type InputInstance = {
-	text: string; // Raw text content
-	cursor: number; // Cursor position
-	type: InputType; // "message" | "command"
-	segments: ColoredSegment[]; // Colored segments for rendering
-	commandPath: string[]; // Command path array
+  text: string;              // Raw text content
+  cursor: number;            // Cursor position
+  type: InputType;           // "message" | "command"
+  segments: ColoredSegment[]; // Colored segments for rendering
+  commandPath: string[];     // Command path array
+  filePath: string[];        // Current file navigation path
+  selectedFiles: SelectedFile[]; // Files selected via @ (with positions)
 };
 ```
 
-All user operations first update the `InputInstance`, then rendering reads from it directly.
+All user operations first update `InputInstance`, then rendering reads from it directly.
 
-### Input Types
+### Data Flow
 
-| Type      | Description                        | Example                   |
-| --------- | ---------------------------------- | ------------------------- |
-| `message` | Regular text input, sent to AI     | `hello world`             |
-| `command` | Slash commands, handled by the app | `/model → openai → gpt-4` |
+```
+User Action → dispatch(EditorAction) → Reducer updates EditorState
+                                              ↓
+                                    Updates InputInstance (segments, positions)
+                                              ↓
+                                    Render uses instance.segments
+                                              ↓
+                                    Submit → UserInput / HistoryEntry
+```
 
 ### UI Modes
 
 | Mode      | Trigger   | Description                                  |
 | --------- | --------- | -------------------------------------------- |
 | `normal`  | Default   | Regular input with autocomplete              |
-| `history` | `↑` / `↓` | Browse history (restores full InputInstance) |
+| `history` | `↑` / `↓` | Browse history (restores full state)         |
 | `slash`   | `/`       | Navigate hierarchical slash commands         |
 | `file`    | `@`       | Navigate file system for selection           |
 | `help`    | `?`       | Display keyboard shortcuts (overlay)         |
 
+### File Selection System
+
+- **Multi-file support**: Select multiple files in one input
+- **Position tracking**: Each `@path` tracks its position via `atPosition` and `endPosition`
+- **Atomic operations**: Cursor movement and deletion treat `@path` as single units
+- **Color rendering**: `@` in light blue, path in gold
+
 ### History System
 
-- Stores complete `InputInstance` objects
-- Up/down navigation restores all properties including colored segments
+- Stores `HistoryEntry` objects (InputInstance without cursor)
+- Restores complete state including colors and selected files
 - Deduplication based on text content
 - `?` input not stored in history
 
@@ -207,11 +227,21 @@ All user operations first update the `InputInstance`, then rendering reads from 
 When user submits input, it's converted to a `UserInput` object:
 
 ```typescript
-// Message input (for AI)
-{ type: "message", content: "hello world" }
+// Message input (includes selected files)
+{
+  type: "message",
+  text: "请分析 @src/app.ts",
+  segments: [...],
+  files: [{ path: "src/app.ts", isDirectory: false }]
+}
 
-// Command input (internal handling)
-{ type: "command", command: ["model", "openai", "gpt-4"], raw: "/model → openai → gpt-4" }
+// Command input
+{
+  type: "command",
+  text: "/model → openai → gpt-4",
+  segments: [...],
+  commandPath: ["model", "openai", "gpt-4"]
+}
 ```
 
 ## Project Structure
@@ -221,7 +251,8 @@ source/
 ├── app.tsx                    # Main application component
 ├── cli.tsx                    # CLI entry point
 ├── constants/
-│   └── commands.ts            # Slash command definitions
+│   ├── commands.ts            # Slash command definitions
+│   └── colors.ts              # Color constants
 ├── components/
 │   ├── AutocompleteInput/     # Core input component
 │   │   ├── index.tsx          # Main component

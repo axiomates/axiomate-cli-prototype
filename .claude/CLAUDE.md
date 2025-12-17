@@ -35,7 +35,7 @@ source/
 ├── components/
 │   ├── AutocompleteInput/     # Core input component (modular structure)
 │   │   ├── index.tsx          # Main component (composition layer)
-│   │   ├── types.ts           # EditorState, UIMode, EditorAction, helpers
+│   │   ├── types.ts           # EditorState, UIMode, EditorAction, re-exports
 │   │   ├── reducer.ts         # State machine reducer (editorReducer)
 │   │   ├── hooks/
 │   │   │   ├── useAutocomplete.ts  # Autocomplete logic
@@ -56,7 +56,8 @@ source/
 │   ├── inputInstance.ts       # InputInstance - core input data model
 │   └── richInput.ts           # ColoredSegment, ColorRange, color utils
 ├── constants/
-│   └── commands.ts            # Slash command definitions (SLASH_COMMANDS)
+│   ├── commands.ts            # Slash command definitions (SLASH_COMMANDS)
+│   └── colors.ts              # Color constants (PATH_COLOR, FILE_AT_COLOR, etc.)
 ├── services/
 │   └── commandHandler.ts      # Command execution logic
 ├── hooks/                     # React hooks (useTerminalWidth/Height)
@@ -100,6 +101,15 @@ type InputInstance = {
   type: InputType;           // "message" | "command"
   segments: ColoredSegment[]; // Colored segments for rendering
   commandPath: string[];     // Command path (e.g., ["model", "openai"])
+  filePath: string[];        // Current file navigation path (e.g., ["src", "components"])
+  selectedFiles: SelectedFile[]; // Files selected via @ (with position tracking)
+};
+
+type SelectedFile = {
+  path: string;              // Full file path (e.g., "assets/icon.ico")
+  isDirectory: boolean;      // Is it a directory?
+  atPosition: number;        // Position of @ in text (0-based)
+  endPosition: number;       // End position of file path (exclusive)
 };
 ```
 
@@ -107,8 +117,9 @@ Key functions:
 - `createEmptyInstance()` - Create empty instance
 - `createMessageInstance(text)` - Create message type
 - `createCommandInstance(path, trailing)` - Create command type with colors
-- `updateInstanceFromText(text, cursor, path)` - Update from text input
-- `buildCommandText(path, trailing)` - Build command text from path
+- `updateInstanceFromText(text, cursor, path, filePath)` - Update from text input
+- `rebuildSegmentsWithFiles(text, selectedFiles)` - Rebuild colored segments with file highlighting
+- `removeSelectedFile(text, file, selectedFiles)` - Remove a selected file (whole block deletion)
 
 #### Data Flow
 
@@ -118,6 +129,8 @@ User Action → dispatch(EditorAction) → Reducer updates EditorState
                                     Updates InputInstance (includes segments)
                                               ↓
                                     Render uses instance.segments directly
+                                              ↓
+                                    Submit converts to UserInput/HistoryEntry
 ```
 
 #### InputInstance 唯一真相来源原则
@@ -129,13 +142,12 @@ User Action → dispatch(EditorAction) → Reducer updates EditorState
 2. 然后基于 `InputInstance.segments` 进行渲染
 
 这确保了：
-- 历史记录存储实际的 instance（带彩色分段）
-- 从历史恢复时显示与原始输入完全一致
+- 历史记录存储 `HistoryEntry`（从 InputInstance 转换，去除 cursor）
+- 从历史恢复时显示与原始输入完全一致（包括彩色分段）
 - 不需要从文本重新解析来重建状态
+- 多文件选择时位置信息始终准确
 
 **禁止**从文本解析创建显示状态 - 始终从 `InputInstance` 派生。
-
-示例：提交时传递完整的 `InputInstance` 而非文本字符串，历史记录直接存储该实例。
 
 ### Editor State
 
@@ -143,16 +155,16 @@ Defined in `AutocompleteInput/types.ts`:
 
 ```typescript
 type EditorState = {
-  instance: InputInstance;    // Current input data
+  instance: InputInstance;    // Current input data (single source of truth)
   uiMode: UIMode;            // UI mode state
   suggestion: string | null; // Autocomplete suggestion
 };
 
 type UIMode =
   | { type: "normal" }
-  | { type: "history"; index: number; savedInstance: InputInstance }
+  | { type: "history"; index: number; savedEntry: HistoryEntry }
   | { type: "slash"; selectedIndex: number }
-  | { type: "file"; selectedIndex: number; basePath: string; atPosition: number }
+  | { type: "file"; selectedIndex: number; prefix: string; suffix: string; atPosition: number }
   | { type: "help" };
 ```
 
@@ -161,43 +173,142 @@ type UIMode =
 | Mode      | Trigger | Description                          |
 | --------- | ------- | ------------------------------------ |
 | `normal`  | default | Regular input with autocomplete      |
-| `history` | ↑/↓     | Browse command history (restores full InputInstance) |
+| `history` | ↑/↓     | Browse command history (restores full HistoryEntry) |
 | `slash`   | `/`     | Navigate hierarchical commands       |
 | `file`    | `@`     | Navigate file system for selection   |
 | `help`    | `?`     | Display shortcuts overlay            |
 
-### Selection List System
+### File Selection System
 
-Both slash commands and file selection share similar interaction patterns:
+File selection is triggered by `@` and supports:
+- **Multi-file selection**: Select multiple files in a single input (e.g., `请分析 @src/a.ts 和 @src/b.ts`)
+- **Position tracking**: Each selected file tracks its position in text via `atPosition` and `endPosition`
+- **Whole block operations**: Cursor movement and deletion treat `@path` as atomic units
+- **Prefix/Suffix preservation**: Text before and after `@` is preserved during selection
 
-| Feature | Slash Mode (`/`) | File Mode (`@`) |
-|---------|------------------|-----------------|
-| Data Source | Static command config | Async file system |
-| Enter | Next level / Execute | Enter directory / Select file |
-| Escape | Back one level / Exit | Back one level / Exit |
-| ↑/↓ | Navigate commands | Navigate files |
-| Component | `SlashMenu` | `FileMenu` |
+#### File Mode State
+
+```typescript
+type FileUIMode = {
+  type: "file";
+  selectedIndex: number;  // Currently highlighted item in FileMenu
+  prefix: string;         // Text before @ (preserved during selection)
+  suffix: string;         // Text after cursor when @ was typed (restored on exit)
+  atPosition: number;     // Position where @ was inserted
+};
+```
+
+#### File Selection Flow
+
+```
+User types @ at position N
+    ↓
+ENTER_FILE action:
+  - prefix = text[0..N], suffix = text[N..]
+  - instance.text = prefix + "@"
+  - uiMode = { type: "file", prefix, suffix, atPosition: N }
+    ↓
+useFileSelect reads current directory (instance.filePath)
+    ↓
+User navigates with ↑/↓, filters by typing
+    ↓
+ENTER_FILE_DIR: Enter subdirectory
+  - instance.filePath.push(dirName)
+  - instance.text = prefix + "@path\"
+    ↓
+CONFIRM_FILE: Select file
+  - newSelectedFile = { path, atPosition, endPosition }
+  - instance.text = prefix + "@path" + suffix
+  - instance.selectedFiles.push(newSelectedFile)
+  - Update positions of files in suffix
+  - Rebuild segments with file colors
+  - Exit to normal mode
+```
+
+#### Cursor and Deletion Behavior
+
+When `selectedFiles` exist:
+- **Left/Right Arrow**: Skip over `@path` blocks (cursor jumps to start/end)
+- **Backspace at file end**: Delete entire `@path` block
+- **Delete at file start**: Delete entire `@path` block
+- **Backspace/Delete inside file**: Delete entire `@path` block (defensive)
 
 ### History System
 
-- Stores `InputInstance[]` (complete data including colors)
+- Stores `HistoryEntry[]` (InputInstance without cursor)
 - Deduplication based on `text` field
 - `?` input not stored in history
-- Up/down navigation restores all properties including colored segments
+- Up/down navigation restores all properties including colored segments and selectedFiles
+
+```typescript
+type HistoryEntry = {
+  text: string;
+  type: InputType;
+  segments: ColoredSegment[];
+  commandPath: string[];
+  filePath: string[];
+  selectedFiles: SelectedFile[];
+};
+
+// Conversion functions
+toHistoryEntry(instance: InputInstance): HistoryEntry  // Remove cursor
+fromHistoryEntry(entry: HistoryEntry): InputInstance   // Set cursor to text.length
+```
 
 ### UserInput (Submit Callback)
 
-For the `onSubmit` callback, a simpler `UserInput` type is used:
+For the `onSubmit` callback, InputInstance is converted to `UserInput`:
 
 ```typescript
 type UserInput = MessageInput | CommandInput;
 
-// Regular input -> sent to AI
-type MessageInput = { type: "message"; content: string };
+type MessageInput = {
+  type: "message";
+  text: string;                    // Raw text
+  segments: ColoredSegment[];      // For display
+  files: { path: string; isDirectory: boolean }[];  // Selected files
+};
 
-// Slash commands -> handled internally
-type CommandInput = { type: "command"; command: string[]; raw: string };
+type CommandInput = {
+  type: "command";
+  text: string;                    // Raw text (e.g., "/model → openai")
+  segments: ColoredSegment[];      // For display
+  commandPath: string[];           // Parsed path (e.g., ["model", "openai"])
+};
 ```
+
+### Rendering System
+
+#### Color Rendering Pipeline
+
+```
+InputInstance.segments (ColoredSegment[])
+    ↓
+segmentsToRanges() → ColorRange[]
+    ↓
+InputLine receives colorRanges
+    ↓
+renderWithColorRanges() applies colors to text
+    ↓
+CursorLineContent handles cursor position with colors
+```
+
+#### ColoredSegment vs ColorRange
+
+```typescript
+// Storage format (in InputInstance)
+type ColoredSegment = { text: string; color?: string };
+
+// Rendering format (position-based)
+type ColorRange = { start: number; end: number; color?: string };
+```
+
+#### Color Constants
+
+Defined in `constants/colors.ts`:
+- `PATH_COLOR = "#ffd700"` - Command path / directory name (gold)
+- `ARROW_COLOR = "gray"` - Arrow separator / backslash
+- `FILE_AT_COLOR = "#87ceeb"` - @ symbol in file paths (light blue)
 
 ### Slash Commands
 
@@ -211,81 +322,13 @@ type SlashCommand = {
   action?: CommandAction;     // Command behavior (leaf nodes)
 };
 
-// Command action types
 type CommandAction =
-  | { type: "internal"; handler?: string }  // Internal handler (e.g., /version, /clear)
-  | { type: "prompt"; template: string }    // Convert to prompt and send to AI (e.g., /compact)
-  | { type: "config"; key: string };        // Configuration change (e.g., /model)
+  | { type: "internal"; handler?: string }  // Internal handler
+  | { type: "prompt"; template: string }    // Convert to AI prompt
+  | { type: "config"; key: string };        // Configuration change
 ```
 
 Example: `/model → openai → gpt-4` with path `["model", "openai", "gpt-4"]`
-
-### File Selection
-
-File selection is triggered by `@` and provides hierarchical navigation:
-
-```typescript
-// useFileSelect hook returns
-type FileItem = {
-  name: string;
-  isDirectory: boolean;
-  path: string;
-};
-
-// File mode state
-type FileUIMode = {
-  type: "file";
-  selectedIndex: number;
-  basePath: string;      // Current directory path
-  atPosition: number;    // Position of @ in input text
-};
-```
-
-**File Selection Flow:**
-```
-User types @
-    ↓
-ENTER_FILE action → file mode activated
-    ↓
-useFileSelect reads current directory
-    ↓
-User navigates with ↑/↓, enters directories
-    ↓
-CONFIRM_FILE → file path inserted at @ position
-```
-
-### Command Handler
-
-Command execution is handled by `services/commandHandler.ts`:
-
-```typescript
-type CommandResult =
-  | { type: "message"; content: string }    // Display message (internal complete)
-  | { type: "prompt"; content: string }     // Send to AI
-  | { type: "config"; key: string; value: string }  // Config change
-  | { type: "action"; action: "clear" | "exit" }    // Special action
-  | { type: "error"; message: string };
-
-// Execute command and get result
-executeCommand(path: string[], context: CommandContext): CommandResult
-```
-
-### Color Rendering
-
-Colors are stored in `InputInstance.segments` and converted to `ColorRange[]` for rendering:
-
-```typescript
-type ColoredSegment = { text: string; color?: string };
-type ColorRange = { start: number; end: number; color?: string };
-```
-
-Color constants (in `richInput.ts`):
-- `PATH_COLOR = "#ffd700"` - Command path color (gold)
-- `ARROW_COLOR = "gray"` - Arrow separator color
-
-File colors (in `FileMenu.tsx`):
-- `FILE_COLOR = "#87ceeb"` - File color (light blue)
-- `DIR_COLOR = "#ffd700"` - Directory color (gold)
 
 ### Component Communication
 
@@ -340,18 +383,25 @@ AutocompleteInput
 
 | Action | Description |
 |--------|-------------|
-| `SET_TEXT` | Update text and cursor, auto-detect mode |
+| `SET_TEXT` | Update text and cursor, auto-detect mode, update selectedFiles positions |
 | `SET_CURSOR` | Move cursor position |
-| `ENTER_HISTORY` | Enter history mode, save current instance |
-| `NAVIGATE_HISTORY` | Navigate history, restore instance |
-| `EXIT_HISTORY` | Exit history, restore saved instance |
+| `ENTER_HISTORY` | Enter history mode, save current entry |
+| `NAVIGATE_HISTORY` | Navigate history, restore entry |
+| `EXIT_HISTORY` | Exit history, restore saved entry |
 | `ENTER_SLASH_LEVEL` | Enter next command level (has children) |
 | `SELECT_FINAL_COMMAND` | Select leaf command (no children) |
 | `EXIT_SLASH_LEVEL` | Go back one level or exit slash mode |
-| `ENTER_FILE` | Enter file selection mode |
-| `SELECT_FILE` | Navigate file list |
-| `ENTER_FILE_DIR` | Enter subdirectory |
-| `CONFIRM_FILE` | Select file and insert path |
+| `ENTER_FILE` | Enter file selection mode (save prefix/suffix) |
+| `SELECT_FILE` | Navigate file list (change selectedIndex) |
+| `ENTER_FILE_DIR` | Enter subdirectory (update filePath) |
+| `CONFIRM_FILE` | Select file, add to selectedFiles, rebuild segments |
+| `CONFIRM_FOLDER` | Select current folder (`.` entry) |
 | `EXIT_FILE` | Go back one level or exit file mode |
+| `EXIT_FILE_KEEP_AT` | Exit file mode but keep `@` and path text |
+| `REMOVE_SELECTED_FILE` | Delete a selected file block entirely |
 | `TOGGLE_HELP` | Toggle help panel |
 | `RESET` | Reset to initial state |
+
+### Platform-Specific Notes
+
+**Windows Backspace Handling**: On Windows terminals, the backspace key may trigger `key.delete` instead of `key.backspace`. The input handler detects this by checking `inputChar` (backspace produces `""`, `"\b"`, or `"\x7f"`).
