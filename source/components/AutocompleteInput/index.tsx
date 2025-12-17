@@ -7,12 +7,15 @@ import { Box } from "ink";
 import { useReducer, useCallback, useState, useMemo } from "react";
 import { useApp } from "ink";
 import useTerminalWidth from "../../hooks/useTerminalWidth.js";
-import { createMessageInput, createCommandInput } from "../../models/input.js";
 import { segmentsToRanges } from "../../models/richInput.js";
 import {
 	buildFileText,
+	toHistoryEntry,
+	toUserInput,
 	type InputInstance,
+	type HistoryEntry,
 } from "../../models/inputInstance.js";
+import { isMessageInput } from "../../models/input.js";
 
 // Types
 import type { AutocompleteInputProps } from "./types.js";
@@ -55,8 +58,8 @@ export default function AutocompleteInput({
 	const [state, dispatch] = useReducer(editorReducer, initialState);
 	const columns = useTerminalWidth();
 
-	// 输入历史记录（存储完整的 InputInstance）
-	const [history, setHistory] = useState<InputInstance[]>([]);
+	// 输入历史记录（存储 HistoryEntry，不含 cursor）
+	const [history, setHistory] = useState<HistoryEntry[]>([]);
 
 	// 解构状态便于使用
 	const { instance, uiMode } = state;
@@ -116,7 +119,7 @@ export default function AutocompleteInput({
 			const value = submittedInstance.text;
 			if (!value.trim()) return;
 
-			// 添加到历史记录 - 直接存储 instance，保留彩色分段
+			// 添加到历史记录 - 转换为 HistoryEntry（去除 cursor），保留彩色分段
 			// "?" 输入不存入历史
 			if (value.trim() !== "?") {
 				setHistory((prev) => {
@@ -125,30 +128,22 @@ export default function AutocompleteInput({
 					const filtered = prev.filter(
 						(entry) => entry.text.trim() !== trimmedText,
 					);
-					// 直接使用传入的 instance（已包含正确的 segments）
-					return [...filtered, submittedInstance];
+					// 使用 toHistoryEntry 去除 cursor，保留其他属性
+					return [...filtered, toHistoryEntry(submittedInstance)];
 				});
 			}
 
 			// 重置输入状态
 			dispatch({ type: "RESET" });
 
-			// 处理斜杠命令（内部命令）
-			if (value.startsWith("/")) {
-				// 使用 instance.commandPath（如果有）或从文本解析
-				const path =
-					submittedInstance.commandPath.length > 0
-						? submittedInstance.commandPath
-						: value
-								.slice(1)
-								.split(/\s*→\s*/)
-								.map((s) => s.trim())
-								.filter(Boolean);
-				const userInput = createCommandInput(path, value);
-				onSubmit?.(userInput);
+			// 使用 toUserInput 转换为 UserInput（保留 segments 和结构化信息）
+			const userInput = toUserInput(submittedInstance);
+			onSubmit?.(userInput);
 
-				// 内置命令处理
-				const slashCmd = path[0]?.toLowerCase();
+			// 内置命令处理
+			if (!isMessageInput(userInput)) {
+				// 命令类型
+				const slashCmd = userInput.commandPath[0]?.toLowerCase();
 				if (slashCmd === "exit") {
 					if (onExit) {
 						onExit();
@@ -160,10 +155,6 @@ export default function AutocompleteInput({
 				}
 				return;
 			}
-
-			// 处理普通输入（消息类型）
-			const userInput = createMessageInput(value.trim());
-			onSubmit?.(userInput);
 
 			// 内置命令快捷方式（不带斜杠的命令）
 			const cmd = value.trim().toLowerCase();

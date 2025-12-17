@@ -1,7 +1,10 @@
 /**
  * 用户输入类型定义
- * 为用户输入提供结构化的元信息，区分不同的输入模式
+ * UserInput 是 InputInstance 的语义子集，用于提交回调
+ * 保留渲染信息（segments），便于显示历史/预览
  */
+
+import type { ColoredSegment } from "./richInput.js";
 
 /**
  * 输入类型枚举
@@ -11,12 +14,28 @@
 export type InputType = "message" | "command";
 
 /**
+ * 文件引用
+ * 结构化的文件信息，从 @ 选择的文件
+ */
+export type FileReference = {
+	/** 完整路径（如 "assets/icon.ico"） */
+	path: string;
+	/** 是否目录 */
+	isDirectory: boolean;
+};
+
+/**
  * 普通消息输入
  * 来自 normal 或 history 模式的输入，需要发送给 AI 处理
  */
 export type MessageInput = {
 	type: "message";
-	content: string;
+	/** 原始文本（包含 @path） */
+	text: string;
+	/** 渲染分段（带颜色，用于显示历史/预览） */
+	segments: ColoredSegment[];
+	/** 结构化的文件引用列表 */
+	files: FileReference[];
 };
 
 /**
@@ -25,10 +44,12 @@ export type MessageInput = {
  */
 export type CommandInput = {
 	type: "command";
+	/** 原始文本 */
+	text: string;
+	/** 渲染分段（带颜色） */
+	segments: ColoredSegment[];
 	/** 命令路径，如 ["model", "openai", "gpt-4"] */
-	command: string[];
-	/** 原始输入字符串 */
-	raw: string;
+	commandPath: string[];
 };
 
 /**
@@ -53,10 +74,16 @@ export function isCommandInput(input: UserInput): input is CommandInput {
 /**
  * 创建消息输入
  */
-export function createMessageInput(content: string): MessageInput {
+export function createMessageInput(
+	text: string,
+	segments: ColoredSegment[] = [],
+	files: FileReference[] = [],
+): MessageInput {
 	return {
 		type: "message",
-		content,
+		text,
+		segments: segments.length > 0 ? segments : text ? [{ text }] : [],
+		files,
 	};
 }
 
@@ -64,12 +91,14 @@ export function createMessageInput(content: string): MessageInput {
  * 创建命令输入
  */
 export function createCommandInput(
-	command: string[],
-	raw: string,
+	commandPath: string[],
+	text: string,
+	segments: ColoredSegment[] = [],
 ): CommandInput {
 	return {
 		type: "command",
-		command,
-		raw,
+		text,
+		segments,
+		commandPath,
 	};
 }

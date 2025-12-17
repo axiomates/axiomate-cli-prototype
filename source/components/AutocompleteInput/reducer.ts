@@ -24,6 +24,10 @@ import {
 	createCommandInstance,
 	buildFileText,
 	buildFileSegments,
+	toHistoryEntry,
+	fromHistoryEntry,
+	updateSelectedFilesPositions,
+	rebuildSegmentsWithFiles,
 } from "./types.js";
 
 /**
@@ -108,6 +112,7 @@ export function editorReducer(
 					segments: newSegments,
 					commandPath: [],
 					filePath: currentFilePath,
+					selectedFiles: state.instance.selectedFiles,
 				};
 				return {
 					...state,
@@ -116,6 +121,29 @@ export function editorReducer(
 			}
 
 			// 普通文本更新
+			// 如果有已选择的文件，更新它们的位置并重建带颜色的 segments
+			const oldSelectedFiles = state.instance.selectedFiles;
+			if (oldSelectedFiles.length > 0) {
+				const updatedSelectedFiles = updateSelectedFilesPositions(
+					text,
+					oldSelectedFiles,
+				);
+				const newSegments = rebuildSegmentsWithFiles(text, updatedSelectedFiles);
+				const newInstance: InputInstance = {
+					text,
+					cursor,
+					type: "message",
+					segments: newSegments,
+					commandPath: [],
+					filePath: [],
+					selectedFiles: updatedSelectedFiles,
+				};
+				return {
+					...state,
+					instance: newInstance,
+				};
+			}
+			// 没有已选择的文件，使用原有逻辑
 			const newInstance = updateInstanceFromText(
 				text,
 				cursor,
@@ -143,12 +171,12 @@ export function editorReducer(
 		case "ENTER_HISTORY":
 			return {
 				...state,
-				instance: action.entry,
+				instance: fromHistoryEntry(action.entry),
 				suggestion: null,
 				uiMode: {
 					type: "history",
 					index: action.index,
-					savedInstance: state.instance,
+					savedEntry: toHistoryEntry(state.instance),
 				},
 			};
 
@@ -156,7 +184,7 @@ export function editorReducer(
 			if (!isHistoryMode(state.uiMode)) return state;
 			return {
 				...state,
-				instance: action.entry,
+				instance: fromHistoryEntry(action.entry),
 				uiMode: { ...state.uiMode, index: action.index },
 			};
 
@@ -164,7 +192,7 @@ export function editorReducer(
 			if (!isHistoryMode(state.uiMode)) return state;
 			return {
 				...state,
-				instance: state.uiMode.savedInstance,
+				instance: fromHistoryEntry(state.uiMode.savedEntry),
 				uiMode: { type: "normal" },
 			};
 
@@ -248,8 +276,8 @@ export function editorReducer(
 		// ====================================================================
 
 		case "ENTER_FILE": {
-			// 创建文件选择模式实例，保留 @ 之前的前缀
-			const { prefix } = action;
+			// 创建文件选择模式实例，保留 @ 之前的前缀和之后的后缀
+			const { prefix, suffix } = action;
 			const filePathText = buildFileText([], true); // "@"
 			const newText = prefix + filePathText;
 			const fileSegments = buildFileSegments([], true);
@@ -261,6 +289,7 @@ export function editorReducer(
 				segments: newSegments,
 				commandPath: [],
 				filePath: [],
+				selectedFiles: state.instance.selectedFiles,
 			};
 			return {
 				...state,
@@ -271,6 +300,7 @@ export function editorReducer(
 					selectedIndex: 0,
 					atPosition: action.atPosition,
 					prefix: action.prefix,
+					suffix: action.suffix,
 				},
 			};
 		}
@@ -298,6 +328,7 @@ export function editorReducer(
 				segments: newSegments,
 				commandPath: [],
 				filePath: newPath,
+				selectedFiles: state.instance.selectedFiles,
 			};
 			return {
 				...state,
@@ -311,24 +342,36 @@ export function editorReducer(
 
 		case "CONFIRM_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
-			// 构建完整文件路径，保留前缀
-			const { prefix } = state.uiMode;
+			// 构建完整文件路径，保留前缀和后缀
+			const { prefix, suffix, atPosition } = state.uiMode;
 			const finalPath = [...state.instance.filePath, action.fileName];
 			// 构建彩色分段（无尾部反斜杠，因为是最终文件）
 			const fileSegments = buildFileSegments(finalPath, false);
-			const newSegments = prefix
-				? [{ text: prefix }, ...fileSegments]
-				: fileSegments;
-			// 最终文本：前缀 + @ + 文件路径
-			const newText = prefix + buildFileText(finalPath, false);
-			const newCursor = newText.length;
+			// 分段：prefix + fileSegments + suffix（如果有）
+			const allSegments = [
+				...(prefix ? [{ text: prefix }] : []),
+				...fileSegments,
+				...(suffix ? [{ text: suffix }] : []),
+			];
+			// 最终文本：前缀 + @ + 文件路径 + 后缀
+			const fileText = buildFileText(finalPath, false);
+			const newText = prefix + fileText + suffix;
+			const newCursor = prefix.length + fileText.length; // 光标在文件路径后，后缀前
+			// 添加到 selectedFiles
+			const newSelectedFile = {
+				path: finalPath.join("\\"),
+				isDirectory: false,
+				atPosition,
+				endPosition: prefix.length + fileText.length,
+			};
 			const newInstance: InputInstance = {
 				text: newText,
 				cursor: newCursor,
 				type: "message",
-				segments: newSegments,
+				segments: allSegments,
 				commandPath: [],
 				filePath: [], // 退出文件模式，清空 filePath
+				selectedFiles: [...state.instance.selectedFiles, newSelectedFile],
 			};
 			return {
 				...state,
@@ -340,23 +383,35 @@ export function editorReducer(
 		case "CONFIRM_FOLDER": {
 			// 选择当前文件夹（"." 条目）
 			if (!isFileMode(state.uiMode)) return state;
-			const { prefix } = state.uiMode;
+			const { prefix, suffix, atPosition } = state.uiMode;
 			const folderPath = state.instance.filePath;
 			// 构建彩色分段（无尾部反斜杠，因为是最终文件夹）
 			const fileSegments = buildFileSegments(folderPath, false);
-			const newSegments = prefix
-				? [{ text: prefix }, ...fileSegments]
-				: fileSegments;
-			// 最终文本：前缀 + @ + 文件夹路径
-			const newText = prefix + buildFileText(folderPath, false);
-			const newCursor = newText.length;
+			// 分段：prefix + fileSegments + suffix（如果有）
+			const allSegments = [
+				...(prefix ? [{ text: prefix }] : []),
+				...fileSegments,
+				...(suffix ? [{ text: suffix }] : []),
+			];
+			// 最终文本：前缀 + @ + 文件夹路径 + 后缀
+			const fileText = buildFileText(folderPath, false);
+			const newText = prefix + fileText + suffix;
+			const newCursor = prefix.length + fileText.length; // 光标在文件路径后，后缀前
+			// 添加到 selectedFiles
+			const newSelectedFile = {
+				path: folderPath.join("\\"),
+				isDirectory: true,
+				atPosition,
+				endPosition: prefix.length + fileText.length,
+			};
 			const newInstance: InputInstance = {
 				text: newText,
 				cursor: newCursor,
 				type: "message",
-				segments: newSegments,
+				segments: allSegments,
 				commandPath: [],
 				filePath: [], // 退出文件模式，清空 filePath
+				selectedFiles: [...state.instance.selectedFiles, newSelectedFile],
 			};
 			return {
 				...state,
@@ -367,10 +422,10 @@ export function editorReducer(
 
 		case "EXIT_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
-			const { prefix } = state.uiMode;
+			const { prefix, suffix } = state.uiMode;
 			const filePath = state.instance.filePath;
 			if (filePath.length > 0) {
-				// 有父目录，返回上一级，保留前缀
+				// 有父目录，返回上一级，保留前缀（suffix 保持在 uiMode 中）
 				const newPath = filePath.slice(0, -1);
 				const filePathText = buildFileText(newPath, true);
 				const newText = prefix + filePathText;
@@ -383,6 +438,7 @@ export function editorReducer(
 					segments: newSegments,
 					commandPath: [],
 					filePath: newPath,
+					selectedFiles: state.instance.selectedFiles,
 				};
 				return {
 					...state,
@@ -393,31 +449,37 @@ export function editorReducer(
 					},
 				};
 			}
-			// 在根级，退出文件模式，恢复前缀（如果有的话）
-			const newInstance = prefix
-				? updateInstanceFromText(prefix, prefix.length, [], [])
+			// 在根级，退出文件模式，恢复前缀 + 后缀
+			const restoredText = prefix + suffix;
+			const exitInstance = restoredText
+				? updateInstanceFromText(restoredText, prefix.length, [], [])
 				: createEmptyInstance();
+			// 保留已选择的文件
+			exitInstance.selectedFiles = state.instance.selectedFiles;
 			return {
 				...state,
-				instance: newInstance,
+				instance: exitInstance,
 				uiMode: { type: "normal" },
 			};
 		}
 
 		case "EXIT_FILE_KEEP_AT": {
-			// 退出文件模式但保留当前文本（包括 @path/）
+			// 退出文件模式但保留当前文本（包括 @path/），并恢复 suffix
 			if (!isFileMode(state.uiMode)) return state;
-			// 将当前路径文本转换为普通消息
-			const currentText = state.instance.text;
-			const newInstance = updateInstanceFromText(
+			const { suffix } = state.uiMode;
+			// 将当前路径文本 + suffix 转换为普通消息
+			const currentText = state.instance.text + suffix;
+			const exitInstance = updateInstanceFromText(
 				currentText,
-				currentText.length,
+				state.instance.text.length, // 光标在原位置
 				[],
 				[],
 			);
+			// 保留已选择的文件
+			exitInstance.selectedFiles = state.instance.selectedFiles;
 			return {
 				...state,
-				instance: newInstance,
+				instance: exitInstance,
 				uiMode: { type: "normal" },
 			};
 		}

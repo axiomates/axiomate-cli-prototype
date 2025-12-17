@@ -9,6 +9,7 @@ import type {
 	EditorAction,
 	SlashCommand,
 	InputInstance,
+	HistoryEntry,
 } from "../types.js";
 import {
 	isSlashMode,
@@ -23,7 +24,7 @@ import type { FileItem } from "./useFileSelect.js";
 type UseInputHandlerOptions = {
 	state: EditorState;
 	dispatch: React.Dispatch<EditorAction>;
-	history: InputInstance[];
+	history: HistoryEntry[];
 	filteredCommands: SlashCommand[];
 	filteredFiles: FileItem[];
 	effectiveSuggestion: string | null;
@@ -361,12 +362,14 @@ export function useInputHandler({
 
 			// 输入 @ 时进入文件选择模式（不在斜杠模式或文件模式时）
 			if (inputChar === "@" && !inSlashMode && !inFileMode) {
-				// 进入文件选择模式，保留 @ 之前的文本作为前缀
+				// 进入文件选择模式，保留 @ 之前的文本作为前缀，之后的文本作为后缀
 				const prefix = input.slice(0, cursor);
+				const suffix = input.slice(cursor);
 				dispatch({
 					type: "ENTER_FILE",
 					atPosition: cursor,
 					prefix,
+					suffix,
 				});
 				return;
 			}

@@ -5,11 +5,30 @@
 
 import type { ColoredSegment } from "./richInput.js";
 import { PATH_COLOR, ARROW_COLOR, FILE_AT_COLOR } from "../constants/colors.js";
+import type { UserInput, MessageInput, CommandInput } from "./input.js";
 
 /**
  * 输入类型
  */
 export type InputType = "message" | "command";
+
+/**
+ * 已选择的文件引用
+ * 跟踪每个通过 @ 选择的文件的位置信息
+ */
+export type SelectedFile = {
+	/** 完整文件路径（如 "assets/icon.ico"） */
+	path: string;
+
+	/** 是否目录 */
+	isDirectory: boolean;
+
+	/** @ 符号在文本中的位置（0-based） */
+	atPosition: number;
+
+	/** 文件路径结束位置（不含，用于识别编辑区域） */
+	endPosition: number;
+};
 
 /**
  * 输入实例 - 用户输入的完整数据
@@ -33,6 +52,9 @@ export type InputInstance = {
 
 	/** 文件路径（文件选择模式下的导航路径） */
 	filePath: string[];
+
+	/** 已选择的文件列表（通过 @ 选择的文件） */
+	selectedFiles: SelectedFile[];
 };
 
 // ============================================================================
@@ -50,6 +72,7 @@ export function createEmptyInstance(): InputInstance {
 		segments: [],
 		commandPath: [],
 		filePath: [],
+		selectedFiles: [],
 	};
 }
 
@@ -67,6 +90,7 @@ export function createMessageInstance(
 		segments: text ? [{ text }] : [],
 		commandPath: [],
 		filePath: [],
+		selectedFiles: [],
 	};
 }
 
@@ -87,6 +111,7 @@ export function createCommandInstance(
 		segments: buildCommandSegments(path, trailing),
 		commandPath: path,
 		filePath: [],
+		selectedFiles: [],
 	};
 }
 
@@ -107,6 +132,7 @@ export function createFileInstance(
 		segments: buildFileSegments(path, trailing),
 		commandPath: [],
 		filePath: path,
+		selectedFiles: [],
 	};
 }
 
@@ -136,6 +162,7 @@ export function updateInstanceFromText(
 			segments: buildCommandSegments(currentPath, false),
 			commandPath: currentPath,
 			filePath: [],
+			selectedFiles: [],
 		};
 	}
 	// 文件选择模式：保持现有文件路径，segments 基于路径生成
@@ -147,6 +174,7 @@ export function updateInstanceFromText(
 			segments: buildFileSegments(currentFilePath, true),
 			commandPath: [],
 			filePath: currentFilePath,
+			selectedFiles: [],
 		};
 	}
 	// 消息模式
@@ -157,6 +185,7 @@ export function updateInstanceFromText(
 		segments: text ? [{ text }] : [],
 		commandPath: [],
 		filePath: [],
+		selectedFiles: [],
 	};
 }
 
@@ -186,6 +215,7 @@ export function enterCommandLevel(
 		segments: buildCommandSegments(newPath, true),
 		commandPath: newPath,
 		filePath: [],
+		selectedFiles: [],
 	};
 }
 
@@ -206,6 +236,7 @@ export function exitCommandLevel(instance: InputInstance): InputInstance {
 		segments: buildCommandSegments(newPath, true),
 		commandPath: newPath,
 		filePath: [],
+		selectedFiles: [],
 	};
 }
 
@@ -225,6 +256,7 @@ export function enterFileLevel(
 		segments: buildFileSegments(newPath, true),
 		commandPath: [],
 		filePath: newPath,
+		selectedFiles: instance.selectedFiles,
 	};
 }
 
@@ -245,6 +277,7 @@ export function exitFileLevel(instance: InputInstance): InputInstance {
 		segments: buildFileSegments(newPath, true),
 		commandPath: [],
 		filePath: newPath,
+		selectedFiles: instance.selectedFiles,
 	};
 }
 
@@ -353,6 +386,79 @@ export function getInstanceText(instance: InputInstance): string {
 }
 
 /**
+ * 更新 selectedFiles 的位置信息
+ * 当文本变化时，通过搜索文件路径来更新位置
+ * @returns 仍然有效的 selectedFiles（位置已更新）
+ */
+export function updateSelectedFilesPositions(
+	newText: string,
+	oldSelectedFiles: SelectedFile[],
+): SelectedFile[] {
+	return oldSelectedFiles
+		.map((file) => {
+			// 构建要搜索的文本（@path）
+			const searchText = "@" + file.path;
+			const newPosition = newText.indexOf(searchText);
+			if (newPosition === -1) {
+				// 文件路径不在新文本中
+				return null;
+			}
+			return {
+				...file,
+				atPosition: newPosition,
+				endPosition: newPosition + searchText.length,
+			};
+		})
+		.filter((f): f is SelectedFile => f !== null);
+}
+
+/**
+ * 根据 selectedFiles 重建带颜色的 segments
+ * 文件路径显示颜色，其余部分为普通文本
+ */
+export function rebuildSegmentsWithFiles(
+	text: string,
+	selectedFiles: SelectedFile[],
+): ColoredSegment[] {
+	if (selectedFiles.length === 0 || text.length === 0) {
+		return text ? [{ text }] : [];
+	}
+
+	// 按位置排序
+	const sortedFiles = [...selectedFiles].sort(
+		(a, b) => a.atPosition - b.atPosition,
+	);
+
+	const segments: ColoredSegment[] = [];
+	let pos = 0;
+
+	for (const file of sortedFiles) {
+		// 添加文件前的普通文本
+		if (file.atPosition > pos) {
+			segments.push({ text: text.substring(pos, file.atPosition) });
+		}
+
+		// 添加 @ 符号（浅蓝色）
+		segments.push({ text: "@", color: FILE_AT_COLOR });
+
+		// 添加文件路径（金黄色）
+		const pathText = text.substring(file.atPosition + 1, file.endPosition);
+		if (pathText) {
+			segments.push({ text: pathText, color: PATH_COLOR });
+		}
+
+		pos = file.endPosition;
+	}
+
+	// 添加最后一个文件之后的文本
+	if (pos < text.length) {
+		segments.push({ text: text.substring(pos) });
+	}
+
+	return segments;
+}
+
+/**
  * 判断是否为消息类型
  */
 export function isMessageInstance(instance: InputInstance): boolean {
@@ -364,4 +470,92 @@ export function isMessageInstance(instance: InputInstance): boolean {
  */
 export function isCommandInstance(instance: InputInstance): boolean {
 	return instance.type === "command";
+}
+
+// ============================================================================
+// 历史记录类型
+// ============================================================================
+
+/**
+ * 历史记录条目 - 不包含 cursor（恢复时设为 text.length）
+ * 这是 InputInstance 的子集，用于历史存储
+ */
+export type HistoryEntry = {
+	/** 纯文本内容 */
+	text: string;
+
+	/** 输入类型 */
+	type: InputType;
+
+	/** 渲染分段（带颜色） */
+	segments: ColoredSegment[];
+
+	/** 命令路径（仅 type='command' 时有意义） */
+	commandPath: string[];
+
+	/** 文件路径（文件选择模式下的导航路径） */
+	filePath: string[];
+
+	/** 已选择的文件列表（通过 @ 选择的文件） */
+	selectedFiles: SelectedFile[];
+};
+
+/**
+ * 从 InputInstance 创建 HistoryEntry（去除 cursor）
+ */
+export function toHistoryEntry(instance: InputInstance): HistoryEntry {
+	return {
+		text: instance.text,
+		type: instance.type,
+		segments: instance.segments,
+		commandPath: instance.commandPath,
+		filePath: instance.filePath,
+		selectedFiles: instance.selectedFiles,
+	};
+}
+
+/**
+ * 从 HistoryEntry 恢复 InputInstance（cursor 设为 text.length）
+ */
+export function fromHistoryEntry(entry: HistoryEntry): InputInstance {
+	return {
+		text: entry.text,
+		cursor: entry.text.length,
+		type: entry.type,
+		segments: entry.segments,
+		commandPath: entry.commandPath,
+		filePath: entry.filePath,
+		selectedFiles: entry.selectedFiles,
+	};
+}
+
+// ============================================================================
+// UserInput 转换
+// ============================================================================
+
+/**
+ * 从 InputInstance 创建 UserInput
+ * UserInput 是 InputInstance 的语义子集，用于提交回调
+ */
+export function toUserInput(instance: InputInstance): UserInput {
+	if (instance.type === "command") {
+		const commandInput: CommandInput = {
+			type: "command",
+			text: instance.text,
+			segments: instance.segments,
+			commandPath: instance.commandPath,
+		};
+		return commandInput;
+	}
+
+	const messageInput: MessageInput = {
+		type: "message",
+		text: instance.text,
+		segments: instance.segments,
+		files: instance.selectedFiles.map((f) => ({
+			path: f.path,
+			isDirectory: f.isDirectory,
+		})),
+	};
+	return messageInput;
 }

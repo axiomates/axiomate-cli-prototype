@@ -59,10 +59,10 @@ export default function App() {
 	const handleSubmit = useCallback(
 		(input: UserInput) => {
 			if (isMessageInput(input)) {
-				sendToAI(input.content);
+				sendToAI(input.text);
 			} else if (isCommandInput(input)) {
 				handleCommand(
-					input.command,
+					input.commandPath,
 					{ appName: APP_NAME, version: VERSION },
 					commandCallbacks,
 				);
