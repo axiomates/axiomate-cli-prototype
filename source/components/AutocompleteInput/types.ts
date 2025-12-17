@@ -102,6 +102,7 @@ export type EditorAction =
 	| { type: "SELECT_FILE"; index: number }
 	| { type: "ENTER_FILE_DIR"; dirName: string }
 	| { type: "CONFIRM_FILE"; fileName: string }
+	| { type: "CONFIRM_FOLDER" } // 选择当前文件夹（"." 条目）
 	| { type: "EXIT_FILE" }
 	| { type: "EXIT_FILE_KEEP_AT" } // 退出文件模式但保留 @ 符号
 	// 其他

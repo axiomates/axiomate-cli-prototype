@@ -62,29 +62,37 @@ export function FileMenu({
 				</Box>
 			)}
 			{/* 文件列表（最多显示 10 个） */}
-			{files.slice(0, 10).map((file, index) => (
-				<Box key={file.path}>
-					<Text
-						backgroundColor={index === selectedIndex ? "blue" : undefined}
-						color={index === selectedIndex ? "white" : undefined}
-					>
-						{promptIndent}
-						{file.isDirectory ? "📁 " : "📄 "}
+			{files.slice(0, 10).map((file, index) => {
+				const isDotEntry = file.name === ".";
+				return (
+					<Box key={file.path}>
 						<Text
-							color={
-								index === selectedIndex
-									? "white"
-									: file.isDirectory
-										? DIR_COLOR
-										: FILE_COLOR
-							}
+							backgroundColor={index === selectedIndex ? "blue" : undefined}
+							color={index === selectedIndex ? "white" : undefined}
 						>
-							{file.name}
+							{promptIndent}
+							{file.isDirectory ? "📁 " : "📄 "}
+							<Text
+								color={
+									index === selectedIndex
+										? "white"
+										: file.isDirectory
+											? DIR_COLOR
+											: FILE_COLOR
+								}
+							>
+								{file.name}
+							</Text>
+							{isDotEntry && (
+								<Text color={index === selectedIndex ? "white" : "gray"}>
+									{" "}(选择此文件夹)
+								</Text>
+							)}
 						</Text>
-					</Text>
-					{file.isDirectory && <Text color="gray"> →</Text>}
-				</Box>
-			))}
+						{file.isDirectory && !isDotEntry && <Text color="gray"> →</Text>}
+					</Box>
+				);
+			})}
 			{/* 如果还有更多文件 */}
 			{files.length > 10 && (
 				<Text color="gray">

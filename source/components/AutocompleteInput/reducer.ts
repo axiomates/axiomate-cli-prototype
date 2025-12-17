@@ -313,6 +313,23 @@ export function editorReducer(
 			};
 		}
 
+		case "CONFIRM_FOLDER": {
+			// 选择当前文件夹（"." 条目）
+			if (!isFileMode(state.uiMode)) return state;
+			const { prefix } = state.uiMode;
+			// 使用当前 filePath，不追加任何文件名
+			const folderPath = state.instance.filePath.join("\\");
+			// 最终文本：前缀 + 文件夹路径
+			const newText = prefix + folderPath;
+			const newCursor = newText.length;
+			const newInstance = updateInstanceFromText(newText, newCursor, [], []);
+			return {
+				...state,
+				instance: newInstance,
+				uiMode: { type: "normal" },
+			};
+		}
+
 		case "EXIT_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
 			const { prefix } = state.uiMode;

@@ -92,7 +92,22 @@ export function useFileSelect(
 						item.name.toLowerCase().startsWith(filter.toLowerCase()),
 					)
 				: items;
-			setFiles(filtered);
+
+			// 在子目录中（非根目录）时，添加 "." 条目用于选择当前文件夹
+			// 只在没有过滤时显示，或过滤匹配 "." 时显示
+			const isInSubdirectory = basePath !== "." && basePath !== "";
+			const showDotEntry = isInSubdirectory && (!filter || ".".startsWith(filter.toLowerCase()));
+
+			if (showDotEntry) {
+				const dotEntry: FileItem = {
+					name: ".",
+					isDirectory: true,
+					path: normalize(basePath),
+				};
+				setFiles([dotEntry, ...filtered]);
+			} else {
+				setFiles(filtered);
+			}
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "读取目录失败");
 			setFiles([]);

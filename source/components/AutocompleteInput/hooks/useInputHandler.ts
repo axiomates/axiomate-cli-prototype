@@ -161,34 +161,42 @@ export function useInputHandler({
 				return;
 			}
 
-			if (filteredFiles.length > 0) {
-				if (key.upArrow) {
+			// 上下键导航 - 始终在文件模式内处理，保持一致性
+			if (key.upArrow) {
+				if (filteredFiles.length > 0) {
 					const newIndex =
 						selectedIndex > 0 ? selectedIndex - 1 : filteredFiles.length - 1;
 					dispatch({ type: "SELECT_FILE", index: newIndex });
-					return;
 				}
+				// 无论是否有文件，都不退出文件模式
+				return;
+			}
 
-				if (key.downArrow) {
+			if (key.downArrow) {
+				if (filteredFiles.length > 0) {
 					const newIndex =
 						selectedIndex < filteredFiles.length - 1 ? selectedIndex + 1 : 0;
 					dispatch({ type: "SELECT_FILE", index: newIndex });
-					return;
 				}
+				// 无论是否有文件，都不退出文件模式
+				return;
+			}
 
-				if (key.return) {
-					const selectedFile = filteredFiles[selectedIndex];
-					if (selectedFile) {
-						if (selectedFile.isDirectory) {
-							// 进入子目录
-							dispatch({ type: "ENTER_FILE_DIR", dirName: selectedFile.name });
-						} else {
-							// 确认选择文件
-							dispatch({ type: "CONFIRM_FILE", fileName: selectedFile.name });
-						}
+			if (key.return && filteredFiles.length > 0) {
+				const selectedFile = filteredFiles[selectedIndex];
+				if (selectedFile) {
+					if (selectedFile.name === ".") {
+						// 选择当前文件夹（"." 条目）
+						dispatch({ type: "CONFIRM_FOLDER" });
+					} else if (selectedFile.isDirectory) {
+						// 进入子目录
+						dispatch({ type: "ENTER_FILE_DIR", dirName: selectedFile.name });
+					} else {
+						// 确认选择文件
+						dispatch({ type: "CONFIRM_FILE", fileName: selectedFile.name });
 					}
-					return;
 				}
+				return;
 			}
 
 			if (key.escape) {
