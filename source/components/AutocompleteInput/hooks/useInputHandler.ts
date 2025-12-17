@@ -136,10 +136,12 @@ export function useInputHandler({
 			// 处理 backspace
 			if (key.backspace || key.delete) {
 				const { filePath } = instance;
-				// 计算路径前缀长度（如 "@assets/" 的长度）
-				const pathPrefix = buildFileText(filePath, true);
-				// 检查是否有过滤文本（光标位置 > 路径前缀长度）
-				const hasFilterText = cursor > pathPrefix.length;
+				const { prefix } = uiMode;
+				// 计算完整前缀长度（包括 @ 之前的文本 + 文件路径部分，如 "hello @assets\"）
+				const filePathText = buildFileText(filePath, true);
+				const fullPrefixLength = prefix.length + filePathText.length;
+				// 检查是否有过滤文本（光标位置 > 完整前缀长度）
+				const hasFilterText = cursor > fullPrefixLength;
 
 				if (hasFilterText) {
 					// 有过滤文本，删除一个字符，保持文件选择模式
@@ -150,7 +152,7 @@ export function useInputHandler({
 
 				// 没有过滤文本
 				if (filePath.length === 0) {
-					// 在根级别，退出文件模式但保留 @
+					// 在根级别，退出文件模式但保留前缀
 					dispatch({ type: "EXIT_FILE_KEEP_AT" });
 					return;
 				}
@@ -340,10 +342,12 @@ export function useInputHandler({
 
 			// 输入 @ 时进入文件选择模式（不在斜杠模式或文件模式时）
 			if (inputChar === "@" && !inSlashMode && !inFileMode) {
-				// 进入文件选择模式（reducer 会创建带 @ 的 instance）
+				// 进入文件选择模式，保留 @ 之前的文本作为前缀
+				const prefix = input.slice(0, cursor);
 				dispatch({
 					type: "ENTER_FILE",
 					atPosition: cursor,
+					prefix,
 				});
 				return;
 			}

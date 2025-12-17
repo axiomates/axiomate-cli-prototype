@@ -78,19 +78,21 @@ export default function AutocompleteInput({
 	// basePath 现在从 instance.filePath 获取
 	const fileBasePath = useMemo(() => {
 		if (!isFileMode(uiMode)) return "";
-		return instance.filePath.join("/") || ".";
+		return instance.filePath.join("\\") || ".";
 	}, [uiMode, instance.filePath]);
 
 	// 过滤文本从路径前缀之后提取
 	const fileFilter = useMemo(() => {
 		if (!isFileMode(uiMode)) return "";
-		// 计算路径前缀（如 "@assets/"）
-		const pathPrefix = buildFileText(instance.filePath, true);
-		// 提取路径前缀之后的文本作为过滤条件
-		if (input.length > pathPrefix.length) {
-			const afterPath = input.slice(pathPrefix.length);
-			// 匹配到空格或斜杠为止
-			const match = afterPath.match(/^[^\s/]*/);
+		// 计算完整前缀（包括 @ 之前的文本 + 文件路径部分，如 "hello @assets\"）
+		const { prefix } = uiMode;
+		const filePathText = buildFileText(instance.filePath, true);
+		const fullPrefix = prefix + filePathText;
+		// 提取完整前缀之后的文本作为过滤条件
+		if (input.length > fullPrefix.length) {
+			const afterPath = input.slice(fullPrefix.length);
+			// 匹配到空格或反斜杠为止
+			const match = afterPath.match(/^[^\s\\]*/);
 			return match ? match[0] : "";
 		}
 		return "";

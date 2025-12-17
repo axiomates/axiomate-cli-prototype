@@ -296,21 +296,21 @@ export function buildCommandSegments(
 /**
  * 根据文件路径构建文本
  * @param path 文件路径数组，如 ["src", "components"]
- * @param trailing 是否包含尾部斜杠
- * @returns 文本，如 "@src/components/"
+ * @param trailing 是否包含尾部反斜杠
+ * @returns 文本，如 "@src\components\"
  */
 export function buildFileText(path: string[], trailing: boolean): string {
 	if (path.length === 0) {
 		return "@";
 	}
-	const base = "@" + path.join("/");
-	return trailing ? base + "/" : base;
+	const base = "@" + path.join("\\");
+	return trailing ? base + "\\" : base;
 }
 
 /**
  * 根据文件路径构建带颜色的分段
  * @param path 文件路径数组
- * @param trailing 是否包含尾部斜杠
+ * @param trailing 是否包含尾部反斜杠
  */
 export function buildFileSegments(
 	path: string[],
@@ -325,9 +325,9 @@ export function buildFileSegments(
 
 	for (let i = 0; i < path.length; i++) {
 		segments.push({ text: path[i]!, color: PATH_COLOR }); // 目录名为金黄色
-		// 中间的斜杠，或者尾部斜杠（如果 trailing=true）
+		// 中间的反斜杠，或者尾部反斜杠（如果 trailing=true）
 		if (i < path.length - 1 || trailing) {
-			segments.push({ text: "/", color: ARROW_COLOR });
+			segments.push({ text: "\\", color: ARROW_COLOR });
 		}
 	}
 

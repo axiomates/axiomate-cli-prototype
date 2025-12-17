@@ -58,7 +58,7 @@ export function FileMenu({
 			{path.length > 0 && (
 				<Box>
 					<Text color="gray">{promptIndent}← </Text>
-					<Text color={DIR_COLOR}>{path.join("/")}</Text>
+					<Text color={DIR_COLOR}>{path.join("\\")}</Text>
 				</Box>
 			)}
 			{/* 文件列表（最多显示 10 个） */}

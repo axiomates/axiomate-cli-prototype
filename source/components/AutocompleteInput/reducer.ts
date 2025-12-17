@@ -7,6 +7,7 @@ import {
 	type EditorState,
 	type EditorAction,
 	type UIMode,
+	type InputInstance,
 	isNormalMode,
 	isHistoryMode,
 	isSlashMode,
@@ -22,6 +23,7 @@ import {
 	exitFileLevel,
 	createCommandInstance,
 	buildFileText,
+	buildFileSegments,
 } from "./types.js";
 
 /**
@@ -233,8 +235,20 @@ export function editorReducer(
 		// ====================================================================
 
 		case "ENTER_FILE": {
-			// 创建文件选择模式实例
-			const newInstance = createFileInstance([], true);
+			// 创建文件选择模式实例，保留 @ 之前的前缀
+			const { prefix } = action;
+			const filePathText = buildFileText([], true); // "@"
+			const newText = prefix + filePathText;
+			const fileSegments = buildFileSegments([], true);
+			const newSegments = prefix ? [{ text: prefix }, ...fileSegments] : fileSegments;
+			const newInstance: InputInstance = {
+				text: newText,
+				cursor: newText.length,
+				type: "message",
+				segments: newSegments,
+				commandPath: [],
+				filePath: [],
+			};
 			return {
 				...state,
 				instance: newInstance,
@@ -243,6 +257,7 @@ export function editorReducer(
 					type: "file",
 					selectedIndex: 0,
 					atPosition: action.atPosition,
+					prefix: action.prefix,
 				},
 			};
 		}
@@ -256,8 +271,21 @@ export function editorReducer(
 
 		case "ENTER_FILE_DIR": {
 			if (!isFileMode(state.uiMode)) return state;
-			// 使用 enterFileLevel 更新 instance（包括 text、segments、filePath）
-			const newInstance = enterFileLevel(state.instance, action.dirName);
+			// 进入子目录，保留前缀
+			const { prefix } = state.uiMode;
+			const newPath = [...state.instance.filePath, action.dirName];
+			const filePathText = buildFileText(newPath, true);
+			const newText = prefix + filePathText;
+			const fileSegments = buildFileSegments(newPath, true);
+			const newSegments = prefix ? [{ text: prefix }, ...fileSegments] : fileSegments;
+			const newInstance: InputInstance = {
+				text: newText,
+				cursor: newText.length,
+				type: "message",
+				segments: newSegments,
+				commandPath: [],
+				filePath: newPath,
+			};
 			return {
 				...state,
 				instance: newInstance,
@@ -270,24 +298,12 @@ export function editorReducer(
 
 		case "CONFIRM_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
-			// 构建完整文件路径
+			// 构建完整文件路径，保留前缀
+			const { prefix } = state.uiMode;
 			const finalPath = [...state.instance.filePath, action.fileName];
-			const filePath = finalPath.join("/");
-			// 将文件路径插入到 @ 位置，保留上下文
-			const { atPosition } = state.uiMode;
-			// 计算当前路径前缀长度（包括可能的过滤文本）
-			const pathPrefix = buildFileText(state.instance.filePath, true);
-			const currentText = state.instance.text;
-			// 找到过滤文本结束位置（空格或末尾）
-			const afterPathPrefix = currentText.slice(pathPrefix.length);
-			const filterMatch = afterPathPrefix.match(/^[^\s/]*/);
-			const filterLength = filterMatch ? filterMatch[0].length : 0;
-			// 获取 @ 之前的文本（通过 atPosition）
-			// 注意：由于我们重建了 instance.text，需要通过 atPosition 计算
-			// atPosition 是原始输入中 @ 的位置，但现在 text 已经被替换为路径格式
-			// 所以这里需要重新构建最终文本
-			// 简化处理：直接用文件路径替换整个输入（因为进入文件模式后 text 就变成了 @path/）
-			const newText = filePath;
+			const filePath = finalPath.join("\\");
+			// 最终文本：前缀 + 文件路径（不带 @，因为这是最终选择的文件）
+			const newText = prefix + filePath;
 			const newCursor = newText.length;
 			const newInstance = updateInstanceFromText(newText, newCursor, [], []);
 			return {
@@ -299,11 +315,23 @@ export function editorReducer(
 
 		case "EXIT_FILE": {
 			if (!isFileMode(state.uiMode)) return state;
-			// 使用 exitFileLevel 返回上一级或退出
+			const { prefix } = state.uiMode;
 			const filePath = state.instance.filePath;
 			if (filePath.length > 0) {
-				// 有父目录，返回上一级
-				const newInstance = exitFileLevel(state.instance);
+				// 有父目录，返回上一级，保留前缀
+				const newPath = filePath.slice(0, -1);
+				const filePathText = buildFileText(newPath, true);
+				const newText = prefix + filePathText;
+				const fileSegments = buildFileSegments(newPath, true);
+				const newSegments = prefix ? [{ text: prefix }, ...fileSegments] : fileSegments;
+				const newInstance: InputInstance = {
+					text: newText,
+					cursor: newText.length,
+					type: "message",
+					segments: newSegments,
+					commandPath: [],
+					filePath: newPath,
+				};
 				return {
 					...state,
 					instance: newInstance,
@@ -313,10 +341,13 @@ export function editorReducer(
 					},
 				};
 			}
-			// 在根级，退出文件模式并清空
+			// 在根级，退出文件模式，恢复前缀（如果有的话）
+			const newInstance = prefix
+				? updateInstanceFromText(prefix, prefix.length, [], [])
+				: createEmptyInstance();
 			return {
 				...state,
-				instance: createEmptyInstance(),
+				instance: newInstance,
 				uiMode: { type: "normal" },
 			};
 		}
