@@ -66,7 +66,7 @@ export function HelpPanel({ columns }: HelpPanelProps) {
 			<Box flexDirection="row" flexWrap="wrap">
 				<Box width="50%">
 					<Text color="#ffff00">Escape </Text>
-					<Text color="gray">exit mode / clear suggestion</Text>
+					<Text color="gray">go back / cancel</Text>
 				</Box>
 			</Box>
 		</Box>
