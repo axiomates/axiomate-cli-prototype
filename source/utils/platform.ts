@@ -6,7 +6,7 @@
  * - 配置更新后自动重启（保持工作目录）
  */
 
-import { spawn } from "child_process";
+import { spawn, spawnSync } from "child_process";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs";
 import { platform } from "os";
 import { join } from "path";
@@ -66,6 +66,129 @@ type TerminalSettings = {
 	};
 	[key: string]: unknown;
 };
+
+// ============================================================================
+// 跨平台重启功能
+// ============================================================================
+
+type WindowsTerminal = "wt" | "powershell" | "cmd";
+
+/**
+ * 检测命令是否存在
+ */
+function commandExists(cmd: string): boolean {
+	try {
+		const result = spawnSync(
+			platform() === "win32" ? "where" : "which",
+			[cmd],
+			{
+				stdio: "pipe",
+				windowsHide: true,
+			},
+		);
+		return result.status === 0;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * 检测 Windows 可用的终端（按优先级）
+ * 优先级：Windows Terminal > PowerShell > CMD
+ */
+function detectWindowsTerminal(): WindowsTerminal {
+	if (commandExists("wt.exe")) {
+		return "wt";
+	}
+	if (commandExists("powershell.exe")) {
+		return "powershell";
+	}
+	return "cmd";
+}
+
+/**
+ * 转义 PowerShell 字符串参数
+ */
+function escapePowerShellArg(arg: string): string {
+	// 用单引号包裹，内部的单引号用两个单引号转义
+	return `'${arg.replace(/'/g, "''")}'`;
+}
+
+/**
+ * 转义 CMD 字符串参数
+ */
+function escapeCmdArg(arg: string): string {
+	// 如果包含空格或特殊字符，用双引号包裹
+	if (/[\s&|<>^"]/.test(arg)) {
+		return `"${arg.replace(/"/g, '""')}"`;
+	}
+	return arg;
+}
+
+/**
+ * Windows 平台重启（自动检测最佳终端）
+ */
+function restartWindows(): never {
+	const cwd = process.cwd();
+	const exePath = process.execPath;
+	const args = process.argv.slice(1);
+	const terminal = detectWindowsTerminal();
+
+	switch (terminal) {
+		case "wt":
+			// Windows Terminal: wt.exe -d <cwd> <exe> <args...>
+			spawn("wt.exe", ["-d", cwd, exePath, ...args], {
+				detached: true,
+				stdio: "ignore",
+			}).unref();
+			break;
+
+		case "powershell": {
+			// PowerShell: Start-Process 启动新窗口
+			const psArgs = args.map(escapePowerShellArg).join(", ");
+			const psCommand = psArgs
+				? `Start-Process -FilePath ${escapePowerShellArg(exePath)} -ArgumentList ${psArgs} -WorkingDirectory ${escapePowerShellArg(cwd)}`
+				: `Start-Process -FilePath ${escapePowerShellArg(exePath)} -WorkingDirectory ${escapePowerShellArg(cwd)}`;
+			spawn("powershell.exe", ["-Command", psCommand], {
+				detached: true,
+				stdio: "ignore",
+				windowsHide: true,
+			}).unref();
+			break;
+		}
+
+		case "cmd": {
+			// CMD: start 命令启动新窗口
+			const cmdArgs = [exePath, ...args].map(escapeCmdArg).join(" ");
+			spawn("cmd.exe", ["/C", `start "" /D "${cwd}" ${cmdArgs}`], {
+				detached: true,
+				stdio: "ignore",
+				windowsHide: true,
+			}).unref();
+			break;
+		}
+	}
+
+	process.exit(0);
+}
+
+/**
+ * Unix 平台重启（macOS / Linux）
+ */
+function restartUnix(): never {
+	const cwd = process.cwd();
+	const exePath = process.execPath;
+	const args = process.argv.slice(1);
+
+	// 直接 spawn 新进程替换当前进程
+	spawn(exePath, args, {
+		cwd,
+		stdio: "inherit",
+		detached: true,
+	}).unref();
+
+	process.exit(0);
+}
 
 // ============================================================================
 // 内部辅助函数
@@ -174,20 +297,17 @@ function ensureWindowsTerminalProfile(): boolean {
 }
 
 /**
- * 使用 Windows Terminal 重启应用（保持工作目录和命令行参数）
+ * 跨平台重启应用（保持工作目录和命令行参数）
+ *
+ * Windows: 自动检测最佳终端（wt.exe > powershell.exe > cmd.exe）
+ * macOS/Linux: 直接 spawn 新进程
  */
-function restartWithWindowsTerminal(): never {
-	const cwd = process.cwd();
-	const exePath = process.execPath;
-	// 获取原始命令行参数（排除 exe 路径本身）
-	const args = process.argv.slice(1);
-
-	spawn("wt.exe", ["-d", cwd, exePath, ...args], {
-		detached: true,
-		stdio: "ignore",
-	}).unref();
-
-	process.exit(0);
+export function restartApp(): never {
+	if (platform() === "win32") {
+		restartWindows();
+	} else {
+		restartUnix();
+	}
 }
 
 // ============================================================================
@@ -215,6 +335,6 @@ export function initPlatform(): void {
 	const needsRestart = ensureWindowsTerminalProfile();
 
 	if (needsRestart) {
-		restartWithWindowsTerminal();
+		restartApp();
 	}
 }
