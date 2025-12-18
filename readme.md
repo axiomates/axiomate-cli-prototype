@@ -1,24 +1,26 @@
 # axiomate-cli
 
-A terminal-based CLI application built with [Ink](https://github.com/vadimdemedes/ink) and React, featuring a data-driven input system with slash commands, multi-file selection, and history support.
+A terminal-based AI agent CLI application built with [React](https://react.dev/) + [Ink](https://github.com/vadimdemedes/ink), featuring a data-driven input system with hierarchical slash commands, multi-file selection, and intelligent history support.
 
 ## Features
 
-- Interactive terminal UI with fixed layout (Header, Output, Input, Selection List)
+- Interactive terminal UI with responsive layout
 - **Data-driven input system** with `InputInstance` as single source of truth
-- Auto-completion support with async provider
-- Hierarchical slash commands with colored rendering (`/model → openai → gpt-4`)
+- Auto-completion with async provider support
+- **Hierarchical slash commands** with colored rendering (`/model → openai → gpt-4`)
 - **Multi-file selection** with `@` trigger for quick file path insertion
+- **Atomic file blocks**: `@path` treated as single units for cursor/deletion
 - Command history with full state restoration (including colors and selected files)
-- Keyboard shortcuts (Ctrl+C, Ctrl+U, Ctrl+K, etc.)
-- Responsive layout that adapts to terminal size
+- Comprehensive keyboard shortcuts
+- Cross-platform support (Windows, macOS, Linux)
+- Structured logging with daily rotation
 
 ## Requirements
 
 - Node.js >= 20
 - Bun (optional, for building standalone executable)
 
-## Install
+## Installation
 
 ```bash
 npm install
@@ -45,7 +47,7 @@ Build a standalone executable (requires [Bun](https://bun.sh)):
 npm run package
 ```
 
-This creates `bundle/axiomate-cli.exe` (Windows) or `bundle/axiomate-cli` (macOS/Linux).
+Creates `bundle/axiomate-cli.exe` (Windows) or `bundle/axiomate-cli` (macOS/Linux).
 
 ### Command Line Options
 
@@ -54,100 +56,76 @@ This creates `bundle/axiomate-cli.exe` (Windows) or `bundle/axiomate-cli` (macOS
 | `-h, --help`    | Show help message and exit           |
 | `-v, --verbose` | Enable verbose logging (trace level) |
 
-Example:
+## Slash Commands
 
-```bash
-# Show help information
-axiomate --help
-axiomate -h
+Type `/` to open the slash command menu. Use arrow keys to navigate and Enter to select.
 
-# Run with verbose logging
-axiomate --verbose
-axiomate -v
+| Command    | Description                |
+| ---------- | -------------------------- |
+| `/model`   | Select AI model provider   |
+| `/compact` | Summarize conversation     |
+| `/help`    | Show available commands    |
+| `/clear`   | Clear the screen           |
+| `/version` | Show version information   |
+| `/exit`    | Exit the application       |
+
+Slash commands support nested hierarchy with colored path display:
+
+```
+/model
+  ├── /openai (gpt-4o, gpt-4, gpt-4-turbo, gpt-3.5-turbo)
+  ├── /qwen (qwen-72b, qwen-14b, qwen-7b)
+  ├── /claude (claude-3-opus, claude-3-sonnet, claude-3-haiku)
+  ├── /deepseek-v3
+  └── /llama-3.3-70b
 ```
 
-## Commands
+## File Selection
 
-Type commands directly or use slash commands:
+Type `@` to open the file selection menu. Navigate directories and select files to insert their paths.
 
-| Command         | Description              |
-| --------------- | ------------------------ |
-| `help`          | Show available commands  |
-| `clear`         | Clear the screen         |
-| `exit` / `quit` | Exit the application     |
-| `version`       | Show version information |
-
-### Slash Commands
-
-Type `/` to see available slash commands. Use arrow keys to select and Enter to execute.
-
-| Slash Command | Description              |
-| ------------- | ------------------------ |
-| `/help`       | Show available commands  |
-| `/clear`      | Clear the screen         |
-| `/exit`       | Exit the application     |
-| `/version`    | Show version information |
-
-Slash commands support nested hierarchy (e.g., `/model → openai → gpt-4`) with colored path display.
-
-### File Selection
-
-Type `@` to open the file selection menu. Navigate directories and select files to insert their paths into your input.
-
-- Use `↑/↓` to navigate files and folders
-- Press `Enter` to enter a directory or select a file
-- Press `Escape` to go back one level or exit file mode
+- `↑/↓` - Navigate files and folders
+- `Enter` - Enter directory or select file
+- `Escape` - Go back one level or exit
 - Type to filter files by name
-- Select `.` to choose the current folder
-- **Multi-file support**: Select multiple files in a single input (e.g., `请分析 @src/a.ts 和 @src/b.ts`)
+- Select `.` to choose current folder
+- **Multi-file support**: Select multiple files (e.g., `analyze @src/a.ts and @src/b.ts`)
 
-File paths are treated as atomic blocks:
-
+File paths are **atomic blocks**:
 - Cursor skips over `@path` blocks when moving left/right
 - Backspace/Delete removes the entire `@path` block at once
 
 ## Keyboard Shortcuts
 
-| Shortcut     | Action                                             |
-| ------------ | -------------------------------------------------- |
-| `/`          | Open slash command menu                            |
-| `@`          | Open file selection menu                           |
-| `Tab`        | Accept autocomplete suggestion                     |
-| `→`          | Accept one character from suggestion               |
-| `←` / `→`    | Move cursor left/right (skips over @file blocks)   |
-| `↑` / `↓`    | Navigate history / command list / file list        |
-| `Ctrl+Enter` | Insert new line                                    |
-| `Ctrl+A`     | Move cursor to line start                          |
-| `Ctrl+E`     | Move cursor to line end                            |
-| `Ctrl+U`     | Clear text before cursor                           |
-| `Ctrl+K`     | Clear text after cursor                            |
-| `Ctrl+C`     | Exit application                                   |
-| `Escape`     | Clear suggestion / exit current mode / close help  |
-| `?`          | Show keyboard shortcuts help (when input is empty) |
+| Shortcut     | Action                                           |
+| ------------ | ------------------------------------------------ |
+| `/`          | Open slash command menu                          |
+| `@`          | Open file selection menu                         |
+| `?`          | Show keyboard shortcuts (when input empty)       |
+| `Tab`        | Accept autocomplete suggestion                   |
+| `→`          | Accept one character from suggestion             |
+| `←` / `→`    | Move cursor (skips over @file blocks)            |
+| `↑` / `↓`    | Navigate history / command list / file list      |
+| `Enter`      | Submit input or select menu item                 |
+| `Ctrl+Enter` | Insert new line                                  |
+| `Ctrl+A`     | Move cursor to line start                        |
+| `Ctrl+E`     | Move cursor to line end                          |
+| `Ctrl+U`     | Clear text before cursor                         |
+| `Ctrl+K`     | Clear text after cursor                          |
+| `Ctrl+C`     | Exit application                                 |
+| `Escape`     | Clear suggestion / exit mode / close help        |
 
 ## Development
 
 ```bash
-# Watch mode for development
-npm run dev
-
-# Build project
-npm run build
-
-# Run tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Lint code
-npm run lint
-
-# Fix lint issues
-npm run lint:fix
-
-# Build standalone executable
-npm run package
+npm run dev        # Watch mode
+npm run build      # Build project
+npm test           # Run tests
+npm run test:watch # Tests in watch mode
+npm run lint       # Lint code
+npm run lint:fix   # Fix lint issues
+npm run bundle     # Bundle with esbuild
+npm run package    # Build standalone executable
 ```
 
 ## Architecture
@@ -158,11 +136,11 @@ npm run package
 ┌─────────────────────────────┐
 │ Header                      │
 ├─────────────────────────────┤
-│ Output Area                 │
+│ MessageOutput               │  ← Scrollable message history
 ├─────────────────────────────┤
-│ Input Area                  │
+│ AutocompleteInput           │  ← Multi-line input with colors
 ├─────────────────────────────┤
-│ Selection List              │  ← Changes based on mode
+│ Selection Panel             │  ← Mode-dependent content
 │   - SlashMenu (/ commands)  │
 │   - FileMenu  (@ files)     │
 │   - HelpPanel (? help)      │
@@ -171,17 +149,17 @@ npm run package
 
 ### Input System
 
-The input system uses a **data-driven architecture** with a unified `InputInstance` model as the single source of truth:
+The input system uses a **data-driven architecture** with `InputInstance` as the single source of truth:
 
 ```typescript
 type InputInstance = {
-	text: string; // Raw text content
-	cursor: number; // Cursor position
-	type: InputType; // "message" | "command"
-	segments: ColoredSegment[]; // Colored segments for rendering
-	commandPath: string[]; // Command path array
-	filePath: string[]; // Current file navigation path
-	selectedFiles: SelectedFile[]; // Files selected via @ (with positions)
+  text: string;               // Raw text content
+  cursor: number;             // Cursor position
+  type: InputType;            // "message" | "command"
+  segments: ColoredSegment[]; // Colored segments for rendering
+  commandPath: string[];      // Command path array
+  filePath: string[];         // Current file navigation path
+  selectedFiles: SelectedFile[]; // Files selected via @ (with positions)
 };
 ```
 
@@ -196,7 +174,7 @@ User Action → dispatch(EditorAction) → Reducer updates EditorState
                                               ↓
                                     Render uses instance.segments
                                               ↓
-                                    Submit → UserInput / HistoryEntry
+                                    Submit → UserInput (message/command)
 ```
 
 ### UI Modes
@@ -207,21 +185,7 @@ User Action → dispatch(EditorAction) → Reducer updates EditorState
 | `history` | `↑` / `↓` | Browse history (restores full state) |
 | `slash`   | `/`       | Navigate hierarchical slash commands |
 | `file`    | `@`       | Navigate file system for selection   |
-| `help`    | `?`       | Display keyboard shortcuts (overlay) |
-
-### File Selection System
-
-- **Multi-file support**: Select multiple files in one input
-- **Position tracking**: Each `@path` tracks its position via `atPosition` and `endPosition`
-- **Atomic operations**: Cursor movement and deletion treat `@path` as single units
-- **Color rendering**: `@` in light blue, path in gold
-
-### History System
-
-- Stores `HistoryEntry` objects (InputInstance without cursor)
-- Restores complete state including colors and selected files
-- Deduplication based on text content
-- `?` input not stored in history
+| `help`    | `?`       | Display keyboard shortcuts           |
 
 ### Submit Callback
 
@@ -231,7 +195,7 @@ When user submits input, it's converted to a `UserInput` object:
 // Message input (includes selected files)
 {
   type: "message",
-  text: "请分析 @src/app.ts",
+  text: "analyze @src/app.ts",
   segments: [...],
   files: [{ path: "src/app.ts", isDirectory: false }]
 }
@@ -249,11 +213,8 @@ When user submits input, it's converted to a `UserInput` object:
 
 ```
 source/
+├── cli.tsx                    # CLI entry point (meow)
 ├── app.tsx                    # Main application component
-├── cli.tsx                    # CLI entry point
-├── constants/
-│   ├── commands.ts            # Slash command definitions
-│   └── colors.ts              # Color constants
 ├── components/
 │   ├── AutocompleteInput/     # Core input component
 │   │   ├── index.tsx          # Main component
@@ -269,16 +230,41 @@ source/
 │   ├── input.ts               # UserInput type (submit callback)
 │   ├── inputInstance.ts       # InputInstance (core data model)
 │   └── richInput.ts           # ColoredSegment, ColorRange
-└── hooks/
-    ├── useTerminalHeight.ts   # Terminal height hook
-    └── useTerminalWidth.ts    # Terminal width hook
+├── constants/
+│   ├── commands.ts            # Slash command definitions
+│   ├── colors.ts              # Color constants
+│   ├── platform.ts            # Cross-platform path separator
+│   └── meta.ts                # Auto-generated version info
+├── services/
+│   └── commandHandler.ts      # Command execution
+├── hooks/
+│   ├── useTerminalWidth.ts    # Terminal width hook
+│   └── useTerminalHeight.ts   # Terminal height hook
+└── utils/
+    ├── config.ts              # User config (~/.axiomate.json)
+    ├── appdata.ts             # App data (~/.axiomate/)
+    ├── localsettings.ts       # Project settings (.axiomate/)
+    ├── logger.ts              # Pino logger with rotation
+    └── flags.ts               # CLI flags
 ```
+
+## Configuration
+
+- `~/.axiomate.json` - User configuration
+- `~/.axiomate/logs/` - Log files with daily rotation
+- `.axiomate/localsettings.json` - Project-local settings
 
 ## Tech Stack
 
-- [Ink](https://github.com/vadimdemedes/ink) - React for CLI
-- [React](https://react.dev/) - UI framework
-- [meow](https://github.com/sindresorhus/meow) - CLI argument parsing
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [React 19](https://react.dev/) - UI framework
+- [Ink 6](https://github.com/vadimdemedes/ink) - React for CLI
+- [TypeScript 5.7](https://www.typescriptlang.org/) - Type safety
 - [Vitest](https://vitest.dev/) - Testing framework
+- [Meow 13](https://github.com/sindresorhus/meow) - CLI argument parsing
+- [Pino](https://getpino.io/) - Structured logging
+- [esbuild](https://esbuild.github.io/) - Fast bundling
 - [Bun](https://bun.sh/) - Standalone executable packaging (optional)
+
+## License
+
+MIT
