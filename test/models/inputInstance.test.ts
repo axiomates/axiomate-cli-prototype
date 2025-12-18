@@ -25,7 +25,12 @@ import {
 	type InputInstance,
 	type SelectedFile,
 } from "../../source/models/inputInstance.js";
-import { PATH_COLOR, ARROW_COLOR, FILE_AT_COLOR, FILE_COLOR } from "../../source/constants/colors.js";
+import {
+	PATH_COLOR,
+	ARROW_COLOR,
+	FILE_AT_COLOR,
+	FILE_COLOR,
+} from "../../source/constants/colors.js";
 import { PATH_SEPARATOR } from "../../source/constants/platform.js";
 
 describe("models/inputInstance", () => {
@@ -325,12 +330,19 @@ describe("models/inputInstance", () => {
 			const instance: InputInstance = {
 				...createMessageInstance("@file.ts"),
 				selectedFiles: [
-					{ path: "file.ts", isDirectory: false, atPosition: 0, endPosition: 8 },
+					{
+						path: "file.ts",
+						isDirectory: false,
+						atPosition: 0,
+						endPosition: 8,
+					},
 				],
 			};
 			const userInput = toUserInput(instance);
 			if (userInput.type === "message") {
-				expect(userInput.files).toEqual([{ path: "file.ts", isDirectory: false }]);
+				expect(userInput.files).toEqual([
+					{ path: "file.ts", isDirectory: false },
+				]);
 			}
 		});
 	});
@@ -465,7 +477,11 @@ describe("models/inputInstance", () => {
 			const files: SelectedFile[] = [
 				{ path: "file.ts", isDirectory: false, atPosition: 6, endPosition: 14 },
 			];
-			const result = removeSelectedFile("hello @file.ts world", files[0]!, files);
+			const result = removeSelectedFile(
+				"hello @file.ts world",
+				files[0]!,
+				files,
+			);
 			expect(result.text).toBe("hello  world");
 			expect(result.cursor).toBe(6);
 			expect(result.selectedFiles).toEqual([]);

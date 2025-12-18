@@ -60,14 +60,14 @@ Creates `bundle/axiomate-cli.exe` (Windows) or `bundle/axiomate-cli` (macOS/Linu
 
 Type `/` to open the slash command menu. Use arrow keys to navigate and Enter to select.
 
-| Command    | Description                |
-| ---------- | -------------------------- |
-| `/model`   | Select AI model provider   |
-| `/compact` | Summarize conversation     |
-| `/help`    | Show available commands    |
-| `/clear`   | Clear the screen           |
-| `/version` | Show version information   |
-| `/exit`    | Exit the application       |
+| Command    | Description              |
+| ---------- | ------------------------ |
+| `/model`   | Select AI model provider |
+| `/compact` | Summarize conversation   |
+| `/help`    | Show available commands  |
+| `/clear`   | Clear the screen         |
+| `/version` | Show version information |
+| `/exit`    | Exit the application     |
 
 Slash commands support nested hierarchy with colored path display:
 
@@ -92,28 +92,29 @@ Type `@` to open the file selection menu. Navigate directories and select files 
 - **Multi-file support**: Select multiple files (e.g., `analyze @src/a.ts and @src/b.ts`)
 
 File paths are **atomic blocks**:
+
 - Cursor skips over `@path` blocks when moving left/right
 - Backspace/Delete removes the entire `@path` block at once
 
 ## Keyboard Shortcuts
 
-| Shortcut     | Action                                           |
-| ------------ | ------------------------------------------------ |
-| `/`          | Open slash command menu                          |
-| `@`          | Open file selection menu                         |
-| `?`          | Show keyboard shortcuts (when input empty)       |
-| `Tab`        | Accept autocomplete suggestion                   |
-| `→`          | Accept one character from suggestion             |
-| `←` / `→`    | Move cursor (skips over @file blocks)            |
-| `↑` / `↓`    | Navigate history / command list / file list      |
-| `Enter`      | Submit input or select menu item                 |
-| `Ctrl+Enter` | Insert new line                                  |
-| `Ctrl+A`     | Move cursor to line start                        |
-| `Ctrl+E`     | Move cursor to line end                          |
-| `Ctrl+U`     | Clear text before cursor                         |
-| `Ctrl+K`     | Clear text after cursor                          |
-| `Ctrl+C`     | Exit application                                 |
-| `Escape`     | Clear suggestion / exit mode / close help        |
+| Shortcut     | Action                                      |
+| ------------ | ------------------------------------------- |
+| `/`          | Open slash command menu                     |
+| `@`          | Open file selection menu                    |
+| `?`          | Show keyboard shortcuts (when input empty)  |
+| `Tab`        | Accept autocomplete suggestion              |
+| `→`          | Accept one character from suggestion        |
+| `←` / `→`    | Move cursor (skips over @file blocks)       |
+| `↑` / `↓`    | Navigate history / command list / file list |
+| `Enter`      | Submit input or select menu item            |
+| `Ctrl+Enter` | Insert new line                             |
+| `Ctrl+A`     | Move cursor to line start                   |
+| `Ctrl+E`     | Move cursor to line end                     |
+| `Ctrl+U`     | Clear text before cursor                    |
+| `Ctrl+K`     | Clear text after cursor                     |
+| `Ctrl+C`     | Exit application                            |
+| `Escape`     | Clear suggestion / exit mode / close help   |
 
 ## Development
 
@@ -153,13 +154,13 @@ The input system uses a **data-driven architecture** with `InputInstance` as the
 
 ```typescript
 type InputInstance = {
-  text: string;               // Raw text content
-  cursor: number;             // Cursor position
-  type: InputType;            // "message" | "command"
-  segments: ColoredSegment[]; // Colored segments for rendering
-  commandPath: string[];      // Command path array
-  filePath: string[];         // Current file navigation path
-  selectedFiles: SelectedFile[]; // Files selected via @ (with positions)
+	text: string; // Raw text content
+	cursor: number; // Cursor position
+	type: InputType; // "message" | "command"
+	segments: ColoredSegment[]; // Colored segments for rendering
+	commandPath: string[]; // Command path array
+	filePath: string[]; // Current file navigation path
+	selectedFiles: SelectedFile[]; // Files selected via @ (with positions)
 };
 ```
 

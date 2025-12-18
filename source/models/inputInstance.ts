@@ -4,7 +4,12 @@
  */
 
 import type { ColoredSegment } from "./richInput.js";
-import { PATH_COLOR, ARROW_COLOR, FILE_AT_COLOR, FILE_COLOR } from "../constants/colors.js";
+import {
+	PATH_COLOR,
+	ARROW_COLOR,
+	FILE_AT_COLOR,
+	FILE_COLOR,
+} from "../constants/colors.js";
 import { PATH_SEPARATOR } from "../constants/platform.js";
 import type { UserInput, MessageInput, CommandInput } from "./input.js";
 

@@ -12,11 +12,9 @@ import {
 	isSlashMode,
 	isFileMode,
 	isHelpMode,
-	createEmptyInstance,
 	createMessageInstance,
-	createCommandInstance,
-	toHistoryEntry,
 } from "../../source/components/AutocompleteInput/types.js";
+
 import { PATH_SEPARATOR } from "../../source/constants/platform.js";
 
 describe("editorReducer", () => {
@@ -306,7 +304,10 @@ describe("editorReducer", () => {
 			const commandEntry: HistoryEntry = {
 				text: "/help",
 				type: "command",
-				segments: [{ text: "/", color: "#ffd700" }, { text: "help", color: "#ffd700" }],
+				segments: [
+					{ text: "/", color: "#ffd700" },
+					{ text: "help", color: "#ffd700" },
+				],
 				commandPath: ["help"],
 				filePath: [],
 				selectedFiles: [],
@@ -324,11 +325,19 @@ describe("editorReducer", () => {
 			const entryWithFiles: HistoryEntry = {
 				text: "@file.ts",
 				type: "message",
-				segments: [{ text: "@", color: "#87ceeb" }, { text: "file.ts", color: "#87ceeb" }],
+				segments: [
+					{ text: "@", color: "#87ceeb" },
+					{ text: "file.ts", color: "#87ceeb" },
+				],
 				commandPath: [],
 				filePath: [],
 				selectedFiles: [
-					{ path: "file.ts", isDirectory: false, atPosition: 0, endPosition: 8 },
+					{
+						path: "file.ts",
+						isDirectory: false,
+						atPosition: 0,
+						endPosition: 8,
+					},
 				],
 			};
 			const state = editorReducer(initialState, {
@@ -398,8 +407,14 @@ describe("editorReducer", () => {
 
 		it("ENTER_SLASH_LEVEL chains multiple levels", () => {
 			let state = editorReducer(initialState, { type: "ENTER_SLASH" });
-			state = editorReducer(state, { type: "ENTER_SLASH_LEVEL", name: "model" });
-			state = editorReducer(state, { type: "ENTER_SLASH_LEVEL", name: "openai" });
+			state = editorReducer(state, {
+				type: "ENTER_SLASH_LEVEL",
+				name: "model",
+			});
+			state = editorReducer(state, {
+				type: "ENTER_SLASH_LEVEL",
+				name: "openai",
+			});
 			expect(state.instance.commandPath).toEqual(["model", "openai"]);
 			expect(state.instance.text).toBe("/model → openai → ");
 		});
@@ -418,8 +433,14 @@ describe("editorReducer", () => {
 
 		it("EXIT_SLASH_LEVEL goes back one level", () => {
 			let state = editorReducer(initialState, { type: "ENTER_SLASH" });
-			state = editorReducer(state, { type: "ENTER_SLASH_LEVEL", name: "model" });
-			state = editorReducer(state, { type: "ENTER_SLASH_LEVEL", name: "openai" });
+			state = editorReducer(state, {
+				type: "ENTER_SLASH_LEVEL",
+				name: "model",
+			});
+			state = editorReducer(state, {
+				type: "ENTER_SLASH_LEVEL",
+				name: "openai",
+			});
 			state = editorReducer(state, { type: "EXIT_SLASH_LEVEL" });
 			expect(state.instance.commandPath).toEqual(["model"]);
 		});
@@ -533,7 +554,10 @@ describe("editorReducer", () => {
 				suffix: "",
 			});
 			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "src" });
-			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "components" });
+			state = editorReducer(state, {
+				type: "ENTER_FILE_DIR",
+				dirName: "components",
+			});
 			expect(state.instance.filePath).toEqual(["src", "components"]);
 		});
 
@@ -545,12 +569,17 @@ describe("editorReducer", () => {
 				suffix: "",
 			});
 			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "src" });
-			state = editorReducer(state, { type: "CONFIRM_FILE", fileName: "app.tsx" });
+			state = editorReducer(state, {
+				type: "CONFIRM_FILE",
+				fileName: "app.tsx",
+			});
 
 			expect(isNormalMode(state.uiMode)).toBe(true);
 			expect(state.instance.filePath).toEqual([]);
 			expect(state.instance.selectedFiles).toHaveLength(1);
-			expect(state.instance.selectedFiles[0]?.path).toBe("src" + PATH_SEPARATOR + "app.tsx");
+			expect(state.instance.selectedFiles[0]?.path).toBe(
+				"src" + PATH_SEPARATOR + "app.tsx",
+			);
 		});
 
 		it("CONFIRM_FILE restores suffix", () => {
@@ -605,7 +634,10 @@ describe("editorReducer", () => {
 				suffix: "",
 			});
 			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "src" });
-			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "components" });
+			state = editorReducer(state, {
+				type: "ENTER_FILE_DIR",
+				dirName: "components",
+			});
 			state = editorReducer(state, { type: "EXIT_FILE" });
 			expect(state.instance.filePath).toEqual(["src"]);
 			expect(isFileMode(state.uiMode)).toBe(true);
@@ -900,7 +932,9 @@ describe("editorReducer", () => {
 
 	describe("edge cases", () => {
 		it("unknown action returns same state", () => {
-			const state = editorReducer(initialState, { type: "UNKNOWN" } as any);
+			const state = editorReducer(initialState, {
+				type: "UNKNOWN",
+			} as unknown as EditorAction);
 			expect(state).toBe(initialState);
 		});
 
