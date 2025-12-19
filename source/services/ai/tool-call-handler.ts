@@ -46,9 +46,7 @@ export class ToolCallHandler implements IToolCallHandler {
 	/**
 	 * 执行单个工具调用
 	 */
-	private async executeSingleCall(
-		call: ToolCall,
-	): Promise<{
+	private async executeSingleCall(call: ToolCall): Promise<{
 		result: ToolExecutionResult;
 		tool?: DiscoveredTool;
 		action?: ToolAction;

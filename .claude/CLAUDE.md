@@ -72,10 +72,25 @@ source/
 │   └── meta.ts                # Auto-generated version info
 ├── services/
 │   ├── commandHandler.ts      # Command execution and routing (async support)
+│   ├── ai/                    # AI service integration
+│   │   ├── types.ts           # ChatMessage, ToolCall, AIResponse, interfaces
+│   │   ├── config.ts          # AI model configuration (~/.axiomate-ai.json)
+│   │   ├── service.ts         # AIService with two-phase calling
+│   │   ├── tool-call-handler.ts # Execute tools, format results
+│   │   ├── index.ts           # Main exports and factory functions
+│   │   ├── adapters/          # Protocol adapters
+│   │   │   ├── openai.ts      # OpenAI function calling format
+│   │   │   ├── anthropic.ts   # Anthropic tool use format
+│   │   │   └── index.ts       # Adapter exports
+│   │   └── clients/           # API clients
+│   │       ├── openai.ts      # OpenAI/Azure/Custom API client
+│   │       ├── anthropic.ts   # Anthropic API client
+│   │       └── index.ts       # Client exports
 │   └── tools/                 # Local development tools discovery
 │       ├── types.ts           # DiscoveredTool, ToolAction, ToolParameter
 │       ├── registry.ts        # ToolRegistry class (singleton)
 │       ├── executor.ts        # executeToolAction, renderCommandTemplate
+│       ├── matcher.ts         # ToolMatcher with context awareness
 │       ├── discoverers/       # Per-tool discovery modules
 │       │   ├── base.ts        # commandExists, getVersion, queryRegistry
 │       │   ├── git.ts         # Git discoverer
@@ -606,6 +621,12 @@ npm run test:watch # Watch mode
 ## Configuration Files
 
 - `~/.axiomate.json` - User configuration (via `utils/config.ts`)
+- `~/.axiomate-ai.json` - AI model configuration (via `services/ai/config.ts`)
+  - `currentModel` - Active model ID
+  - `models` - Configured model list with API keys
+  - `twoPhaseEnabled` - Two-phase calling toggle
+  - `contextAwareEnabled` - Context-aware matching toggle
+  - `maxToolCallRounds` - Max tool call iterations
 - `~/.axiomate/` - App data directory
   - `logs/` - Log files with daily rotation
   - `history/` - Command history
@@ -903,3 +924,442 @@ useInput((_input, key) => {
 - `scrollOffset`: Lines to skip from the top
 - Auto-scrolls to bottom when new messages arrive (unless manually scrolled up)
 - Shows scroll hints when content extends beyond visible area
+
+## AI Service Integration
+
+### Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  App.tsx                                                            │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │  AIService                                                     │  │
+│  │    ├── IAIClient (OpenAI / Anthropic)                         │  │
+│  │    ├── ToolMatcher (context-aware tool selection)             │  │
+│  │    └── ToolCallHandler (execute & format results)             │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+│                              ↓                                      │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │  ToolRegistry (Singleton)                                      │  │
+│  │    └── DiscoveredTool[] (local development tools)             │  │
+│  └───────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Directory Structure
+
+```
+source/services/ai/
+├── types.ts              # Core AI types and interfaces
+├── config.ts             # AI model configuration management
+├── service.ts            # AIService with two-phase calling
+├── tool-call-handler.ts  # Tool execution and result formatting
+├── index.ts              # Main exports and factory functions
+├── adapters/
+│   ├── openai.ts         # OpenAI protocol adapter
+│   ├── anthropic.ts      # Anthropic protocol adapter
+│   └── index.ts          # Adapter exports
+└── clients/
+    ├── openai.ts         # OpenAI API client
+    ├── anthropic.ts      # Anthropic API client
+    └── index.ts          # Client exports
+
+source/services/tools/
+├── matcher.ts            # ToolMatcher with context awareness
+└── ... (existing tool system)
+```
+
+### Core Types
+
+```typescript
+// services/ai/types.ts
+
+// Message types for AI conversation
+type ChatMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  tool_calls?: ToolCall[];      // AI requests tool execution
+  tool_call_id?: string;        // For tool result messages
+};
+
+type ToolCall = {
+  id: string;                   // Unique call ID (e.g., "call_abc123")
+  type: "function";
+  function: {
+    name: string;               // Tool action name (e.g., "git_status")
+    arguments: string;          // JSON string of parameters
+  };
+};
+
+// AI response
+type AIResponse = {
+  message: ChatMessage;
+  finish_reason: FinishReason;  // "stop" | "tool_calls" | "length"
+  usage?: { prompt_tokens, completion_tokens, total_tokens };
+};
+
+// Tool matching context
+type MatchContext = {
+  cwd: string;                  // Current working directory
+  userMessage: string;          // User's input message
+  projectType?: ProjectType;    // Detected project type
+};
+
+type ProjectType = "node" | "python" | "java" | "dotnet" | "rust" | "go" | "unknown";
+```
+
+### Two-Phase Calling Flow
+
+AIService implements a two-phase calling strategy for efficient tool selection:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Phase 1: Intent Analysis (no tools)                            │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  User Message → AI → Intent Analysis                      │  │
+│  │    - Extracts: keywords, capabilities, file types         │  │
+│  │    - Returns: IntentAnalysis object                       │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│  Phase 2: Tool-Assisted Response                                │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  ToolMatcher.matchTools(intent, context)                  │  │
+│  │    - Filters tools based on intent                        │  │
+│  │    - Returns: relevant DiscoveredTool[] only              │  │
+│  └───────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │  AI Chat with Filtered Tools                              │  │
+│  │    - Only relevant tools are provided                     │  │
+│  │    - Reduces token usage and improves accuracy            │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Implementation** (`services/ai/service.ts`):
+
+```typescript
+class AIService implements IAIService {
+  async sendMessage(userMessage: string, context: MatchContext): Promise<AIResponse> {
+    // Phase 1: Analyze intent (if twoPhaseEnabled)
+    if (this.config.twoPhaseEnabled) {
+      const intent = await this.analyzeIntent(userMessage);
+      const tools = this.matchToolsForIntent(intent, context);
+      return this.chatWithTools(tools);
+    }
+
+    // Direct mode: provide all tools
+    return this.chatWithTools(this.registry.getInstalled());
+  }
+}
+```
+
+### Tool Call Loop
+
+When AI requests tool execution, a loop handles multiple rounds:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Tool Call Loop                                                 │
+│                                                                 │
+│  while (rounds < maxToolCallRounds) {                          │
+│    ┌─────────────────────────────────────────────────────────┐  │
+│    │  1. AI Response                                         │  │
+│    │     finish_reason: "tool_calls"                         │  │
+│    │     tool_calls: [{ id, function: { name, arguments }}]  │  │
+│    └─────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│    ┌─────────────────────────────────────────────────────────┐  │
+│    │  2. ToolCallHandler.handleToolCalls(toolCalls)          │  │
+│    │     - Parse tool name: "git_status" → toolId="git",     │  │
+│    │       actionName="status"                               │  │
+│    │     - Execute tool action via executor                  │  │
+│    │     - Format result as ChatMessage[]                    │  │
+│    └─────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│    ┌─────────────────────────────────────────────────────────┐  │
+│    │  3. Add Results to Messages                             │  │
+│    │     messages.push(...toolResults)                       │  │
+│    │     // Each result: { role: "tool", tool_call_id, ... } │  │
+│    └─────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│    ┌─────────────────────────────────────────────────────────┐  │
+│    │  4. Send Back to AI                                     │  │
+│    │     response = await client.chat(messages, tools)       │  │
+│    └─────────────────────────────────────────────────────────┘  │
+│                              ↓                                  │
+│    if (finish_reason !== "tool_calls") break;                  │
+│  }                                                              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Tool Result Message Format
+
+**Critical**: Tool results must include `tool_call_id` to match the original request:
+
+```typescript
+// services/ai/tool-call-handler.ts
+async handleToolCalls(toolCalls: ToolCall[]): Promise<ChatMessage[]> {
+  const results: ChatMessage[] = [];
+
+  for (const call of toolCalls) {
+    const { result, tool, action } = await this.executeSingleCall(call);
+
+    // Format content with tool info
+    let content = result.success
+      ? result.output || "(执行成功，无输出)"
+      : `Error: ${result.error || "未知错误"}`;
+
+    if (tool && action) {
+      content = `[${tool.name}:${action.name}] (${result.duration}ms)\n${content}`;
+    }
+
+    // IMPORTANT: Include tool_call_id to match the request
+    results.push({
+      role: "tool",
+      tool_call_id: call.id,  // Must match call.id from AI response
+      content,
+    });
+  }
+
+  return results;
+}
+```
+
+**Message Flow Example**:
+
+```typescript
+// 1. User sends message
+messages = [
+  { role: "user", content: "Show me the git status" }
+];
+
+// 2. AI responds with tool_calls
+aiResponse = {
+  message: {
+    role: "assistant",
+    content: "",
+    tool_calls: [{
+      id: "call_abc123",
+      type: "function",
+      function: { name: "git_status", arguments: "{}" }
+    }]
+  },
+  finish_reason: "tool_calls"
+};
+
+// 3. ToolCallHandler executes and returns result
+toolResults = [{
+  role: "tool",
+  tool_call_id: "call_abc123",  // Matches the request
+  content: "[Git:status] (45ms)\nOn branch main\nnothing to commit"
+}];
+
+// 4. Messages sent back to AI
+messages = [
+  { role: "user", content: "Show me the git status" },
+  { role: "assistant", content: "", tool_calls: [...] },
+  { role: "tool", tool_call_id: "call_abc123", content: "..." }
+];
+
+// 5. AI generates final response
+finalResponse = {
+  message: { role: "assistant", content: "You're on the main branch with a clean working directory." },
+  finish_reason: "stop"
+};
+```
+
+### Context-Aware Tool Matching
+
+ToolMatcher uses multiple strategies to select relevant tools:
+
+```typescript
+// services/tools/matcher.ts
+class ToolMatcher implements IToolMatcher {
+  matchTools(intent: IntentAnalysis, context: MatchContext): DiscoveredTool[] {
+    const matched = new Set<DiscoveredTool>();
+
+    // 1. Keyword matching (e.g., "git" → git tool)
+    for (const keyword of intent.keywords) {
+      const tools = this.matchByKeyword(keyword);
+      tools.forEach(t => matched.add(t));
+    }
+
+    // 2. Capability matching (e.g., "version control" → git tool)
+    for (const cap of intent.capabilities) {
+      const tools = this.matchByCapability(cap);
+      tools.forEach(t => matched.add(t));
+    }
+
+    // 3. Project type matching (e.g., node project → node, npm tools)
+    if (context.projectType) {
+      const tools = this.matchByProjectType(context.projectType);
+      tools.forEach(t => matched.add(t));
+    }
+
+    // 4. File extension inference (e.g., .py file → python tool)
+    for (const ext of intent.fileExtensions) {
+      const tools = this.matchByFileExtension(ext);
+      tools.forEach(t => matched.add(t));
+    }
+
+    return Array.from(matched);
+  }
+}
+```
+
+**Project Type Detection**:
+
+```typescript
+function detectProjectType(cwd: string): ProjectType {
+  // Check for project markers
+  if (existsSync(join(cwd, "package.json"))) return "node";
+  if (existsSync(join(cwd, "requirements.txt")) ||
+      existsSync(join(cwd, "pyproject.toml"))) return "python";
+  if (existsSync(join(cwd, "pom.xml")) ||
+      existsSync(join(cwd, "build.gradle"))) return "java";
+  if (existsSync(join(cwd, "*.csproj"))) return "dotnet";
+  if (existsSync(join(cwd, "Cargo.toml"))) return "rust";
+  if (existsSync(join(cwd, "go.mod"))) return "go";
+  return "unknown";
+}
+```
+
+### AI Configuration
+
+Config file: `~/.axiomate-ai.json`
+
+```typescript
+// services/ai/config.ts
+type AIConfig = {
+  currentModel: string;           // Active model ID (e.g., "gpt-4o")
+  models: Record<string, AIModelConfig>;  // Configured models
+  twoPhaseEnabled: boolean;       // Enable two-phase calling (default: true)
+  contextAwareEnabled: boolean;   // Enable context-aware matching (default: true)
+  maxToolCallRounds: number;      // Max tool call iterations (default: 5)
+};
+
+type AIModelConfig = {
+  provider: "openai" | "anthropic" | "azure" | "custom";
+  apiKey: string;
+  model: string;                  // Model name (e.g., "gpt-4o")
+  baseUrl?: string;               // Custom API endpoint
+};
+```
+
+**Model Presets** (pre-configured models):
+
+| Preset | Provider | Model |
+|--------|----------|-------|
+| `gpt-4o` | openai | gpt-4o |
+| `gpt-4-turbo` | openai | gpt-4-turbo |
+| `claude-3.5-sonnet` | anthropic | claude-3-5-sonnet-20241022 |
+| `claude-3-opus` | anthropic | claude-3-opus-20240229 |
+| `deepseek-v3` | custom | deepseek-chat |
+| `llama-3.3-70b` | custom | llama-3.3-70b-versatile |
+
+**Commands**:
+- `/model list` - Show configured models and current settings
+- `/model presets` - Show available model presets
+
+### Protocol Adapters
+
+Adapters convert between internal types and provider-specific formats:
+
+**OpenAI Format** (`adapters/openai.ts`):
+```typescript
+// Tool definition
+type OpenAITool = {
+  type: "function";
+  function: {
+    name: string;        // "toolId_actionName" (e.g., "git_status")
+    description: string;
+    parameters: JSONSchema;
+  };
+};
+
+// Conversion
+function toOpenAITools(tools: DiscoveredTool[]): OpenAITool[];
+function parseOpenAIToolCalls(response): ToolCall[];
+function toOpenAIMessages(messages: ChatMessage[]): OpenAIMessage[];
+```
+
+**Anthropic Format** (`adapters/anthropic.ts`):
+```typescript
+// Tool definition
+type AnthropicTool = {
+  name: string;
+  description: string;
+  input_schema: JSONSchema;
+};
+
+// Conversion
+function toAnthropicTools(tools: DiscoveredTool[]): AnthropicTool[];
+function parseAnthropicToolUse(blocks): ToolCall[];
+function toAnthropicMessages(messages: ChatMessage[]): AnthropicMessage[];
+```
+
+### Integration Points
+
+**App.tsx Integration**:
+
+```typescript
+// Initialize AI service
+useEffect(() => {
+  const initAI = async () => {
+    const registry = getToolRegistry();
+    await registry.discover();
+
+    const service = createAIServiceFromConfig(registry);
+    if (service) {
+      aiServiceRef.current = service;
+    }
+  };
+  initAI();
+}, []);
+
+// Send message to AI
+const sendToAI = useCallback(async (text: string) => {
+  if (!aiServiceRef.current) {
+    showMessage("AI 服务未配置");
+    return;
+  }
+
+  const context = { cwd: process.cwd(), userMessage: text };
+  const response = await aiServiceRef.current.sendMessage(text, context);
+
+  setMessages(prev => [...prev, { content: response.message.content }]);
+}, []);
+```
+
+**Tool Execution Flow**:
+
+```
+User Input → App.sendToAI()
+    ↓
+AIService.sendMessage(text, context)
+    ↓
+[Phase 1] analyzeIntent() → IntentAnalysis
+    ↓
+[Phase 2] matchToolsForIntent() → filtered tools
+    ↓
+chatWithTools() → AI response
+    ↓
+if (finish_reason === "tool_calls"):
+    ToolCallHandler.handleToolCalls()
+        ↓
+    parseToolCallName("git_status") → { toolId: "git", actionName: "status" }
+        ↓
+    registry.getTool("git") → DiscoveredTool
+        ↓
+    getToolAction(tool, "status") → ToolAction
+        ↓
+    executeToolAction() → result
+        ↓
+    Format as ChatMessage with tool_call_id
+        ↓
+    Add to messages, send back to AI
+        ↓
+    Loop until finish_reason === "stop"
+    ↓
+Return final AI response
