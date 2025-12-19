@@ -11,7 +11,7 @@ export default function Header({ focusMode = "input" }: Props) {
 	const isOutputMode = focusMode === "output";
 
 	return (
-		<Box flexShrink={0} justifyContent="space-between">
+		<Box flexShrink={0} justifyContent="space-between" width="100%">
 			<Text>
 				<Text color="#ff69b4" bold>
 					{APP_NAME}
