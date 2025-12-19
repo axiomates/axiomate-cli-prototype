@@ -54,6 +54,7 @@ export default function AutocompleteInput({
 	onClear,
 	onExit,
 	slashCommands = [],
+	isActive = true,
 }: AutocompleteInputProps) {
 	const { exit } = useApp();
 	const [state, dispatch] = useReducer(editorReducer, initialState);
@@ -183,6 +184,7 @@ export default function AutocompleteInput({
 		effectiveSuggestion,
 		onSubmit: handleSubmit,
 		onExit,
+		isActive,
 	});
 
 	// 计算显示内容

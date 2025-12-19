@@ -140,6 +140,8 @@ export type AutocompleteInputProps = {
 	onClear?: () => void;
 	onExit?: () => void;
 	slashCommands?: SlashCommand[];
+	/** 是否激活键盘输入（默认 true）*/
+	isActive?: boolean;
 };
 
 // ============================================================================

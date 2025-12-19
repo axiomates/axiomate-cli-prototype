@@ -1,4 +1,4 @@
-import { Box, useApp } from "ink";
+import { Box, useApp, useInput } from "ink";
 import { useState, useCallback, useMemo } from "react";
 import AutocompleteInput from "./components/AutocompleteInput/index.js";
 import Divider from "./components/Divider.js";
@@ -17,10 +17,34 @@ import {
 	type CommandCallbacks,
 } from "./services/commandHandler.js";
 
+/**
+ * 应用焦点模式
+ * - input: 输入模式，↑/↓ 用于历史导航，输入框可用
+ * - output: 输出查看模式，↑/↓ 用于滚动消息，输入框禁用
+ */
+type FocusMode = "input" | "output";
+
 export default function App() {
 	const { exit } = useApp();
 	const [messages, setMessages] = useState<Message[]>([]);
+	const [focusMode, setFocusMode] = useState<FocusMode>("input");
 	const terminalHeight = useTerminalHeight();
+
+	// 焦点模式切换（Escape 键）
+	const toggleFocusMode = useCallback(() => {
+		setFocusMode((prev) => (prev === "input" ? "output" : "input"));
+	}, []);
+
+	// 全局键盘监听（仅处理模式切换）
+	useInput(
+		(_input, key) => {
+			// Shift+↑ 或 Shift+↓ 切换焦点模式
+			if (key.shift && (key.upArrow || key.downArrow)) {
+				toggleFocusMode();
+			}
+		},
+		{ isActive: true },
+	);
 
 	// 发送消息给 AI（目前只是显示）
 	const sendToAI = useCallback((content: string) => {
@@ -90,10 +114,13 @@ export default function App() {
 	// 固定占用: 1 + 1 + 1 + 1 = 4 行
 	const messageOutputHeight = Math.max(1, terminalHeight - 4);
 
+	// 派生状态
+	const isInputMode = focusMode === "input";
+
 	return (
 		<Box flexDirection="column" height={terminalHeight}>
 			{/* 标题区域 */}
-			<Header />
+			<Header focusMode={focusMode} />
 
 			{/* 标题与输出区域分隔线 */}
 			<Box flexShrink={0}>
@@ -101,7 +128,11 @@ export default function App() {
 			</Box>
 
 			{/* 输出区域 */}
-			<MessageOutput messages={messages} height={messageOutputHeight} />
+			<MessageOutput
+				messages={messages}
+				height={messageOutputHeight}
+				focusMode={focusMode}
+			/>
 
 			{/* 输出区域与输入框分隔线 */}
 			<Box flexShrink={0}>
@@ -116,6 +147,7 @@ export default function App() {
 					onClear={handleClear}
 					onExit={clearAndExit}
 					slashCommands={SLASH_COMMANDS}
+					isActive={isInputMode}
 				/>
 			</Box>
 		</Box>

@@ -7,10 +7,17 @@ export type Message = {
 	markdown?: boolean; // 是否渲染为 Markdown，默认 true
 };
 
+/**
+ * 焦点模式
+ * - input: 输入模式，需要 Shift+↑/↓ 滚动
+ * - output: 输出查看模式，直接用 ↑/↓ 滚动
+ */
+type FocusMode = "input" | "output";
+
 type Props = {
 	messages: Message[];
 	height: number; // 可用高度（行数）
-	isFocused?: boolean; // 是否接收键盘输入（默认 true）
+	focusMode?: FocusMode; // 焦点模式（默认 input）
 };
 
 // 延迟加载 marked 和 marked-terminal，避免测试环境问题
@@ -55,7 +62,7 @@ type RenderedLine = {
 export default function MessageOutput({
 	messages,
 	height,
-	isFocused = true,
+	focusMode = "input",
 }: Props) {
 	const width = useTerminalWidth();
 	// scrollOffset: 从底部向上的偏移量（0 = 显示最新消息）
@@ -120,34 +127,42 @@ export default function MessageOutput({
 	const linesAbove = startLine;
 	const linesBelow = safeOffset;
 
-	// 键盘控制滚动
+	// 是否处于输出模式（直接用 ↑/↓ 滚动）
+	const isOutputMode = focusMode === "output";
+
+	// 键盘控制滚动（仅在输出模式下用 ↑/↓，输入模式下不响应方向键）
 	useInput(
-		(input, key) => {
-			// Shift+↑: 向上滚动
-			if (key.upArrow && key.shift) {
-				setScrollOffset((prev) => Math.min(prev + 1, maxOffset));
-				setAutoScroll(false);
+		(_input, key) => {
+			// 忽略带 Shift 的方向键（用于模式切换）
+			if (key.shift && (key.upArrow || key.downArrow)) {
 				return;
 			}
 
-			// Shift+↓: 向下滚动
-			if (key.downArrow && key.shift) {
-				const newOffset = Math.max(0, scrollOffset - 1);
-				setScrollOffset(newOffset);
-				if (newOffset === 0) {
-					setAutoScroll(true);
+			// 输出模式下用 ↑/↓ 滚动
+			if (isOutputMode) {
+				if (key.upArrow) {
+					setScrollOffset((prev) => Math.min(prev + 1, maxOffset));
+					setAutoScroll(false);
+					return;
 				}
-				return;
+
+				if (key.downArrow) {
+					const newOffset = Math.max(0, scrollOffset - 1);
+					setScrollOffset(newOffset);
+					if (newOffset === 0) {
+						setAutoScroll(true);
+					}
+					return;
+				}
 			}
 
-			// Page Up: 向上滚动一页
+			// Page Up/Down 两种模式都可用
 			if (key.pageUp) {
 				setScrollOffset((prev) => Math.min(prev + contentHeight, maxOffset));
 				setAutoScroll(false);
 				return;
 			}
 
-			// Page Down: 向下滚动一页
 			if (key.pageDown) {
 				const newOffset = Math.max(0, scrollOffset - contentHeight);
 				setScrollOffset(newOffset);
@@ -156,18 +171,8 @@ export default function MessageOutput({
 				}
 				return;
 			}
-
-			// Shift+Home: 滚动到顶部
-			if (key.shift && input === "") {
-				// Home key sends empty string with shift
-			}
-
-			// Shift+End: 滚动到底部
-			if (key.shift && input === "") {
-				// End key sends empty string with shift
-			}
 		},
-		{ isActive: isFocused },
+		{ isActive: true },
 	);
 
 	return (
@@ -175,7 +180,7 @@ export default function MessageOutput({
 			{/* 顶部指示器 */}
 			{hasMoreAbove && (
 				<Box justifyContent="center" flexShrink={0}>
-					<Text dimColor>↑ 还有 {linesAbove} 行 (Shift+↑ 或 PageUp 滚动)</Text>
+					<Text dimColor>↑ 还有 {linesAbove} 行 (PageUp 翻页)</Text>
 				</Box>
 			)}
 
@@ -196,9 +201,7 @@ export default function MessageOutput({
 			{/* 底部指示器 */}
 			{hasMoreBelow && (
 				<Box justifyContent="center" flexShrink={0}>
-					<Text dimColor>
-						↓ 还有 {linesBelow} 行 (Shift+↓ 或 PageDown 滚动)
-					</Text>
+					<Text dimColor>↓ 还有 {linesBelow} 行 (PageDown 翻页)</Text>
 				</Box>
 			)}
 		</Box>
