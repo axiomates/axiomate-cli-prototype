@@ -28,10 +28,10 @@ export default function Header({ focusMode = "input" }: Props) {
 			<Text>
 				{isOutputMode ? (
 					<Text color="cyan" bold>
-						[View] Shift+↑↓ Switch
+						[View] Shift+↑↓
 					</Text>
 				) : (
-					<Text color="gray">[Input] Shift+↑↓ Switch</Text>
+					<Text color="gray">[Input] Shift+↑↓</Text>
 				)}
 			</Text>
 		</Box>
