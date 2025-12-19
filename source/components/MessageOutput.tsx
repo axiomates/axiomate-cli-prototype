@@ -1,7 +1,6 @@
 import { Box, Text, useInput } from "ink";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
-import { logger } from "../utils/logger.js";
 
 export type Message = {
 	content: string;
@@ -87,18 +86,102 @@ export default function MessageOutput({
 		[width],
 	);
 
-	// 将所有消息预渲染为行数组
+	// 去除 ANSI 转义码，计算可见字符宽度
+	const stripAnsi = useCallback((str: string): string => {
+		// eslint-disable-next-line no-control-regex
+		return str.replace(/\x1b\[[0-9;]*m/g, "");
+	}, []);
+
+	// 计算字符串的显示宽度（考虑中文等宽字符）
+	const getDisplayWidth = useCallback(
+		(str: string): number => {
+			const plain = stripAnsi(str);
+			let width = 0;
+			for (const char of plain) {
+				// 中文、日文、韩文等宽字符占 2 个宽度
+				const code = char.charCodeAt(0);
+				if (code >= 0x4e00 && code <= 0x9fff) {
+					width += 2;
+				} else if (code >= 0x3000 && code <= 0x303f) {
+					width += 2;
+				} else if (code >= 0xff00 && code <= 0xffef) {
+					width += 2;
+				} else {
+					width += 1;
+				}
+			}
+			return width;
+		},
+		[stripAnsi],
+	);
+
+	// 将长行拆分为多个终端行
+	const wrapLine = useCallback(
+		(text: string, maxWidth: number): string[] => {
+			if (maxWidth <= 0) return [text];
+
+			const result: string[] = [];
+			const plain = stripAnsi(text);
+
+			// 如果纯文本宽度小于等于 maxWidth，不需要换行
+			if (getDisplayWidth(plain) <= maxWidth) {
+				return [text];
+			}
+
+			// 简单处理：按字符拆分（保留 ANSI 码会很复杂）
+			// 这里用纯文本拆分，然后每行单独处理
+			let currentLine = "";
+			let currentWidth = 0;
+
+			for (const char of plain) {
+				const charWidth =
+					char.charCodeAt(0) >= 0x4e00 && char.charCodeAt(0) <= 0x9fff
+						? 2
+						: char.charCodeAt(0) >= 0x3000 && char.charCodeAt(0) <= 0x303f
+							? 2
+							: char.charCodeAt(0) >= 0xff00 && char.charCodeAt(0) <= 0xffef
+								? 2
+								: 1;
+
+				if (currentWidth + charWidth > maxWidth) {
+					result.push(currentLine);
+					currentLine = char;
+					currentWidth = charWidth;
+				} else {
+					currentLine += char;
+					currentWidth += charWidth;
+				}
+			}
+
+			if (currentLine) {
+				result.push(currentLine);
+			}
+
+			return result.length > 0 ? result : [""];
+		},
+		[stripAnsi, getDisplayWidth],
+	);
+
+	// 将所有消息预渲染为行数组（考虑换行）
 	const renderedLines: RenderedLine[] = useMemo(() => {
 		const lines: RenderedLine[] = [];
+		const effectiveWidth = width - 2; // 留一点边距
+
 		for (let i = 0; i < messages.length; i++) {
 			const content = renderContent(messages[i]!);
 			const msgLines = content.split("\n");
+
 			for (const line of msgLines) {
-				lines.push({ text: line, msgIndex: i });
+				// 检查这行是否需要换行
+				const wrappedLines = wrapLine(line, effectiveWidth);
+				for (const wrappedLine of wrappedLines) {
+					lines.push({ text: wrappedLine, msgIndex: i });
+				}
 			}
 		}
+
 		return lines;
-	}, [messages, renderContent]);
+	}, [messages, renderContent, width, wrapLine]);
 
 	// 计算可见范围
 	const totalLines = renderedLines.length;
@@ -135,7 +218,10 @@ export default function MessageOutput({
 
 	// 现在可以确定指示器状态
 	// 使用保守高度计算起始行
-	const startLineConservative = Math.max(0, totalLines - minContentHeight - safeOffset);
+	const startLineConservative = Math.max(
+		0,
+		totalLines - minContentHeight - safeOffset,
+	);
 	const hasMoreAbove = startLineConservative > 0;
 	const hasMoreBelow = safeOffset > 0;
 
@@ -152,19 +238,6 @@ export default function MessageOutput({
 	// 指示器显示的行数
 	const linesAbove = startLine;
 	const linesBelow = safeOffset;
-
-	// 调试日志
-	logger.warn("MessageOutput render", {
-		height,
-		totalLines,
-		contentHeight,
-		indicatorCount,
-		hasMoreAbove,
-		hasMoreBelow,
-		scrollOffset,
-		safeOffset,
-		visibleLinesCount: visibleLines.length,
-	});
 
 	// 是否处于输出模式（直接用 ↑/↓ 滚动）
 	const isOutputMode = focusMode === "output";
@@ -214,45 +287,63 @@ export default function MessageOutput({
 		{ isActive: true },
 	);
 
-	// 构建要渲染的行数组
-	const rows: React.ReactNode[] = [];
+	// 构建内容行数组
+	const contentRows: React.ReactNode[] = [];
 
 	// 1. 顶部指示器
 	if (hasMoreAbove) {
-		rows.push(
-			<Box key="indicator-above" justifyContent="center">
+		contentRows.push(
+			<Box key="indicator-above" justifyContent="center" height={1}>
 				<Text dimColor>↑ 还有 {linesAbove} 行 (PageUp 翻页)</Text>
 			</Box>,
 		);
 	}
 
-	// 2. 消息内容
+	// 2. 消息内容（确保空行也占据空间）
 	for (let i = 0; i < visibleLines.length; i++) {
 		const line = visibleLines[i]!;
-		rows.push(
-			<Box key={`line-${line.msgIndex}-${i}`}>
-				<Text>{line.text}</Text>
+		contentRows.push(
+			<Box key={`line-${line.msgIndex}-${i}`} height={1}>
+				<Text>{line.text || " "}</Text>
 			</Box>,
 		);
 	}
 
 	// 3. 底部指示器
 	if (hasMoreBelow) {
-		rows.push(
-			<Box key="indicator-below" justifyContent="center">
+		contentRows.push(
+			<Box key="indicator-below" justifyContent="center" height={1}>
 				<Text dimColor>↓ 还有 {linesBelow} 行 (PageDown 翻页)</Text>
 			</Box>,
 		);
 	}
 
+	// 计算需要的空行数（在顶部填充）
+	const emptyRowsNeeded = Math.max(0, height - contentRows.length);
+
+	// 构建最终行数组：空行 + 内容
+	const finalRows: React.ReactNode[] = [];
+
+	// 1. 顶部空行填充
+	for (let i = 0; i < emptyRowsNeeded; i++) {
+		finalRows.push(
+			<Box key={`empty-${i}`} height={1}>
+				<Text> </Text>
+			</Box>,
+		);
+	}
+
+	// 2. 实际内容
+	finalRows.push(...contentRows);
+
 	return (
 		<Box
 			flexDirection="column"
 			height={height}
-			justifyContent="flex-end"
+			flexShrink={0}
 			overflowY="hidden"
 		>
-			{rows}
+			{finalRows}
 		</Box>
 	);
 }

@@ -51,7 +51,8 @@ source/
 │   │   │   ├── useInputHandler.ts  # Keyboard event handling
 │   │   │   └── useFileSelect.ts    # File system reading for @ selection
 │   │   ├── utils/
-│   │   │   └── lineProcessor.ts    # Line wrapping & cursor calculation
+│   │   │   ├── lineProcessor.ts    # Line wrapping & cursor calculation
+│   │   │   └── heightCalculator.ts # Input area height calculation
 │   │   └── components/
 │   │       ├── InputLine.tsx       # Single line rendering with colors
 │   │       ├── SlashMenu.tsx       # Slash command selection menu
@@ -157,6 +158,12 @@ type FocusMode = "input" | "output";
 
 const [focusMode, setFocusMode] = useState<FocusMode>("input");
 
+// AutocompleteInput reports its dynamic height
+const [inputAreaHeight, setInputAreaHeight] = useState(1);
+const handleInputHeightChange = useCallback((height: number) => {
+  setInputAreaHeight(height);
+}, []);
+
 // Global key handler for mode switching
 useInput((_input, key) => {
   if (key.shift && (key.upArrow || key.downArrow)) {
@@ -164,12 +171,14 @@ useInput((_input, key) => {
   }
 }, { isActive: true });
 
-// Dynamic height calculation
-const fixedHeight = isOutputMode ? 2 : 4;  // 2 rows in browse, 4 in input
+// Dynamic height calculation (accounts for variable input area)
+// Input mode: Header(1) + Divider(1) + MessageOutput + Divider(1) + InputArea(dynamic)
+// Browse mode: Header(1) + Divider(1) + MessageOutput = 2 rows fixed
+const fixedHeight = isOutputMode ? 2 : 2 + 1 + inputAreaHeight;
 const messageOutputHeight = Math.max(1, terminalHeight - fixedHeight);
 
 // Conditional rendering
-{isInputMode && <AutocompleteInput ... isActive={isInputMode} />}
+{isInputMode && <AutocompleteInput onHeightChange={handleInputHeightChange} ... />}
 ```
 
 ## Key Architecture
@@ -825,6 +834,30 @@ Set `markdown: false` on a message to disable Markdown rendering:
 ```typescript
 setMessages(prev => [...prev, { content: "raw text", markdown: false }]);
 ```
+
+### MessageOutput Row Rendering
+
+**Important**: Each row in MessageOutput must have explicit `height={1}` to prevent Ink from collapsing empty lines:
+
+```typescript
+// Each content row must specify height={1}
+<Box key={`line-${index}`} height={1}>
+  <Text>{line.text || " "}</Text>
+</Box>
+
+// Empty lines must have content (space) to prevent collapse
+{line.text || " "}
+```
+
+**Why**: In Ink, a `<Box>` containing an empty `<Text>` may collapse to 0 height. This causes layout issues where content appears to only fill half the allocated space. Always:
+1. Add `height={1}` to each row Box
+2. Use `line.text || " "` to ensure empty lines have content
+
+The component also handles:
+- **ANSI escape code stripping** for accurate width calculation
+- **CJK character width** (Chinese, Japanese, Korean characters count as 2 columns)
+- **Line wrapping** for lines exceeding terminal width
+- **Top padding** with empty rows when content is less than available height
 
 ### Message Scrolling
 

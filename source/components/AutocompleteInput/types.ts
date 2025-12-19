@@ -142,6 +142,8 @@ export type AutocompleteInputProps = {
 	slashCommands?: SlashCommand[];
 	/** 是否激活键盘输入（默认 true）*/
 	isActive?: boolean;
+	/** 输入区域高度变化回调（用于布局计算） */
+	onHeightChange?: (height: number) => void;
 };
 
 // ============================================================================

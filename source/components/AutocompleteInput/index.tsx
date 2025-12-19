@@ -4,7 +4,7 @@
  */
 
 import { Box } from "ink";
-import { useReducer, useCallback, useState, useMemo } from "react";
+import { useReducer, useCallback, useState, useMemo, useEffect } from "react";
 import { useApp } from "ink";
 import useTerminalWidth from "../../hooks/useTerminalWidth.js";
 import { segmentsToRanges } from "../../models/richInput.js";
@@ -41,6 +41,7 @@ import { useFileSelect } from "./hooks/useFileSelect.js";
 
 // Utils
 import { processLines, getInputEndInfo } from "./utils/lineProcessor.js";
+import { calculateInputAreaHeight } from "./utils/heightCalculator.js";
 
 // Components
 import { InputLine } from "./components/InputLine.js";
@@ -55,6 +56,7 @@ export default function AutocompleteInput({
 	onExit,
 	slashCommands = [],
 	isActive = true,
+	onHeightChange,
 }: AutocompleteInputProps) {
 	const { exit } = useApp();
 	const [state, dispatch] = useReducer(editorReducer, initialState);
@@ -210,6 +212,34 @@ export default function AutocompleteInput({
 
 	// 计算 prompt 缩进（用于后续行对齐）
 	const promptIndent = " ".repeat(prompt.length);
+
+	// 计算输入区域总高度（用于布局）
+	const inputAreaHeight = useMemo(
+		() =>
+			calculateInputAreaHeight({
+				inputLines: lines.length,
+				uiMode,
+				filteredCommands,
+				filteredFiles,
+				commandPath,
+				filePath: instance.filePath,
+				filesLoading,
+			}),
+		[
+			lines.length,
+			uiMode,
+			filteredCommands,
+			filteredFiles,
+			commandPath,
+			instance.filePath,
+			filesLoading,
+		],
+	);
+
+	// 报告高度变化
+	useEffect(() => {
+		onHeightChange?.(inputAreaHeight);
+	}, [inputAreaHeight, onHeightChange]);
 
 	return (
 		<Box flexDirection="column">

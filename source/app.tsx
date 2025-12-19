@@ -29,10 +29,16 @@ export default function App() {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [focusMode, setFocusMode] = useState<FocusMode>("input");
 	const terminalHeight = useTerminalHeight();
+	const [inputAreaHeight, setInputAreaHeight] = useState(1);
 
 	// 焦点模式切换（Escape 键）
 	const toggleFocusMode = useCallback(() => {
 		setFocusMode((prev) => (prev === "input" ? "output" : "input"));
+	}, []);
+
+	// 输入区域高度变化回调
+	const handleInputHeightChange = useCallback((height: number) => {
+		setInputAreaHeight(height);
 	}, []);
 
 	// 全局键盘监听（仅处理模式切换）
@@ -114,9 +120,9 @@ export default function App() {
 	const isOutputMode = focusMode === "output";
 
 	// 计算 MessageOutput 的可用高度
-	// 输入模式: Header(1) + Divider(1) + MessageOutput + Divider(1) + Input(1) = 4 行固定
+	// 输入模式: Header(1) + Divider(1) + MessageOutput + Divider(1) + InputArea(动态)
 	// 浏览模式: Header(1) + Divider(1) + MessageOutput = 2 行固定
-	const fixedHeight = isOutputMode ? 2 : 4;
+	const fixedHeight = isOutputMode ? 2 : 2 + 1 + inputAreaHeight;
 	const messageOutputHeight = Math.max(1, terminalHeight - fixedHeight);
 
 	return (
@@ -131,7 +137,7 @@ export default function App() {
 				<Divider />
 			</Box>
 
-			{/* 输出区域 - 明确指定高度 */}
+			{/* 输出区域 - 使用计算的固定高度 */}
 			<MessageOutput
 				messages={messages}
 				height={messageOutputHeight}
@@ -155,6 +161,7 @@ export default function App() {
 						onExit={clearAndExit}
 						slashCommands={SLASH_COMMANDS}
 						isActive={isInputMode}
+						onHeightChange={handleInputHeightChange}
 					/>
 				</Box>
 			)}

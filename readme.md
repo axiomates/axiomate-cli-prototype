@@ -220,12 +220,13 @@ const result = await provider.callTool("git_status", {});
 
 The app supports two focus modes for navigating between input and message viewing:
 
-| Mode   | Description                   | How to Enter    |
-| ------ | ----------------------------- | --------------- |
-| Input  | Input active, ↑/↓ for history | Default / `Shift+↑/↓` |
-| Browse | Input hidden, ↑/↓ scrolls messages | `Shift+↑/↓`   |
+| Mode   | Description                        | How to Enter          |
+| ------ | ---------------------------------- | --------------------- |
+| Input  | Input active, ↑/↓ for history      | Default / `Shift+↑/↓` |
+| Browse | Input hidden, ↑/↓ scrolls messages | `Shift+↑/↓`           |
 
 Press `Shift+↑` or `Shift+↓` to toggle between modes. The current mode is shown in the header bar:
+
 - **Input mode**: `[输入] Shift+↑↓ 切换` (gray)
 - **Browse mode**: `[浏览] Shift+↑↓ 切换` (cyan, highlighted)
 
@@ -235,12 +236,12 @@ In Browse mode, the input area is hidden to maximize message viewing space.
 
 ### Global
 
-| Shortcut     | Action                                      |
-| ------------ | ------------------------------------------- |
-| `Shift+↑/↓`  | Toggle between Input and Browse mode        |
-| `PageUp`     | Scroll messages up (both modes)             |
-| `PageDown`   | Scroll messages down (both modes)           |
-| `Ctrl+C`     | Exit application                            |
+| Shortcut    | Action                               |
+| ----------- | ------------------------------------ |
+| `Shift+↑/↓` | Toggle between Input and Browse mode |
+| `PageUp`    | Scroll messages up (both modes)      |
+| `PageDown`  | Scroll messages down (both modes)    |
+| `Ctrl+C`    | Exit application                     |
 
 ### Input Mode
 
@@ -263,10 +264,10 @@ In Browse mode, the input area is hidden to maximize message viewing space.
 
 ### Browse Mode
 
-| Shortcut     | Action                                      |
-| ------------ | ------------------------------------------- |
-| `↑`          | Scroll messages up                          |
-| `↓`          | Scroll messages down                        |
+| Shortcut | Action               |
+| -------- | -------------------- |
+| `↑`      | Scroll messages up   |
+| `↓`      | Scroll messages down |
 
 ## Development
 
@@ -288,6 +289,7 @@ npm run package    # Build standalone executable
 The layout changes based on focus mode:
 
 **Input Mode** (default):
+
 ```
 ┌─────────────────────────────────────────────┐
 │ Header                        [输入] Shift+↑↓│
@@ -304,6 +306,7 @@ The layout changes based on focus mode:
 ```
 
 **Browse Mode** (Shift+↑/↓ to toggle):
+
 ```
 ┌─────────────────────────────────────────────┐
 │ Header                       [浏览] Shift+↑↓│
@@ -387,7 +390,7 @@ source/
 │   │   ├── types.ts           # EditorState, UIMode, EditorAction
 │   │   ├── reducer.ts         # State machine (editorReducer)
 │   │   ├── hooks/             # useAutocomplete, useInputHandler, useFileSelect
-│   │   ├── utils/             # lineProcessor
+│   │   ├── utils/             # lineProcessor, heightCalculator
 │   │   └── components/        # InputLine, SlashMenu, FileMenu, HelpPanel
 │   ├── Divider.tsx            # Separator line
 │   ├── Header.tsx             # Title bar
