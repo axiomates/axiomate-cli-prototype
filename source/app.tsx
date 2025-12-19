@@ -55,24 +55,18 @@ export default function App() {
 	// 发送消息给 AI（目前只是显示）
 	const sendToAI = useCallback((content: string) => {
 		// TODO: 接入 AI 服务
-		setMessages((prev) => [
-			...prev,
-			{ content: `> ${content}`, markdown: false },
-		]);
+		setMessages((prev) => [...prev, { content: `> ${content}` }]);
 	}, []);
 
-	// 显示消息（支持 Markdown）
-	const showMessage = useCallback((content: string, markdown = true) => {
-		setMessages((prev) => [...prev, { content, markdown }]);
+	// 显示消息（Markdown 渲染）
+	const showMessage = useCallback((content: string) => {
+		setMessages((prev) => [...prev, { content }]);
 	}, []);
 
 	// 更新配置
 	const setConfig = useCallback((key: string, value: string) => {
 		// TODO: 实际更新配置
-		setMessages((prev) => [
-			...prev,
-			{ content: `${key} set to: ${value}`, markdown: false },
-		]);
+		setMessages((prev) => [...prev, { content: `${key} set to: ${value}` }]);
 	}, []);
 
 	// 清屏

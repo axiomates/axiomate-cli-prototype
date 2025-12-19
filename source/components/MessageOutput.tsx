@@ -4,7 +4,6 @@ import useTerminalWidth from "../hooks/useTerminalWidth.js";
 
 export type Message = {
 	content: string;
-	markdown?: boolean; // 是否渲染为 Markdown，默认 true
 };
 
 /**
@@ -73,12 +72,9 @@ export default function MessageOutput({
 		getMarkedInstance(width);
 	}, [width]);
 
-	// 渲染单条消息
+	// 渲染单条消息（统一 Markdown 渲染）
 	const renderContent = useCallback(
 		(msg: Message): string => {
-			if (msg.markdown === false) {
-				return msg.content;
-			}
 			return renderMarkdownSync(msg.content, width - 2);
 		},
 		[width],
