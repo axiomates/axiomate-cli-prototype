@@ -55,7 +55,7 @@ export default function App() {
 	// 发送消息给 AI（目前只是显示）
 	const sendToAI = useCallback((content: string) => {
 		// TODO: 接入 AI 服务
-		setMessages((prev) => [...prev, { content: `> ${content}` }]);
+		setMessages((prev) => [...prev, { content, type: "user" }]);
 	}, []);
 
 	// 显示消息（Markdown 渲染）
@@ -91,6 +91,11 @@ export default function App() {
 			if (isMessageInput(input)) {
 				sendToAI(input.text);
 			} else if (isCommandInput(input)) {
+				// 除了 exit 命令，都先显示用户输入
+				const isExit = input.commandPath[0]?.toLowerCase() === "exit";
+				if (!isExit) {
+					sendToAI(input.text);
+				}
 				await handleCommand(
 					input.commandPath,
 					{ appName: APP_NAME, version: VERSION },

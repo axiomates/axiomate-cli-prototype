@@ -4,6 +4,7 @@ import useTerminalWidth from "../hooks/useTerminalWidth.js";
 
 export type Message = {
 	content: string;
+	type?: "user" | "system"; // user: 用户输入, system: 系统输出（默认）
 };
 
 /**
@@ -56,6 +57,8 @@ function renderMarkdownSync(content: string, width: number): string {
 type RenderedLine = {
 	text: string;
 	msgIndex: number;
+	isUser: boolean; // 是否为用户输入
+	isFirstLine: boolean; // 是否为该消息的第一行（用于显示前缀）
 };
 
 export default function MessageOutput({
@@ -162,14 +165,23 @@ export default function MessageOutput({
 		const effectiveWidth = width - 2; // 留一点边距
 
 		for (let i = 0; i < messages.length; i++) {
-			const content = renderContent(messages[i]!);
+			const msg = messages[i]!;
+			const isUser = msg.type === "user";
+			const content = renderContent(msg);
 			const msgLines = content.split("\n");
 
+			let isFirstLineOfMsg = true;
 			for (const line of msgLines) {
 				// 检查这行是否需要换行
 				const wrappedLines = wrapLine(line, effectiveWidth);
 				for (const wrappedLine of wrappedLines) {
-					lines.push({ text: wrappedLine, msgIndex: i });
+					lines.push({
+						text: wrappedLine,
+						msgIndex: i,
+						isUser,
+						isFirstLine: isFirstLineOfMsg,
+					});
+					isFirstLineOfMsg = false;
 				}
 			}
 		}
@@ -302,8 +314,16 @@ export default function MessageOutput({
 	// 2. 消息内容（确保空行也占据空间）
 	for (let i = 0; i < visibleLines.length; i++) {
 		const line = visibleLines[i]!;
+		// 用户消息第一行显示粉色 > 前缀
+		const prefix =
+			line.isUser && line.isFirstLine ? (
+				<Text color="#ff69b4" bold>
+					{">"}{" "}
+				</Text>
+			) : null;
 		contentRows.push(
 			<Box key={`line-${line.msgIndex}-${i}`} height={1}>
+				{prefix}
 				<Text>{line.text || " "}</Text>
 			</Box>,
 		);
