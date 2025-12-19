@@ -1,6 +1,7 @@
 import { Box, Text, useInput } from "ink";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
+import { logger } from "../utils/logger.js";
 
 export type Message = {
 	content: string;
@@ -99,6 +100,9 @@ export default function MessageOutput({
 		return lines;
 	}, [messages, renderContent]);
 
+	// 计算可见范围
+	const totalLines = renderedLines.length;
+
 	// 当有新消息且 autoScroll 为 true 时，滚动到底部
 	useEffect(() => {
 		if (autoScroll) {
@@ -106,26 +110,61 @@ export default function MessageOutput({
 		}
 	}, [messages.length, autoScroll]);
 
-	// 计算实际可用于内容的高度（减去指示器行）
-	const contentHeight = height - 1; // 保留 1 行给指示器
+	// 计算内容高度和可见行
+	// 注意：指示器是否显示取决于滚动位置，这会影响可用高度
+	// 为了避免循环依赖，我们先用保守估计计算，再调整
 
-	// 计算可见范围
-	const totalLines = renderedLines.length;
-	const maxOffset = Math.max(0, totalLines - contentHeight);
+	// 先假设最多需要 2 行给指示器（顶部 + 底部）
+	const minContentHeight = Math.max(1, height - 2);
+
+	// 用保守的高度计算最大偏移
+	const maxOffsetConservative = Math.max(0, totalLines - minContentHeight);
+
+	// 当高度或内容变化时，确保 scrollOffset 在有效范围内
+	useEffect(() => {
+		setScrollOffset((prev) => {
+			if (prev > maxOffsetConservative) {
+				return maxOffsetConservative;
+			}
+			return prev;
+		});
+	}, [maxOffsetConservative]);
 
 	// 确保 scrollOffset 在有效范围内
-	const safeOffset = Math.min(Math.max(0, scrollOffset), maxOffset);
+	const safeOffset = Math.min(Math.max(0, scrollOffset), maxOffsetConservative);
 
-	// 计算可见的行
+	// 现在可以确定指示器状态
+	// 使用保守高度计算起始行
+	const startLineConservative = Math.max(0, totalLines - minContentHeight - safeOffset);
+	const hasMoreAbove = startLineConservative > 0;
+	const hasMoreBelow = safeOffset > 0;
+
+	// 根据实际需要的指示器数量，计算真正的内容高度
+	const indicatorCount = (hasMoreAbove ? 1 : 0) + (hasMoreBelow ? 1 : 0);
+	const contentHeight = Math.max(1, height - indicatorCount);
+	const maxOffset = Math.max(0, totalLines - contentHeight);
+
+	// 重新计算可见行（用真正的内容高度）
 	const startLine = Math.max(0, totalLines - contentHeight - safeOffset);
 	const endLine = totalLines - safeOffset;
 	const visibleLines = renderedLines.slice(startLine, endLine);
 
-	// 指示器状态
-	const hasMoreAbove = startLine > 0;
-	const hasMoreBelow = safeOffset > 0;
+	// 指示器显示的行数
 	const linesAbove = startLine;
 	const linesBelow = safeOffset;
+
+	// 调试日志
+	logger.warn("MessageOutput render", {
+		height,
+		totalLines,
+		contentHeight,
+		indicatorCount,
+		hasMoreAbove,
+		hasMoreBelow,
+		scrollOffset,
+		safeOffset,
+		visibleLinesCount: visibleLines.length,
+	});
 
 	// 是否处于输出模式（直接用 ↑/↓ 滚动）
 	const isOutputMode = focusMode === "output";
@@ -175,35 +214,45 @@ export default function MessageOutput({
 		{ isActive: true },
 	);
 
+	// 构建要渲染的行数组
+	const rows: React.ReactNode[] = [];
+
+	// 1. 顶部指示器
+	if (hasMoreAbove) {
+		rows.push(
+			<Box key="indicator-above" justifyContent="center">
+				<Text dimColor>↑ 还有 {linesAbove} 行 (PageUp 翻页)</Text>
+			</Box>,
+		);
+	}
+
+	// 2. 消息内容
+	for (let i = 0; i < visibleLines.length; i++) {
+		const line = visibleLines[i]!;
+		rows.push(
+			<Box key={`line-${line.msgIndex}-${i}`}>
+				<Text>{line.text}</Text>
+			</Box>,
+		);
+	}
+
+	// 3. 底部指示器
+	if (hasMoreBelow) {
+		rows.push(
+			<Box key="indicator-below" justifyContent="center">
+				<Text dimColor>↓ 还有 {linesBelow} 行 (PageDown 翻页)</Text>
+			</Box>,
+		);
+	}
+
 	return (
-		<Box flexDirection="column" flexGrow={1} overflowY="hidden">
-			{/* 顶部指示器 */}
-			{hasMoreAbove && (
-				<Box justifyContent="center" flexShrink={0}>
-					<Text dimColor>↑ 还有 {linesAbove} 行 (PageUp 翻页)</Text>
-				</Box>
-			)}
-
-			{/* 消息内容 */}
-			<Box
-				flexDirection="column"
-				flexGrow={1}
-				justifyContent={totalLines <= contentHeight ? "flex-end" : "flex-start"}
-				overflowY="hidden"
-			>
-				{visibleLines.map((line, index) => (
-					<Box key={`${line.msgIndex}-${index}`} flexShrink={0}>
-						<Text>{line.text}</Text>
-					</Box>
-				))}
-			</Box>
-
-			{/* 底部指示器 */}
-			{hasMoreBelow && (
-				<Box justifyContent="center" flexShrink={0}>
-					<Text dimColor>↓ 还有 {linesBelow} 行 (PageDown 翻页)</Text>
-				</Box>
-			)}
+		<Box
+			flexDirection="column"
+			height={height}
+			justifyContent="flex-end"
+			overflowY="hidden"
+		>
+			{rows}
 		</Box>
 	);
 }

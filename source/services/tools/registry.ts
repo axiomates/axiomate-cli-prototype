@@ -109,6 +109,7 @@ export class ToolRegistry implements IToolRegistry {
 
 	/**
 	 * 格式化工具列表为显示字符串
+	 * 注意：marked-terminal 在列表项中不支持粗体，所以这里使用纯文本格式
 	 */
 	formatToolList(includeNotInstalled = true): string {
 		const lines: string[] = [];
@@ -140,12 +141,15 @@ export class ToolRegistry implements IToolRegistry {
 		// 输出每个类别
 		for (const [category, tools] of categories) {
 			lines.push(`\n## ${categoryNames[category] || category}`);
+			lines.push(""); // 空行让 marked 正确解析段落
 			for (const tool of tools) {
 				const status = tool.installed ? `✓ ${tool.version || ""}` : "✗ 未安装";
-				lines.push(`- **${tool.name}** (${tool.id}): ${status}`);
+				// 每个工具作为单独段落（需要前后空行）
+				lines.push(`**${tool.name}** \`${tool.id}\` ${status}`);
 				if (!tool.installed && tool.installHint) {
-					lines.push(`  安装: ${tool.installHint.split("\n")[0]}`);
+					lines.push(`> 安装: ${tool.installHint.split("\n")[0]}`);
 				}
+				lines.push(""); // 段落分隔
 			}
 		}
 

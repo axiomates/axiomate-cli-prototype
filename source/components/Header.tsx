@@ -28,10 +28,10 @@ export default function Header({ focusMode = "input" }: Props) {
 			<Text>
 				{isOutputMode ? (
 					<Text color="cyan" bold>
-						[浏览] Shift+↑↓ 切换
+						[View] Shift+↑↓ Switch
 					</Text>
 				) : (
-					<Text color="gray">[输入] Shift+↑↓ 切换</Text>
+					<Text color="gray">[Input] Shift+↑↓ Switch</Text>
 				)}
 			</Text>
 		</Box>
