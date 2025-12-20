@@ -20,8 +20,6 @@ export default function Header({ focusMode = "input" }: Props) {
 				<Text color="gray"> - Type </Text>
 				<Text color={THEME_LIGHT_YELLOW}>/</Text>
 				<Text color="gray"> for commands, </Text>
-				<Text color={THEME_LIGHT_YELLOW}>Tab</Text>
-				<Text color="gray"> to autocomplete, </Text>
 				<Text color={THEME_LIGHT_YELLOW}>?</Text>
 				<Text color="gray"> for shortcuts</Text>
 			</Text>

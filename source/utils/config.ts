@@ -19,7 +19,7 @@ export type ConfigFile = Partial<Config>;
 
 // 默认配置
 const DEFAULT_CONFIG: Config = {
-	AXIOMATE_BASE_URL: "https://api.axiomate.net",
+	AXIOMATE_BASE_URL: "",
 	AXIOMATE_API_KEY: "",
 };
 
@@ -122,4 +122,23 @@ function ensureConfigFileExists(): void {
 export function getConfigPath(): string {
 	const homeDir = os.homedir();
 	return path.join(homeDir, CONFIG_FILENAME);
+}
+
+/**
+ * 检查是否为首次使用（配置未完成）
+ *
+ * 满足以下任一条件即为首次使用：
+ * - 配置文件不存在（此时 loadConfigFile 会返回空对象）
+ * - 配置文件解析失败（此时 loadConfigFile 会重置为空对象）
+ * - AXIOMATE_BASE_URL 不存在或为空字符串
+ * - AXIOMATE_API_KEY 不存在或为空字符串
+ */
+export function isFirstTimeUser(): boolean {
+	const config = getConfig();
+	return (
+		!config.AXIOMATE_BASE_URL ||
+		config.AXIOMATE_BASE_URL.trim() === "" ||
+		!config.AXIOMATE_API_KEY ||
+		config.AXIOMATE_API_KEY.trim() === ""
+	);
 }

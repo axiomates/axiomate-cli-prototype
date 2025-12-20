@@ -44,6 +44,34 @@ Or run directly:
 node dist/cli.js
 ```
 
+### First Run
+
+On first launch, axiomate-cli displays a welcome page if no configuration is found:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ axiomate-cli v0.1.0                                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│                    Welcome to axiomate!                     │
+│                                                             │
+│                      [Test Version]                         │
+│       A pre-configured AI API key is included for testing.  │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│ Press any key to complete setup...                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+The welcome page:
+- Indicates this is a **test version** with pre-configured API credentials
+- Press any key to automatically write the configuration
+- App restarts and enters the main interface
+
+Configuration is stored in `~/.axiomate.json`:
+- `AXIOMATE_BASE_URL` - API endpoint
+- `AXIOMATE_API_KEY` - API key
+
 ### Standalone Executable
 
 Build a standalone executable (requires [Bun](https://bun.sh)):
@@ -394,7 +422,9 @@ source/
 │   │   └── components/        # InputLine, SlashMenu, FileMenu, HelpPanel
 │   ├── Divider.tsx            # Separator line
 │   ├── Header.tsx             # Title bar
-│   └── MessageOutput.tsx      # Message display area
+│   ├── MessageOutput.tsx      # Message display area
+│   ├── Splash.tsx             # Startup splash screen
+│   └── Welcome.tsx            # First-time user welcome page
 ├── models/
 │   ├── input.ts               # UserInput type (submit callback)
 │   ├── inputInstance.ts       # InputInstance (core data model)

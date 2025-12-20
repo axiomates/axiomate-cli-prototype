@@ -61,7 +61,8 @@ source/
 │   ├── Divider.tsx            # Horizontal divider
 │   ├── Header.tsx             # App header with title
 │   ├── MessageOutput.tsx      # Message display area (Markdown rendering)
-│   └── Splash.tsx             # Startup splash screen (standalone)
+│   ├── Splash.tsx             # Startup splash screen (standalone)
+│   └── Welcome.tsx            # First-time user welcome page (standalone)
 ├── models/
 │   ├── input.ts               # UserInput types (for submit callback)
 │   ├── inputInstance.ts       # InputInstance - core input data model
@@ -127,7 +128,7 @@ source/
 
 ## Startup Flow
 
-The application uses a **two-phase rendering** architecture where Splash and App are completely separate:
+The application uses a **three-phase rendering** architecture with first-time user detection:
 
 ```
 cli.tsx (entry point)
@@ -139,14 +140,79 @@ cli.tsx (entry point)
     │       ├── "Discovering tools..." → ToolRegistry.discover()
     │       └── "Loading AI config..." → createAIServiceFromConfig()
     │
-    └── Phase 2: unmount Splash, render(<App initResult={...} />)
+    ├── Phase 2: unmount Splash
+    │
+    └── Phase 3: Check configuration status
+        │
+        ├── isFirstTimeUser() === true
+        │   └── render(<Welcome />)
+        │       ├── Display welcome message with test version notice
+        │       ├── Wait for any key press
+        │       ├── updateConfig() writes preset API URL and key
+        │       └── restartApp() restarts with same cwd and args
+        │           └── On restart: isFirstTimeUser() === false → App
+        │
+        └── isFirstTimeUser() === false
+            └── render(<App initResult={...} />)
 ```
 
 **Key Design Principles**:
 - Splash is **standalone** - not a child of App, controlled by cli.tsx
+- Welcome is **standalone** - shown only for first-time users
 - App receives `initResult` prop containing pre-initialized AI service
 - No `isReady` state in App - it only renders when fully ready
 - Progress updates via `splashInstance.rerender(<Splash message={...} />)`
+
+### First-Time User Detection
+
+Defined in `utils/config.ts`:
+
+```typescript
+/**
+ * Check if this is first-time use (configuration incomplete)
+ *
+ * Returns true if any of:
+ * - Config file doesn't exist (loadConfigFile returns empty object)
+ * - Config file parse failed (loadConfigFile resets to empty object)
+ * - AXIOMATE_BASE_URL is missing or empty string
+ * - AXIOMATE_API_KEY is missing or empty string
+ */
+export function isFirstTimeUser(): boolean {
+  const config = getConfig();
+  return (
+    !config.AXIOMATE_BASE_URL ||
+    config.AXIOMATE_BASE_URL.trim() === "" ||
+    !config.AXIOMATE_API_KEY ||
+    config.AXIOMATE_API_KEY.trim() === ""
+  );
+}
+```
+
+### Welcome Component
+
+Located in `components/Welcome.tsx`:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ axiomate-cli v0.1.0                                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│                    Welcome to axiomate!                     │
+│                                                             │
+│                      [Test Version]                         │
+│       A pre-configured AI API key is included for testing.  │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│ Press any key to complete setup...          Configuring...  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Features**:
+- Full-screen terminal layout (uses `useTerminalHeight`)
+- Centered welcome message with test version notice
+- Pre-configured API credentials for testing (future: user registration/login)
+- Status display: waiting → configuring → restarting
+- Calls `restartApp()` after writing config to apply changes
 
 **Splash Component** (`components/Splash.tsx`):
 ```typescript

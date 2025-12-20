@@ -3,8 +3,9 @@ import { render } from "ink";
 import meow from "meow";
 import App from "./app.js";
 import Splash from "./components/Splash.js";
+import Welcome from "./components/Welcome.js";
 import { initAppData } from "./utils/appdata.js";
-import { initConfig } from "./utils/config.js";
+import { initConfig, isFirstTimeUser } from "./utils/config.js";
 import { setFlags } from "./utils/flags.js";
 import { initLocalSettings } from "./utils/localsettings.js";
 import { initPlatform } from "./utils/platform.js";
@@ -72,12 +73,19 @@ async function main() {
 		process.exit(1);
 	}
 
-	// 阶段 2: 卸载 Splash，渲染 App
+	// 阶段 2: 卸载 Splash
 	splashInstance.unmount();
-	const { waitUntilExit } = render(<App initResult={initResult} />);
 
-	// 退出时清屏
-	await waitUntilExit();
+	// 阶段 3: 根据配置状态决定渲染 Welcome 或 App
+	if (isFirstTimeUser()) {
+		// 首次使用 → 欢迎页面
+		const { waitUntilExit } = render(<Welcome />);
+		await waitUntilExit();
+	} else {
+		// 已配置 → 正常启动
+		const { waitUntilExit } = render(<App initResult={initResult} />);
+		await waitUntilExit();
+	}
 	process.stdout.write("\x1b[2J\x1b[H");
 }
 
