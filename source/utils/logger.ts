@@ -1,64 +1,75 @@
-import * as path from "node:path";
-import pino from "pino";
 import { getLogsPath } from "./appdata.js";
 import { getFlags } from "./flags.js";
+import { LogWriter, type LogLevel } from "./logWriter.js";
+
+export type { LogLevel };
 
 /**
- * 日志级别
+ * 日志级别优先级
  */
-export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
+const LEVEL_PRIORITY: Record<LogLevel, number> = {
+	trace: 10,
+	debug: 20,
+	info: 30,
+	warn: 40,
+	error: 50,
+	fatal: 60,
+};
 
-// 单例 logger
-let loggerInstance: pino.Logger | null = null;
+// 单例 LogWriter
+let writerInstance: LogWriter | null = null;
+
+/**
+ * 获取 LogWriter 实例
+ */
+function getWriter(): LogWriter {
+	if (writerInstance === null) {
+		writerInstance = new LogWriter(getLogsPath(), {
+			baseName: "app",
+			maxFileSize: 10 * 1024 * 1024, // 10MB
+			maxDays: 7,
+		});
+	}
+	return writerInstance;
+}
+
+/**
+ * 获取当前日志级别
+ */
+function getCurrentLevel(): LogLevel {
+	const flags = getFlags();
+	return flags.verbose ? "trace" : "warn";
+}
+
+/**
+ * 检查是否应该记录该级别的日志
+ */
+function shouldLog(level: LogLevel): boolean {
+	const currentLevel = getCurrentLevel();
+	return LEVEL_PRIORITY[level] >= LEVEL_PRIORITY[currentLevel];
+}
+
+/**
+ * 记录日志
+ */
+function log(level: LogLevel, msg: string, obj?: object): void {
+	if (!shouldLog(level)) return;
+
+	try {
+		getWriter().write(level, msg, obj);
+	} catch {
+		// 静默失败
+	}
+}
 
 /**
  * 便捷日志方法
  */
 export const logger = {
-	trace: (msg: string, obj?: object) => getLogger().trace(obj, msg),
-	debug: (msg: string, obj?: object) => getLogger().debug(obj, msg),
-	info: (msg: string, obj?: object) => getLogger().info(obj, msg),
-	warn: (msg: string, obj?: object) => getLogger().warn(obj, msg),
-	error: (msg: string, obj?: object) => getLogger().error(obj, msg),
-	fatal: (msg: string, obj?: object) => getLogger().fatal(obj, msg),
+	trace: (msg: string, obj?: object) => log("trace", msg, obj),
+	debug: (msg: string, obj?: object) => log("debug", msg, obj),
+	info: (msg: string, obj?: object) => log("info", msg, obj),
+	warn: (msg: string, obj?: object) => log("warn", msg, obj),
+	error: (msg: string, obj?: object) => log("error", msg, obj),
+	fatal: (msg: string, obj?: object) => log("fatal", msg, obj),
 };
-
-/**
- * 获取 logger 实例
- */
-export function getLogger(): pino.Logger {
-	if (loggerInstance === null) {
-		loggerInstance = createLogger();
-	}
-	return loggerInstance;
-}
-
-/**
- * 创建 logger 实例
- * 使用 pino-roll 实现日志轮转
- */
-function createLogger(): pino.Logger {
-	const flags = getFlags();
-	const level = flags.verbose ? "trace" : "warn";
-
-	return pino({
-		level,
-		transport: {
-			target: "pino-roll",
-			options: {
-				file: getLogFilePath(),
-				frequency: "daily",
-				mkdir: true,
-				size: "10m",
-				limit: { count: 7 },
-			},
-		},
-	});
-}
-
-/**
- * 获取日志文件路径
- */
-function getLogFilePath(): string {
-	return path.join(getLogsPath(), "app");
-}
