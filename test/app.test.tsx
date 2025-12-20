@@ -1,23 +1,30 @@
 import { render } from "ink-testing-library";
 import { describe, expect, it } from "vitest";
 import App from "../source/app.js";
+import type { InitResult } from "../source/utils/init.js";
+
+// Mock initResult for App component
+const mockInitResult: InitResult = {
+	aiService: null,
+};
 
 describe("App", () => {
-	it("renders the splash screen with app title on initial load", () => {
-		const { lastFrame } = render(<App />);
-		// Splash screen shows app name
+	it("renders the header with app title", () => {
+		const { lastFrame } = render(<App initResult={mockInitResult} />);
+		// Header shows app name
 		expect(lastFrame()).toContain("axiomate-cli");
 	});
 
-	it("shows loading message in splash screen", () => {
-		const { lastFrame } = render(<App />);
-		// Splash screen shows loading message
-		expect(lastFrame()).toContain("Loading...");
+	it("shows input mode indicator by default", () => {
+		const { lastFrame } = render(<App initResult={mockInitResult} />);
+		// Default mode is input mode
+		expect(lastFrame()).toContain("[Input]");
 	});
 
-	it("shows version in splash screen", () => {
-		const { lastFrame } = render(<App />);
-		// Splash screen shows version (format: v0.1.0)
-		expect(lastFrame()).toMatch(/v\d+\.\d+\.\d+/);
+	it("shows command hints in header", () => {
+		const { lastFrame } = render(<App initResult={mockInitResult} />);
+		// Header shows command hints
+		expect(lastFrame()).toContain("for commands");
+		expect(lastFrame()).toContain("Tab");
 	});
 });
