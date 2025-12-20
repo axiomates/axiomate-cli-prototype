@@ -238,7 +238,7 @@ function isProfileUpToDate(profile: TerminalProfile, exePath: string): boolean {
 
 /**
  * 确保 Windows Terminal profile 配置正确
- * @returns true 如果配置被更新，需要重启
+ * @returns true 如果配置被更新，后续需要重启
  */
 function ensureWindowsTerminalProfile(): boolean {
 	const settingsPath = findSettingsPath();
@@ -328,15 +328,16 @@ export async function restartApp(): Promise<never> {
  * 在其他平台上：
  * - 无操作
  *
+ * @returns true 如果配置被更新，后续需要重启
  * 注意：此函数不再自动重启，配置更新后需要用户手动重启才能生效
  * 如需重启，可使用 restartApp() 函数
  */
-export function initPlatform(): void {
+export function initPlatform(): boolean {
 	// 仅 Windows 打包后的 exe 执行
 	if (platform() !== "win32" || !isPackagedExe()) {
-		return;
+		return false;
 	}
 
-	// 仅更新配置，不自动重启
-	ensureWindowsTerminalProfile();
+	// 更新配置
+	return ensureWindowsTerminalProfile();
 }
