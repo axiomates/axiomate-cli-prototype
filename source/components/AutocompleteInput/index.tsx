@@ -7,7 +7,6 @@ import { Box } from "ink";
 import {
 	useReducer,
 	useCallback,
-	useState,
 	useMemo,
 	useEffect,
 	useRef,
@@ -66,7 +65,7 @@ export default function AutocompleteInput({
 	onHeightChange,
 	injectText,
 	onInjectTextHandled,
-	history: externalHistory,
+	history,
 	onHistoryChange,
 }: AutocompleteInputProps) {
 	const { exit } = useApp();
@@ -85,10 +84,7 @@ export default function AutocompleteInput({
 		}
 	}, [injectText, onInjectTextHandled]);
 
-	// 输入历史记录（存储 HistoryEntry，不含 cursor）
-	// 如果外部提供了 history，则使用外部状态；否则使用本地状态（向后兼容）
-	const [localHistory, setLocalHistory] = useState<HistoryEntry[]>([]);
-	const history = externalHistory ?? localHistory;
+	// 输入历史记录（存储 HistoryEntry，不含 cursor，由父组件管理）
 
 	// 使用 ref 追踪最新的 history 值，避免闭包中使用过时的值
 	const historyRef = useRef(history);
@@ -98,15 +94,9 @@ export default function AutocompleteInput({
 
 	const setHistory = useCallback(
 		(updater: HistoryEntry[] | ((prev: HistoryEntry[]) => HistoryEntry[])) => {
-			if (onHistoryChange) {
-				// 使用外部状态，通过 ref 获取最新值
-				const newHistory =
-					typeof updater === "function" ? updater(historyRef.current) : updater;
-				onHistoryChange(newHistory);
-			} else {
-				// 使用本地状态
-				setLocalHistory(updater);
-			}
+			const newHistory =
+				typeof updater === "function" ? updater(historyRef.current) : updater;
+			onHistoryChange(newHistory);
 		},
 		[onHistoryChange],
 	);
