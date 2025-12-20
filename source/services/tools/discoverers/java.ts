@@ -86,13 +86,13 @@ const javacDefinition: ToolDefinition = {
 };
 
 export async function detectJava(): Promise<DiscoveredTool> {
-	if (!commandExists("java")) {
+	if (!(await commandExists("java"))) {
 		return createNotInstalledTool(javaDefinition);
 	}
 
-	const execPath = getExecutablePath("java");
+	const execPath = await getExecutablePath("java");
 	// java -version 输出到 stderr
-	const version = getVersion("java", ["-version"], {
+	const version = await getVersion("java", ["-version"], {
 		useStderr: true,
 		parseOutput: (output) => {
 			// 'openjdk version "21.0.1"' 或 'java version "1.8.0_391"'
@@ -109,12 +109,12 @@ export async function detectJava(): Promise<DiscoveredTool> {
 }
 
 export async function detectJavac(): Promise<DiscoveredTool> {
-	if (!commandExists("javac")) {
+	if (!(await commandExists("javac"))) {
 		return createNotInstalledTool(javacDefinition);
 	}
 
-	const execPath = getExecutablePath("javac");
-	const version = getVersion("javac", ["-version"], {
+	const execPath = await getExecutablePath("javac");
+	const version = await getVersion("javac", ["-version"], {
 		parseOutput: (output) => {
 			// "javac 21.0.1" -> "21.0.1"
 			const match = output.match(/javac (\d+(?:\.\d+)*)/);

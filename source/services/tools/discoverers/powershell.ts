@@ -102,12 +102,12 @@ const pwshDefinition: ToolDefinition = {
 
 export async function detectPowershell(): Promise<DiscoveredTool> {
 	// Windows 上是 powershell.exe
-	if (!commandExists("powershell")) {
+	if (!(await commandExists("powershell"))) {
 		return createNotInstalledTool(powershellDefinition);
 	}
 
-	const execPath = getExecutablePath("powershell");
-	const version = getVersion(
+	const execPath = await getExecutablePath("powershell");
+	const version = await getVersion(
 		"powershell",
 		["-Command", "$PSVersionTable.PSVersion.ToString()"],
 		{
@@ -123,12 +123,12 @@ export async function detectPowershell(): Promise<DiscoveredTool> {
 }
 
 export async function detectPwsh(): Promise<DiscoveredTool> {
-	if (!commandExists("pwsh")) {
+	if (!(await commandExists("pwsh"))) {
 		return createNotInstalledTool(pwshDefinition);
 	}
 
-	const execPath = getExecutablePath("pwsh");
-	const version = getVersion("pwsh", ["--version"], {
+	const execPath = await getExecutablePath("pwsh");
+	const version = await getVersion("pwsh", ["--version"], {
 		parseOutput: (output) => {
 			// "PowerShell 7.4.1" -> "7.4.1"
 			const match = output.match(/PowerShell (\d+\.\d+\.\d+)/);

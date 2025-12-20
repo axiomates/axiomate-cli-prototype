@@ -157,12 +157,12 @@ const npmDefinition: ToolDefinition = {
 };
 
 export async function detectNode(): Promise<DiscoveredTool> {
-	if (!commandExists("node")) {
+	if (!(await commandExists("node"))) {
 		return createNotInstalledTool(nodeDefinition);
 	}
 
-	const execPath = getExecutablePath("node");
-	const version = getVersion("node", ["--version"], {
+	const execPath = await getExecutablePath("node");
+	const version = await getVersion("node", ["--version"], {
 		parseOutput: (output) => output.replace(/^v/, ""),
 	});
 
@@ -174,12 +174,12 @@ export async function detectNode(): Promise<DiscoveredTool> {
 }
 
 export async function detectNvm(): Promise<DiscoveredTool> {
-	if (!commandExists("nvm")) {
+	if (!(await commandExists("nvm"))) {
 		return createNotInstalledTool(nvmDefinition);
 	}
 
-	const execPath = getExecutablePath("nvm");
-	const version = getVersion("nvm", ["version"], {
+	const execPath = await getExecutablePath("nvm");
+	const version = await getVersion("nvm", ["version"], {
 		parseOutput: (output) => output.trim(),
 	});
 
@@ -191,12 +191,12 @@ export async function detectNvm(): Promise<DiscoveredTool> {
 }
 
 export async function detectNpm(): Promise<DiscoveredTool> {
-	if (!commandExists("npm")) {
+	if (!(await commandExists("npm"))) {
 		return createNotInstalledTool(npmDefinition);
 	}
 
-	const execPath = getExecutablePath("npm");
-	const version = getVersion("npm", ["--version"]);
+	const execPath = await getExecutablePath("npm");
+	const version = await getVersion("npm", ["--version"]);
 
 	return createInstalledTool(
 		npmDefinition,

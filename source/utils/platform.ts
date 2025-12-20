@@ -3,10 +3,12 @@
  *
  * 处理平台特定的配置和行为：
  * - Windows Terminal profile 自动配置
- * - 配置更新后自动重启（保持工作目录）
+ * - 跨平台重启功能（保留供其他地方使用）
+ *
+ * 注意：所有命令检测使用异步 spawn 以避免阻塞事件循环
  */
 
-import { spawn, spawnSync } from "child_process";
+import { spawn } from "child_process";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs";
 import { platform } from "os";
 import { join } from "path";
@@ -74,33 +76,34 @@ type TerminalSettings = {
 type WindowsTerminal = "wt" | "powershell" | "cmd";
 
 /**
- * 检测命令是否存在
+ * 检测命令是否存在（异步版本）
  */
-function commandExists(cmd: string): boolean {
-	try {
-		const result = spawnSync(
-			platform() === "win32" ? "where" : "which",
-			[cmd],
-			{
-				stdio: "pipe",
-				windowsHide: true,
-			},
-		);
-		return result.status === 0;
-	} catch {
-		return false;
-	}
+function commandExists(cmd: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		const proc = spawn(platform() === "win32" ? "where" : "which", [cmd], {
+			stdio: "pipe",
+			windowsHide: true,
+		});
+
+		proc.on("close", (code) => {
+			resolve(code === 0);
+		});
+
+		proc.on("error", () => {
+			resolve(false);
+		});
+	});
 }
 
 /**
- * 检测 Windows 可用的终端（按优先级）
+ * 检测 Windows 可用的终端（按优先级，异步）
  * 优先级：Windows Terminal > PowerShell > CMD
  */
-function detectWindowsTerminal(): WindowsTerminal {
-	if (commandExists("wt.exe")) {
+async function detectWindowsTerminal(): Promise<WindowsTerminal> {
+	if (await commandExists("wt.exe")) {
 		return "wt";
 	}
-	if (commandExists("powershell.exe")) {
+	if (await commandExists("powershell.exe")) {
 		return "powershell";
 	}
 	return "cmd";
@@ -126,13 +129,13 @@ function escapeCmdArg(arg: string): string {
 }
 
 /**
- * Windows 平台重启（自动检测最佳终端）
+ * Windows 平台重启（自动检测最佳终端，异步）
  */
-function restartWindows(): never {
+async function restartWindows(): Promise<never> {
 	const cwd = process.cwd();
 	const exePath = process.execPath;
 	const args = process.argv.slice(1);
-	const terminal = detectWindowsTerminal();
+	const terminal = await detectWindowsTerminal();
 
 	switch (terminal) {
 		case "wt":
@@ -301,12 +304,14 @@ function ensureWindowsTerminalProfile(): boolean {
  *
  * Windows: 自动检测最佳终端（wt.exe > powershell.exe > cmd.exe）
  * macOS/Linux: 直接 spawn 新进程
+ *
+ * 注意：此函数为异步函数，调用后会执行 process.exit(0)
  */
-export function restartApp(): never {
+export async function restartApp(): Promise<never> {
 	if (platform() === "win32") {
-		restartWindows();
+		return restartWindows();
 	} else {
-		restartUnix();
+		return restartUnix();
 	}
 }
 
@@ -318,13 +323,13 @@ export function restartApp(): never {
  * 平台初始化
  *
  * 在 Windows 上：
- * - 自动配置 Windows Terminal profile
- * - 如果配置更新了，自动重启以应用新配置（保持工作目录）
+ * - 自动配置 Windows Terminal profile（如果需要）
  *
  * 在其他平台上：
  * - 无操作
  *
- * 注意：如果需要重启，此函数不会返回（调用 process.exit）
+ * 注意：此函数不再自动重启，配置更新后需要用户手动重启才能生效
+ * 如需重启，可使用 restartApp() 函数
  */
 export function initPlatform(): void {
 	// 仅 Windows 打包后的 exe 执行
@@ -332,9 +337,6 @@ export function initPlatform(): void {
 		return;
 	}
 
-	const needsRestart = ensureWindowsTerminalProfile();
-
-	if (needsRestart) {
-		restartApp();
-	}
+	// 仅更新配置，不自动重启
+	ensureWindowsTerminalProfile();
 }

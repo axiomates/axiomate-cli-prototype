@@ -8,13 +8,11 @@ import { setFlags } from "./utils/flags.js";
 import { initLocalSettings } from "./utils/localsettings.js";
 import { initPlatform } from "./utils/platform.js";
 
-// 启动时初始化
-initPlatform(); // 平台相关初始化（Windows Terminal 配置等）
-
 // 初始化配置
 initConfig();
 initAppData();
 initLocalSettings();
+initPlatform(); // 平台相关初始化（Windows Terminal 配置等）
 
 const cli = meow({
 	importMeta: import.meta,

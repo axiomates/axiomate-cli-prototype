@@ -113,12 +113,12 @@ const vscodeDefinition: ToolDefinition = {
 };
 
 export async function detectVscode(): Promise<DiscoveredTool> {
-	if (!commandExists("code")) {
+	if (!(await commandExists("code"))) {
 		return createNotInstalledTool(vscodeDefinition);
 	}
 
-	const execPath = getExecutablePath("code");
-	const version = getVersion("code", ["--version"], {
+	const execPath = await getExecutablePath("code");
+	const version = await getVersion("code", ["--version"], {
 		parseOutput: (output) => {
 			// 第一行是版本号
 			return output.split("\n")[0].trim();

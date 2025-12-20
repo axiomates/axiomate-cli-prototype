@@ -216,12 +216,12 @@ const dockerComposeDefinition: ToolDefinition = {
 };
 
 export async function detectDocker(): Promise<DiscoveredTool> {
-	if (!commandExists("docker")) {
+	if (!(await commandExists("docker"))) {
 		return createNotInstalledTool(dockerDefinition);
 	}
 
-	const execPath = getExecutablePath("docker");
-	const version = getVersion("docker", ["--version"], {
+	const execPath = await getExecutablePath("docker");
+	const version = await getVersion("docker", ["--version"], {
 		parseOutput: (output) => {
 			// "Docker version 24.0.7, build afdd53b" -> "24.0.7"
 			const match = output.match(/Docker version (\d+\.\d+\.\d+)/);
@@ -238,11 +238,11 @@ export async function detectDocker(): Promise<DiscoveredTool> {
 
 export async function detectDockerCompose(): Promise<DiscoveredTool> {
 	// Docker Compose V2 是 docker 的子命令
-	if (!commandExists("docker")) {
+	if (!(await commandExists("docker"))) {
 		return createNotInstalledTool(dockerComposeDefinition);
 	}
 
-	const version = getVersion("docker", ["compose", "version"], {
+	const version = await getVersion("docker", ["compose", "version"], {
 		parseOutput: (output) => {
 			// "Docker Compose version v2.23.0" -> "2.23.0"
 			const match = output.match(/v?(\d+\.\d+\.\d+)/);

@@ -112,7 +112,7 @@ export async function detectBeyondCompare(): Promise<DiscoveredTool> {
 	let bcVersion: string | null = null;
 
 	for (const regPath of regPaths) {
-		const installPath = queryRegistry(regPath, "ExePath");
+		const installPath = await queryRegistry(regPath, "ExePath");
 		if (installPath && fileExists(installPath)) {
 			bcPath = installPath;
 			// 从注册表路径推断版本

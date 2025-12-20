@@ -297,12 +297,12 @@ const sqliteDefinition: ToolDefinition = {
 };
 
 export async function detectMysql(): Promise<DiscoveredTool> {
-	if (!commandExists("mysql")) {
+	if (!(await commandExists("mysql"))) {
 		return createNotInstalledTool(mysqlDefinition);
 	}
 
-	const execPath = getExecutablePath("mysql");
-	const version = getVersion("mysql", ["--version"], {
+	const execPath = await getExecutablePath("mysql");
+	const version = await getVersion("mysql", ["--version"], {
 		parseOutput: (output) => {
 			// "mysql Ver 8.0.35" 或 "mysql Ver 5.7.44"
 			const match = output.match(/Ver (\d+\.\d+\.\d+)/);
@@ -318,12 +318,12 @@ export async function detectMysql(): Promise<DiscoveredTool> {
 }
 
 export async function detectPsql(): Promise<DiscoveredTool> {
-	if (!commandExists("psql")) {
+	if (!(await commandExists("psql"))) {
 		return createNotInstalledTool(psqlDefinition);
 	}
 
-	const execPath = getExecutablePath("psql");
-	const version = getVersion("psql", ["--version"], {
+	const execPath = await getExecutablePath("psql");
+	const version = await getVersion("psql", ["--version"], {
 		parseOutput: (output) => {
 			// "psql (PostgreSQL) 16.1"
 			const match = output.match(/\(PostgreSQL\) (\d+\.\d+(?:\.\d+)?)/);
@@ -339,12 +339,12 @@ export async function detectPsql(): Promise<DiscoveredTool> {
 }
 
 export async function detectSqlite(): Promise<DiscoveredTool> {
-	if (!commandExists("sqlite3")) {
+	if (!(await commandExists("sqlite3"))) {
 		return createNotInstalledTool(sqliteDefinition);
 	}
 
-	const execPath = getExecutablePath("sqlite3");
-	const version = getVersion("sqlite3", ["--version"], {
+	const execPath = await getExecutablePath("sqlite3");
+	const version = await getVersion("sqlite3", ["--version"], {
 		parseOutput: (output) => {
 			// "3.44.2 2023-11-24 ..."
 			const match = output.match(/^(\d+\.\d+\.\d+)/);

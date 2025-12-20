@@ -113,12 +113,12 @@ const gitDefinition: ToolDefinition = {
 };
 
 export async function detectGit(): Promise<DiscoveredTool> {
-	if (!commandExists("git")) {
+	if (!(await commandExists("git"))) {
 		return createNotInstalledTool(gitDefinition);
 	}
 
-	const execPath = getExecutablePath("git");
-	const version = getVersion("git", ["--version"], {
+	const execPath = await getExecutablePath("git");
+	const version = await getVersion("git", ["--version"], {
 		parseOutput: (output) => {
 			// "git version 2.43.0.windows.1" -> "2.43.0"
 			const match = output.match(/git version (\d+\.\d+\.\d+)/);

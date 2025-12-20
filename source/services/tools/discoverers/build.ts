@@ -188,12 +188,12 @@ const mavenDefinition: ToolDefinition = {
 };
 
 export async function detectCmake(): Promise<DiscoveredTool> {
-	if (!commandExists("cmake")) {
+	if (!(await commandExists("cmake"))) {
 		return createNotInstalledTool(cmakeDefinition);
 	}
 
-	const execPath = getExecutablePath("cmake");
-	const version = getVersion("cmake", ["--version"], {
+	const execPath = await getExecutablePath("cmake");
+	const version = await getVersion("cmake", ["--version"], {
 		parseOutput: (output) => {
 			// "cmake version 3.28.1" -> "3.28.1"
 			const match = output.match(/cmake version (\d+\.\d+\.\d+)/);
@@ -209,12 +209,12 @@ export async function detectCmake(): Promise<DiscoveredTool> {
 }
 
 export async function detectGradle(): Promise<DiscoveredTool> {
-	if (!commandExists("gradle")) {
+	if (!(await commandExists("gradle"))) {
 		return createNotInstalledTool(gradleDefinition);
 	}
 
-	const execPath = getExecutablePath("gradle");
-	const version = getVersion("gradle", ["--version"], {
+	const execPath = await getExecutablePath("gradle");
+	const version = await getVersion("gradle", ["--version"], {
 		parseOutput: (output) => {
 			// 找 "Gradle X.Y.Z" 行
 			const match = output.match(/Gradle (\d+\.\d+(?:\.\d+)?)/);
@@ -230,12 +230,12 @@ export async function detectGradle(): Promise<DiscoveredTool> {
 }
 
 export async function detectMaven(): Promise<DiscoveredTool> {
-	if (!commandExists("mvn")) {
+	if (!(await commandExists("mvn"))) {
 		return createNotInstalledTool(mavenDefinition);
 	}
 
-	const execPath = getExecutablePath("mvn");
-	const version = getVersion("mvn", ["--version"], {
+	const execPath = await getExecutablePath("mvn");
+	const version = await getVersion("mvn", ["--version"], {
 		parseOutput: (output) => {
 			// "Apache Maven 3.9.6" -> "3.9.6"
 			const match = output.match(/Apache Maven (\d+\.\d+\.\d+)/);

@@ -149,7 +149,7 @@ const msbuildDefinition: ToolDefinition = {
 };
 
 export async function detectVisualStudio(): Promise<DiscoveredTool> {
-	const vs = findVisualStudio();
+	const vs = await findVisualStudio();
 	if (!vs) {
 		return createNotInstalledTool(vsDefinition);
 	}
@@ -167,7 +167,7 @@ export async function detectVisualStudio(): Promise<DiscoveredTool> {
 }
 
 export async function detectMsbuild(): Promise<DiscoveredTool> {
-	const vs = findVisualStudio();
+	const vs = await findVisualStudio();
 	if (!vs) {
 		return createNotInstalledTool(msbuildDefinition);
 	}
@@ -183,7 +183,7 @@ export async function detectMsbuild(): Promise<DiscoveredTool> {
 		return createNotInstalledTool(msbuildDefinition);
 	}
 
-	const version = getVersion(msbuildPath, ["-version"], {
+	const version = await getVersion(msbuildPath, ["-version"], {
 		parseOutput: (output) => {
 			// 最后一行通常是版本号
 			const lines = output.trim().split("\n");

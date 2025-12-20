@@ -79,7 +79,7 @@ export async function detectPython(): Promise<DiscoveredTool> {
 	let foundCmd: string | null = null;
 
 	for (const cmd of cmds) {
-		if (commandExists(cmd)) {
+		if (await commandExists(cmd)) {
 			foundCmd = cmd;
 			break;
 		}
@@ -89,8 +89,8 @@ export async function detectPython(): Promise<DiscoveredTool> {
 		return createNotInstalledTool(pythonDefinition);
 	}
 
-	const execPath = getExecutablePath(foundCmd);
-	const version = getVersion(foundCmd, ["--version"], {
+	const execPath = await getExecutablePath(foundCmd);
+	const version = await getVersion(foundCmd, ["--version"], {
 		parseOutput: (output) => {
 			// "Python 3.11.5" -> "3.11.5"
 			const match = output.match(/Python (\d+\.\d+\.\d+)/);
