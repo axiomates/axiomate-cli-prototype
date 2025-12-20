@@ -1,5 +1,6 @@
 import { Box, Text } from "ink";
 import { APP_NAME } from "../constants/meta.js";
+import { THEME_LIGHT_YELLOW, THEME_PINK } from "../constants/colors.js";
 
 type FocusMode = "input" | "output";
 
@@ -13,15 +14,15 @@ export default function Header({ focusMode = "input" }: Props) {
 	return (
 		<Box flexShrink={0} justifyContent="space-between" width="100%">
 			<Text>
-				<Text color="#ff69b4" bold>
+				<Text color={THEME_PINK} bold>
 					{APP_NAME}
 				</Text>
 				<Text color="gray"> - Type </Text>
-				<Text color="#ffff00">/</Text>
+				<Text color={THEME_LIGHT_YELLOW}>/</Text>
 				<Text color="gray"> for commands, </Text>
-				<Text color="#ffff00">Tab</Text>
+				<Text color={THEME_LIGHT_YELLOW}>Tab</Text>
 				<Text color="gray"> to autocomplete, </Text>
-				<Text color="#ffff00">?</Text>
+				<Text color={THEME_LIGHT_YELLOW}>?</Text>
 				<Text color="gray"> for shortcuts</Text>
 			</Text>
 			{/* 模式指示器 */}

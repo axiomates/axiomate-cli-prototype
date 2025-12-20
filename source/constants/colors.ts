@@ -17,3 +17,9 @@ export const FILE_COLOR = "#87ceeb";
 
 /** 目录颜色（金黄色） - 用于 FileMenu */
 export const DIR_COLOR = "#ffd700";
+
+/** 主题浅黄色 - 用于快捷键提示等 */
+export const THEME_LIGHT_YELLOW = "#ffff00";
+
+/** 主题粉色 - 用于应用名称等 */
+export const THEME_PINK = "#ff69b4";

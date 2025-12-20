@@ -3,19 +3,21 @@ import { describe, expect, it } from "vitest";
 import App from "../source/app.js";
 
 describe("App", () => {
-	it("renders the header with app title", () => {
+	it("renders the splash screen with app title on initial load", () => {
 		const { lastFrame } = render(<App />);
+		// Splash screen shows app name
 		expect(lastFrame()).toContain("axiomate-cli");
 	});
 
-	it("renders the input prompt", () => {
+	it("shows loading message in splash screen", () => {
 		const { lastFrame } = render(<App />);
-		expect(lastFrame()).toContain(">");
+		// Splash screen shows loading message
+		expect(lastFrame()).toContain("Loading...");
 	});
 
-	it("renders divider lines", () => {
+	it("shows version in splash screen", () => {
 		const { lastFrame } = render(<App />);
-		// Header and input area are separated by dividers
-		expect(lastFrame()).toContain("─");
+		// Splash screen shows version (format: v0.1.0)
+		expect(lastFrame()).toMatch(/v\d+\.\d+\.\d+/);
 	});
 });

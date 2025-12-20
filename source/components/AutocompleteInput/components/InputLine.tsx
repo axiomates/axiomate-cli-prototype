@@ -6,6 +6,7 @@
 import { Box, Text } from "ink";
 import type { ReactNode } from "react";
 import type { ColorRange } from "../../../models/richInput.js";
+import { THEME_PINK } from "../../../constants/colors.js";
 
 type InputLineProps = {
 	/** 当前行文本 */
@@ -120,7 +121,7 @@ export function InputLine({
 		<Box key={`${lineIndex}-${line}`}>
 			{/* 第一行显示粉色 prompt，后续行显示等宽空格缩进 */}
 			{isFirstLine ? (
-				<Text color="#ff69b4">{prompt}</Text>
+				<Text color={THEME_PINK}>{prompt}</Text>
 			) : (
 				<Text>{promptIndent}</Text>
 			)}

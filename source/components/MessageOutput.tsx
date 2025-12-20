@@ -1,6 +1,7 @@
 import { Box, Text, useInput } from "ink";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
+import { THEME_PINK } from "../constants/colors.js";
 
 export type Message = {
 	content: string;
@@ -322,7 +323,7 @@ export default function MessageOutput({
 		// 用户消息第一行显示粉色 > 前缀
 		const prefix =
 			line.isUser && line.isFirstLine ? (
-				<Text color="#ff69b4" bold>
+				<Text color={THEME_PINK} bold>
 					{">"}{" "}
 				</Text>
 			) : null;

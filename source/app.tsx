@@ -4,6 +4,7 @@ import AutocompleteInput from "./components/AutocompleteInput/index.js";
 import Divider from "./components/Divider.js";
 import Header from "./components/Header.js";
 import MessageOutput, { type Message } from "./components/MessageOutput.js";
+import Splash from "./components/Splash.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
 import { SLASH_COMMANDS } from "./constants/commands.js";
 import { VERSION, APP_NAME } from "./constants/meta.js";
@@ -39,6 +40,9 @@ export default function App() {
 	const terminalHeight = useTerminalHeight();
 	const [inputAreaHeight, setInputAreaHeight] = useState(1);
 
+	// 应用就绪状态（初始化完成前显示 Splash）
+	const [isReady, setIsReady] = useState(false);
+
 	// 输入历史记录（提升到 App 组件，避免模式切换时丢失）
 	const [inputHistory, setInputHistory] = useState<HistoryEntry[]>([]);
 	const handleHistoryChange = useCallback((history: HistoryEntry[]) => {
@@ -60,6 +64,9 @@ export default function App() {
 
 			// 尝试创建 AI 服务
 			aiServiceRef.current = createAIServiceFromConfig(registry);
+
+			// 标记初始化完成
+			setIsReady(true);
 		};
 		init();
 	}, []);
@@ -224,6 +231,11 @@ export default function App() {
 	// 浏览模式: Header(1) + Divider(1) + MessageOutput = 2 行固定
 	const fixedHeight = isOutputMode ? 2 : 2 + 1 + inputAreaHeight;
 	const messageOutputHeight = Math.max(1, terminalHeight - fixedHeight);
+
+	// 初始化完成前显示启动页
+	if (!isReady) {
+		return <Splash />;
+	}
 
 	return (
 		<Box flexDirection="column" height={terminalHeight}>
