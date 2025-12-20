@@ -69,6 +69,7 @@ source/
 │   └── richInput.ts           # ColoredSegment, ColorRange, conversion utils
 ├── constants/
 │   ├── commands.ts            # Slash command tree (SLASH_COMMANDS)
+│   ├── models.ts              # Model presets (MODEL_PRESETS, ModelPreset type)
 │   ├── colors.ts              # Color constants (PATH_COLOR, FILE_AT_COLOR, etc.)
 │   ├── platform.ts            # Cross-platform path separator
 │   └── meta.ts                # Auto-generated version info
@@ -76,7 +77,7 @@ source/
 │   ├── commandHandler.ts      # Command execution and routing (async support)
 │   ├── ai/                    # AI service integration
 │   │   ├── types.ts           # ChatMessage, ToolCall, AIResponse, interfaces
-│   │   ├── config.ts          # AI model configuration (~/.axiomate-ai.json)
+│   │   ├── config.ts          # AI config helpers (getCurrentModel, getModelApiConfig)
 │   │   ├── service.ts         # AIService with two-phase calling
 │   │   ├── tool-call-handler.ts # Execute tools, format results
 │   │   ├── index.ts           # Main exports and factory functions
@@ -233,6 +234,7 @@ export default function Splash({ message = "Loading..." }: Props) {
 ```typescript
 type InitResult = {
   aiService: IAIService | null;
+  currentModel: ModelPreset;
 };
 
 type InitProgress = {
@@ -597,11 +599,13 @@ type CommandAction =
 Current command tree:
 ```
 /model
-  /openai (gpt-4o, gpt-4, gpt-4-turbo, gpt-3.5-turbo)
-  /qwen (qwen-72b, qwen-14b, qwen-7b)
-  /claude (claude-3-opus, claude-3-sonnet, claude-3-haiku)
-  /deepseek-v3
-  /llama-3.3-70b
+  /list (internal: model_list) - List available models
+  /glm-4-9b (internal: model_select)
+  /glm-z1-9b (internal: model_select)
+  /qwen3-8b (internal: model_select) - Default model
+  /qwen2-7b (internal: model_select)
+  /qwen2.5-7b (internal: model_select)
+  /deepseek-r1-qwen-7b (internal: model_select)
 /tools
   /list (internal: tools_list, async)
   /refresh (internal: tools_refresh, async)
@@ -612,6 +616,8 @@ Current command tree:
 /version (internal: version)
 /exit (internal: exit)
 ```
+
+Model commands are dynamically generated from `MODEL_PRESETS` in `constants/models.ts`.
 
 ### Command Handler Service
 
@@ -741,12 +747,9 @@ npm run test:watch # Watch mode
 ## Configuration Files
 
 - `~/.axiomate.json` - User configuration (via `utils/config.ts`)
-- `~/.axiomate-ai.json` - AI model configuration (via `services/ai/config.ts`)
-  - `currentModel` - Active model ID
-  - `models` - Configured model list with API keys
-  - `twoPhaseEnabled` - Two-phase calling toggle
-  - `contextAwareEnabled` - Context-aware matching toggle
-  - `maxToolCallRounds` - Max tool call iterations
+  - `AXIOMATE_BASE_URL` - API endpoint (e.g., `https://api.siliconflow.cn/v1`)
+  - `AXIOMATE_API_KEY` - API key
+  - `AXIOMATE_MODEL` - Selected model ID (e.g., `qwen3-8b`)
 - `~/.axiomate/` - App data directory
   - `logs/` - Log files with daily rotation
   - `history/` - Command history
@@ -1079,7 +1082,7 @@ useInput((_input, key) => {
 │  App.tsx                                                            │
 │  ┌───────────────────────────────────────────────────────────────┐  │
 │  │  AIService                                                     │  │
-│  │    ├── IAIClient (OpenAI / Anthropic)                         │  │
+│  │    ├── IAIClient (OpenAI / Anthropic protocol)                │  │
 │  │    ├── ToolMatcher (context-aware tool selection)             │  │
 │  │    └── ToolCallHandler (execute & format results)             │  │
 │  └───────────────────────────────────────────────────────────────┘  │
@@ -1091,12 +1094,44 @@ useInput((_input, key) => {
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+### Model System
+
+Models are defined in `constants/models.ts`:
+
+```typescript
+type ModelPreset = {
+  id: string;                 // Unique ID (e.g., "qwen3-8b")
+  name: string;               // Display name
+  series: ModelSeries;        // "glm" | "qwen" | "deepseek"
+  protocol: ApiProtocol;      // "openai" | "anthropic"
+  supportsTools: boolean;     // Function calling support
+  supportsThinking: boolean;  // Reasoning/thinking mode
+  apiModel: string;           // API model name (e.g., "Qwen/Qwen3-8B")
+};
+```
+
+Available models (via SiliconFlow):
+
+| ID                   | Series   | Protocol | Tools | Thinking |
+|----------------------|----------|----------|-------|----------|
+| `glm-4-9b`           | GLM      | openai   | ✓     | ✗        |
+| `glm-z1-9b`          | GLM      | openai   | ✓     | ✗        |
+| `qwen3-8b`           | Qwen     | openai   | ✓     | ✓        |
+| `qwen2-7b`           | Qwen     | openai   | ✗     | ✗        |
+| `qwen2.5-7b`         | Qwen     | openai   | ✓     | ✗        |
+| `deepseek-r1-qwen-7b`| DeepSeek | openai   | ✗     | ✓        |
+
+Default model: `qwen3-8b`
+
 ### Directory Structure
 
 ```
+source/constants/
+├── models.ts             # Model presets and helpers
+
 source/services/ai/
 ├── types.ts              # Core AI types and interfaces
-├── config.ts             # AI model configuration management
+├── config.ts             # getCurrentModel, getModelApiConfig, isApiConfigValid
 ├── service.ts            # AIService with two-phase calling
 ├── tool-call-handler.ts  # Tool execution and result formatting
 ├── index.ts              # Main exports and factory functions
@@ -1105,8 +1140,8 @@ source/services/ai/
 │   ├── anthropic.ts      # Anthropic protocol adapter
 │   └── index.ts          # Adapter exports
 └── clients/
-    ├── openai.ts         # OpenAI API client
-    ├── anthropic.ts      # Anthropic API client
+    ├── openai.ts         # OpenAI API client (baseUrl + /chat/completions)
+    ├── anthropic.ts      # Anthropic API client (baseUrl + /messages)
     └── index.ts          # Client exports
 
 source/services/tools/
@@ -1372,40 +1407,29 @@ function detectProjectType(cwd: string): ProjectType {
 
 ### AI Configuration
 
-Config file: `~/.axiomate-ai.json`
+Config is stored in `~/.axiomate.json`:
 
 ```typescript
-// services/ai/config.ts
-type AIConfig = {
-  currentModel: string;           // Active model ID (e.g., "gpt-4o")
-  models: Record<string, AIModelConfig>;  // Configured models
-  twoPhaseEnabled: boolean;       // Enable two-phase calling (default: true)
-  contextAwareEnabled: boolean;   // Enable context-aware matching (default: true)
-  maxToolCallRounds: number;      // Max tool call iterations (default: 5)
-};
-
-type AIModelConfig = {
-  provider: "openai" | "anthropic" | "azure" | "custom";
-  apiKey: string;
-  model: string;                  // Model name (e.g., "gpt-4o")
-  baseUrl?: string;               // Custom API endpoint
+// utils/config.ts
+type Config = {
+  AXIOMATE_BASE_URL: string;  // API endpoint (e.g., "https://api.siliconflow.cn/v1")
+  AXIOMATE_API_KEY: string;   // API key
+  AXIOMATE_MODEL: string;     // Selected model ID (e.g., "qwen3-8b")
 };
 ```
 
-**Model Presets** (pre-configured models):
+**Model Selection**:
 
-| Preset | Provider | Model |
-|--------|----------|-------|
-| `gpt-4o` | openai | gpt-4o |
-| `gpt-4-turbo` | openai | gpt-4-turbo |
-| `claude-3.5-sonnet` | anthropic | claude-3-5-sonnet-20241022 |
-| `claude-3-opus` | anthropic | claude-3-opus-20240229 |
-| `deepseek-v3` | custom | deepseek-chat |
-| `llama-3.3-70b` | custom | llama-3.3-70b-versatile |
+```typescript
+// services/ai/config.ts
+function getCurrentModel(): ModelPreset;      // Get current model preset
+function getModelApiConfig(model): { baseUrl, apiKey, apiModel, protocol };
+function isApiConfigValid(): boolean;         // Check if API is configured
+```
 
 **Commands**:
-- `/model list` - Show configured models and current settings
-- `/model presets` - Show available model presets
+- `/model list` - Show available models with capabilities
+- `/model <model-id>` - Switch to a specific model (e.g., `/model qwen3-8b`)
 
 ### Protocol Adapters
 

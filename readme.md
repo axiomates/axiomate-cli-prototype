@@ -71,8 +71,9 @@ The welcome page:
 
 Configuration is stored in `~/.axiomate.json`:
 
-- `AXIOMATE_BASE_URL` - API endpoint
+- `AXIOMATE_BASE_URL` - API endpoint (e.g., `https://api.siliconflow.cn/v1`)
 - `AXIOMATE_API_KEY` - API key
+- `AXIOMATE_MODEL` - Selected model ID (e.g., `qwen3-8b`)
 
 ### Standalone Executable
 
@@ -123,7 +124,8 @@ Type `/` to open the slash command menu. Use arrow keys to navigate and Enter to
 
 | Command          | Description                    |
 | ---------------- | ------------------------------ |
-| `/model`         | Select AI model provider       |
+| `/model`         | Select AI model                |
+| `/model list`    | List available models          |
 | `/tools`         | Manage local development tools |
 | `/tools list`    | List all available tools       |
 | `/tools refresh` | Rescan installed tools         |
@@ -134,15 +136,23 @@ Type `/` to open the slash command menu. Use arrow keys to navigate and Enter to
 | `/version`       | Show version information       |
 | `/exit`          | Exit the application           |
 
-Slash commands support nested hierarchy with colored path display:
+### Model Selection
+
+Available models (via SiliconFlow API):
+
+| Series   | Models                               | Capabilities      |
+| -------- | ------------------------------------ | ----------------- |
+| GLM      | `glm-4-9b`, `glm-z1-9b`              | tools             |
+| Qwen     | `qwen3-8b`, `qwen2-7b`, `qwen2.5-7b` | tools, thinking\* |
+| DeepSeek | `deepseek-r1-qwen-7b`                | thinking          |
+
+\*`qwen3-8b` supports both tools and thinking mode.
+
+Use `/model <model-id>` to switch models, e.g., `/model qwen3-8b`.
+
+### Tools Commands
 
 ```
-/model
-  ├── /openai (gpt-4o, gpt-4, gpt-4-turbo, gpt-3.5-turbo)
-  ├── /qwen (qwen-72b, qwen-14b, qwen-7b)
-  ├── /claude (claude-3-opus, claude-3-sonnet, claude-3-haiku)
-  ├── /deepseek-v3
-  └── /llama-3.3-70b
 /tools
   ├── /list (list all available tools)
   ├── /refresh (rescan installed tools)
