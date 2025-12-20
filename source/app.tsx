@@ -1,5 +1,5 @@
 import { Box, useApp, useInput } from "ink";
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import AutocompleteInput from "./components/AutocompleteInput/index.js";
 import Divider from "./components/Divider.js";
 import Header from "./components/Header.js";
@@ -25,6 +25,7 @@ import {
 	type MatchContext,
 } from "./services/ai/index.js";
 import type { InitResult } from "./utils/init.js";
+import { resumeInput } from "./utils/stdin.js";
 
 /**
  * 应用焦点模式
@@ -55,6 +56,11 @@ export default function App({ initResult }: Props) {
 
 	// AI 服务实例（从初始化结果获取）
 	const aiServiceRef = useRef<IAIService | null>(initResult.aiService);
+
+	// 组件挂载后恢复 stdin 输入（之前在 cli.tsx 中被暂停）
+	useEffect(() => {
+		resumeInput();
+	}, []);
 
 	// 焦点模式切换（Escape 键）
 	const toggleFocusMode = useCallback(() => {

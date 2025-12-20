@@ -775,15 +775,40 @@ Supports multiple Windows Terminal installations:
 
 The `restartApp()` function provides cross-platform restart with cwd and args preservation:
 
+```typescript
+// Async function, returns Promise<never>
+// Only executes once - subsequent calls return the same Promise
+export function restartApp(): Promise<never>
+
+// Usage
+await restartApp(); // Waits for child process to start, then exits
+```
+
 - **Windows**: Auto-detects best terminal by priority:
   1. `wt.exe` (Windows Terminal) - Best experience
   2. `powershell.exe` - Available on Win7+
   3. `cmd.exe` - Ultimate fallback
 - **macOS/Linux**: Spawns new process with `stdio: "inherit"`
 
+**Bun Packaged Exe Detection**:
+
+Bun-compiled executables have special argv format:
+- `process.execPath` = actual exe path (e.g., `C:\...\axiomate-cli.exe`)
+- `process.argv` = `["bun", "B:/~BUN/root/xxx.exe", ...userArgs]`
+
+The `isBunPackagedExe()` function detects this and `getRestartArgs()` returns correct args:
+- Bun exe: `argv.slice(2)` (skip "bun" and virtual path)
+- Node run: `argv.slice(1)` (skip node path, keep script path)
+
+**Launcher Process Handling**:
+
+`wt.exe` is a launcher that starts Windows Terminal and exits immediately. The `spawnAndWaitExit()` function waits for the launcher to exit (via `close` event), ensuring the target program has started before calling `process.exit(0)`.
+
 Helper functions:
-- `commandExists(cmd)` - Uses `where` (Windows) or `which` (Unix)
-- `detectWindowsTerminal()` - Returns `"wt"` | `"powershell"` | `"cmd"`
+- `isBunPackagedExe()` - Detects Bun-compiled exe environment
+- `getRestartArgs()` - Returns correct args for restart
+- `spawnAndWaitExit(cmd, args, options)` - Spawns and waits for exit
+- `detectWindowsTerminalSync()` - Returns `"wt"` | `"powershell"` | `"cmd"`
 - `escapePowerShellArg(arg)` - Single quote escaping
 - `escapeCmdArg(arg)` - Double quote escaping for special chars
 

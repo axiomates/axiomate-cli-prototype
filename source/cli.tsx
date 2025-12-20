@@ -10,6 +10,10 @@ import { setFlags } from "./utils/flags.js";
 import { initLocalSettings } from "./utils/localsettings.js";
 import { initPlatform } from "./utils/platform.js";
 import { initApp, type InitResult } from "./utils/init.js";
+import { pauseInput } from "./utils/stdin.js";
+
+// 暂停 stdin，Splash 阶段不接受任何输入
+pauseInput();
 
 // 同步初始化（配置文件等）
 initConfig();

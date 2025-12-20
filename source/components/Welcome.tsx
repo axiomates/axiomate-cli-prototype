@@ -7,12 +7,13 @@
  */
 
 import { Box, Text, useInput } from "ink";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { THEME_LIGHT_YELLOW, THEME_PINK } from "../constants/colors.js";
 import { APP_NAME, VERSION } from "../constants/meta.js";
 import useTerminalHeight from "../hooks/useTerminalHeight.js";
 import { updateConfig } from "../utils/config.js";
 import { restartApp } from "../utils/platform.js";
+import { resumeInput } from "../utils/stdin.js";
 import Divider from "./Divider.js";
 
 // 测试模式预设值（未来替换为用户注册登录）
@@ -29,27 +30,41 @@ export default function Welcome({ onComplete }: Props) {
 		"welcome",
 	);
 
-	useInput(async () => {
-		if (status !== "welcome") return;
+	// 组件挂载后恢复 stdin 输入（之前在 cli.tsx 中被暂停）
+	useEffect(() => {
+		resumeInput();
+	}, []);
 
-		// 用户按任意键
-		setStatus("configuring");
+	// 使用 ref 防止重复触发（同步检查，不受 React 渲染周期影响）
+	const isProcessingRef = useRef(false);
 
-		// 写入预设配置
-		updateConfig({
-			AXIOMATE_BASE_URL: PRESET_BASE_URL,
-			AXIOMATE_API_KEY: PRESET_API_KEY,
-		});
+	useInput(
+		async () => {
+			// ref 提供立即的同步保护
+			if (isProcessingRef.current) return;
+			isProcessingRef.current = true;
 
-		setStatus("done");
+			// 用户按任意键
+			setStatus("configuring");
 
-		// 重启应用（或调用回调用于测试）
-		if (onComplete) {
-			onComplete();
-		} else {
-			await restartApp();
-		}
-	});
+			// 写入预设配置
+			updateConfig({
+				AXIOMATE_BASE_URL: PRESET_BASE_URL,
+				AXIOMATE_API_KEY: PRESET_API_KEY,
+			});
+
+			setStatus("done");
+
+			// 重启应用（或调用回调用于测试）
+			if (onComplete) {
+				onComplete();
+			} else {
+				await restartApp(); // 等待子进程启动后 process.exit(0)
+			}
+		},
+		// isActive: 未处理时才接受输入
+		{ isActive: status === "welcome" },
+	);
 
 	// 状态文本
 	const statusText = {

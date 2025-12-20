@@ -5,7 +5,7 @@
             "type": "node",
             "request": "launch",
             "name": "Debug CLI",
-            "program": "${workspaceFolder}/dist/source/cli.js",
+            "program": "${workspaceFolder}/dist/cli.js",
             "preLaunchTask": "npm: build",
             "console": "integratedTerminal",  // 重要：ink 需要真实终端
             "sourceMaps": true

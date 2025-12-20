@@ -8,7 +8,7 @@
  * 注意：所有命令检测使用异步 spawn 以避免阻塞事件循环
  */
 
-import { spawn } from "child_process";
+import { execSync, spawn } from "child_process";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs";
 import { platform } from "os";
 import { join } from "path";
@@ -76,34 +76,28 @@ type TerminalSettings = {
 type WindowsTerminal = "wt" | "powershell" | "cmd";
 
 /**
- * 检测命令是否存在（异步版本）
+ * 检测命令是否存在（同步版本）
  */
-function commandExists(cmd: string): Promise<boolean> {
-	return new Promise((resolve) => {
-		const proc = spawn(platform() === "win32" ? "where" : "which", [cmd], {
+function commandExistsSync(cmd: string): boolean {
+	try {
+		execSync(platform() === "win32" ? `where ${cmd}` : `which ${cmd}`, {
 			stdio: "pipe",
-			windowsHide: true,
 		});
-
-		proc.on("close", (code) => {
-			resolve(code === 0);
-		});
-
-		proc.on("error", () => {
-			resolve(false);
-		});
-	});
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**
- * 检测 Windows 可用的终端（按优先级，异步）
+ * 检测 Windows 可用的终端（按优先级，同步）
  * 优先级：Windows Terminal > PowerShell > CMD
  */
-async function detectWindowsTerminal(): Promise<WindowsTerminal> {
-	if (await commandExists("wt.exe")) {
+function detectWindowsTerminalSync(): WindowsTerminal {
+	if (commandExistsSync("wt.exe")) {
 		return "wt";
 	}
-	if (await commandExists("powershell.exe")) {
+	if (commandExistsSync("powershell.exe")) {
 		return "powershell";
 	}
 	return "cmd";
@@ -129,21 +123,68 @@ function escapeCmdArg(arg: string): string {
 }
 
 /**
- * Windows 平台重启（自动检测最佳终端，异步）
+ * 检测是否是 Bun 打包的 exe 运行环境
+ *
+ * Bun 打包的 exe 运行时：
+ *   - process.execPath = 实际 exe 路径 (如 C:\...\axiomate-cli.exe)
+ *   - process.argv = ["bun", "B:/~BUN/root/xxx.exe", ...userArgs]
+ */
+function isBunPackagedExe(): boolean {
+	return (
+		process.argv[0] === "bun" &&
+		typeof process.argv[1] === "string" &&
+		process.argv[1].startsWith("B:/~BUN/")
+	);
+}
+
+/**
+ * 获取重启所需的参数
+ *
+ * Bun 打包 exe：argv = ["bun", "B:/~BUN/...", ...userArgs] → slice(2)
+ * Node 运行：argv = ["node路径", "脚本路径", ...userArgs] → slice(1)
+ */
+function getRestartArgs(): string[] {
+	return isBunPackagedExe() ? process.argv.slice(2) : process.argv.slice(1);
+}
+
+/**
+ * 启动子进程并等待其退出
+ *
+ * 对于 launcher 类型的进程（如 wt.exe），等待它退出意味着
+ * 它已经成功启动了目标程序
+ */
+function spawnAndWaitExit(
+	cmd: string,
+	args: string[],
+	options: Parameters<typeof spawn>[2],
+): Promise<void> {
+	return new Promise<void>((resolve, reject) => {
+		const child = spawn(cmd, args, options);
+
+		child.on("close", () => {
+			resolve();
+		});
+
+		child.on("error", reject);
+	});
+}
+
+/**
+ * Windows 平台重启（异步，等待子进程启动后退出）
  */
 async function restartWindows(): Promise<never> {
 	const cwd = process.cwd();
 	const exePath = process.execPath;
-	const args = process.argv.slice(1);
-	const terminal = await detectWindowsTerminal();
+	const args = getRestartArgs();
+	const terminal = detectWindowsTerminalSync();
 
 	switch (terminal) {
 		case "wt":
 			// Windows Terminal: wt.exe -d <cwd> <exe> <args...>
-			spawn("wt.exe", ["-d", cwd, exePath, ...args], {
+			await spawnAndWaitExit("wt.exe", ["-d", cwd, exePath, ...args], {
 				detached: true,
 				stdio: "ignore",
-			}).unref();
+			});
 			break;
 
 		case "powershell": {
@@ -152,22 +193,23 @@ async function restartWindows(): Promise<never> {
 			const psCommand = psArgs
 				? `Start-Process -FilePath ${escapePowerShellArg(exePath)} -ArgumentList ${psArgs} -WorkingDirectory ${escapePowerShellArg(cwd)}`
 				: `Start-Process -FilePath ${escapePowerShellArg(exePath)} -WorkingDirectory ${escapePowerShellArg(cwd)}`;
-			spawn("powershell.exe", ["-Command", psCommand], {
+			await spawnAndWaitExit("powershell.exe", ["-Command", psCommand], {
 				detached: true,
 				stdio: "ignore",
 				windowsHide: true,
-			}).unref();
+			});
 			break;
 		}
 
 		case "cmd": {
 			// CMD: start 命令启动新窗口
 			const cmdArgs = [exePath, ...args].map(escapeCmdArg).join(" ");
-			spawn("cmd.exe", ["/C", `start "" /D "${cwd}" ${cmdArgs}`], {
+			const cmdCommand = `start "" /D "${cwd}" ${cmdArgs}`;
+			await spawnAndWaitExit("cmd.exe", ["/C", cmdCommand], {
 				detached: true,
 				stdio: "ignore",
 				windowsHide: true,
-			}).unref();
+			});
 			break;
 		}
 	}
@@ -178,17 +220,17 @@ async function restartWindows(): Promise<never> {
 /**
  * Unix 平台重启（macOS / Linux）
  */
-function restartUnix(): never {
+async function restartUnix(): Promise<never> {
 	const cwd = process.cwd();
 	const exePath = process.execPath;
 	const args = process.argv.slice(1);
 
 	// 直接 spawn 新进程替换当前进程
-	spawn(exePath, args, {
+	await spawnAndWaitExit(exePath, args, {
 		cwd,
 		stdio: "inherit",
 		detached: true,
-	}).unref();
+	});
 
 	process.exit(0);
 }
@@ -299,20 +341,27 @@ function ensureWindowsTerminalProfile(): boolean {
 	}
 }
 
+// 存储重启 Promise，确保只执行一次
+let restartPromise: Promise<never> | null = null;
+
 /**
  * 跨平台重启应用（保持工作目录和命令行参数）
  *
  * Windows: 自动检测最佳终端（wt.exe > powershell.exe > cmd.exe）
  * macOS/Linux: 直接 spawn 新进程
  *
- * 注意：此函数为异步函数，调用后会执行 process.exit(0)
+ * 注意：此函数为异步函数，等待子进程启动后执行 process.exit(0)
+ * 注意：此函数只会执行一次，重复调用返回同一个 Promise
  */
-export async function restartApp(): Promise<never> {
-	if (platform() === "win32") {
-		return restartWindows();
-	} else {
-		return restartUnix();
+export function restartApp(): Promise<never> {
+	if (restartPromise) {
+		return restartPromise;
 	}
+
+	restartPromise =
+		platform() === "win32" ? restartWindows() : restartUnix();
+
+	return restartPromise;
 }
 
 // ============================================================================
