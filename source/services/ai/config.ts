@@ -41,6 +41,7 @@ export function getApiConfig(): { baseUrl: string; apiKey: string } {
 /**
  * 获取模型的完整 API 配置
  * 根据协议类型自动添加正确的 API 路径后缀
+ * 注意：model.id 就是 apiModel（如 "Qwen/Qwen3-8B"）
  */
 export function getModelApiConfig(model: ModelPreset): {
 	baseUrl: string;
@@ -61,7 +62,7 @@ export function getModelApiConfig(model: ModelPreset): {
 	return {
 		baseUrl: fullBaseUrl,
 		apiKey,
-		apiModel: model.apiModel,
+		apiModel: model.id, // id 就是 apiModel
 		protocol: model.protocol,
 	};
 }

@@ -152,7 +152,9 @@ const internalHandlers: Record<string, InternalHandler> = {
 					// 能力标签
 					const capabilities: string[] = [];
 					if (model.supportsTools) capabilities.push("tools");
-					if (model.supportsThinking) capabilities.push("thinking");
+					if (model.thinkingToolsExclusive) {
+						capabilities.push("thinking*"); // * 表示与 tools 互斥
+					}
 					const capStr =
 						capabilities.length > 0 ? `[${capabilities.join(", ")}]` : "";
 
@@ -168,8 +170,11 @@ const internalHandlers: Record<string, InternalHandler> = {
 			if (currentModel) {
 				lines.push("---");
 				lines.push(`**Current:** ${currentModel.name} (${currentModel.id})`);
+				const exclusiveNote = currentModel.thinkingToolsExclusive
+					? " (mutually exclusive)"
+					: "";
 				lines.push(
-					`**Capabilities:** tools ${currentModel.supportsTools ? "✓" : "✗"}, thinking ${currentModel.supportsThinking ? "✓" : "✗"}`,
+					`**Capabilities:** tools ${currentModel.supportsTools ? "✓" : "✗"}${exclusiveNote}`,
 				);
 				lines.push(`**Protocol:** ${currentModel.protocol}`);
 			}
@@ -197,7 +202,9 @@ const internalHandlers: Record<string, InternalHandler> = {
 		// 返回成功消息，包含模型信息
 		const capabilities: string[] = [];
 		if (model.supportsTools) capabilities.push("tools");
-		if (model.supportsThinking) capabilities.push("thinking");
+		if (model.thinkingToolsExclusive) {
+			capabilities.push("thinking (exclusive with tools)");
+		}
 
 		return {
 			type: "message" as const,

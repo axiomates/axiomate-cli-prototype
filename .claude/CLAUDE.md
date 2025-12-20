@@ -1096,32 +1096,35 @@ useInput((_input, key) => {
 
 ### Model System
 
-Models are defined in `constants/models.ts`:
+Models are defined in `constants/models.ts`. The `id` field uses the full API model name (apiModel):
 
 ```typescript
 type ModelPreset = {
-  id: string;                 // Unique ID (e.g., "qwen3-8b")
-  name: string;               // Display name
-  series: ModelSeries;        // "glm" | "qwen" | "deepseek"
-  protocol: ApiProtocol;      // "openai" | "anthropic"
-  supportsTools: boolean;     // Function calling support
-  supportsThinking: boolean;  // Reasoning/thinking mode
-  apiModel: string;           // API model name (e.g., "Qwen/Qwen3-8B")
+  id: string;                     // Unique ID = apiModel (e.g., "Qwen/Qwen3-8B")
+  name: string;                   // Display name
+  series: ModelSeries;            // "glm" | "qwen" | "deepseek"
+  protocol: ApiProtocol;          // "openai" | "anthropic"
+  supportsTools: boolean;         // Function calling support
+  thinkingToolsExclusive: boolean; // true = thinking and tools are mutually exclusive
 };
 ```
 
 Available models (via SiliconFlow):
 
-| ID                   | Series   | Protocol | Tools | Thinking |
-|----------------------|----------|----------|-------|----------|
-| `glm-4-9b`           | GLM      | openai   | ✓     | ✗        |
-| `glm-z1-9b`          | GLM      | openai   | ✓     | ✗        |
-| `qwen3-8b`           | Qwen     | openai   | ✓     | ✓        |
-| `qwen2-7b`           | Qwen     | openai   | ✗     | ✗        |
-| `qwen2.5-7b`         | Qwen     | openai   | ✓     | ✗        |
-| `deepseek-r1-qwen-7b`| DeepSeek | openai   | ✗     | ✓        |
+| ID (apiModel)                            | Series   | Tools | Exclusive* |
+|------------------------------------------|----------|-------|------------|
+| `THUDM/glm-4-9b-chat`                    | GLM      | ✓     | ✗          |
+| `THUDM/GLM-Z1-9B-0414`                   | GLM      | ✓     | ✗          |
+| `Qwen/Qwen3-8B`                          | Qwen     | ✓     | ✗          |
+| `Qwen/Qwen2-7B-Instruct`                 | Qwen     | ✗     | ✗          |
+| `Qwen/Qwen2.5-7B-Instruct`               | Qwen     | ✓     | ✗          |
+| `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B`| DeepSeek | ✓     | ✗          |
+| `deepseek-ai/DeepSeek-V3.1`              | DeepSeek | ✓     | ✓          |
+| `Pro/deepseek-ai/DeepSeek-V3.1`          | DeepSeek | ✓     | ✓          |
 
-Default model: `qwen3-8b`
+*Exclusive: Thinking and tools modes are mutually exclusive (cannot be used together).
+
+Default model: `Qwen/Qwen3-8B`
 
 ### Directory Structure
 

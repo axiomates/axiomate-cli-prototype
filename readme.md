@@ -138,17 +138,22 @@ Type `/` to open the slash command menu. Use arrow keys to navigate and Enter to
 
 ### Model Selection
 
-Available models (via SiliconFlow API):
+Available models (via SiliconFlow API). Model IDs use the full API model name:
 
-| Series   | Models                               | Capabilities      |
-| -------- | ------------------------------------ | ----------------- |
-| GLM      | `glm-4-9b`, `glm-z1-9b`              | tools             |
-| Qwen     | `qwen3-8b`, `qwen2-7b`, `qwen2.5-7b` | tools, thinking\* |
-| DeepSeek | `deepseek-r1-qwen-7b`                | thinking          |
+| Series   | Model ID (apiModel)                       | Name                | Tools | Exclusive\* |
+| -------- | ----------------------------------------- | ------------------- | ----- | ----------- |
+| GLM      | `THUDM/glm-4-9b-chat`                     | GLM-4 9B            | Yes   | No          |
+| GLM      | `THUDM/GLM-Z1-9B-0414`                    | GLM-Z1 9B           | Yes   | No          |
+| Qwen     | `Qwen/Qwen3-8B`                           | Qwen3 8B            | Yes   | No          |
+| Qwen     | `Qwen/Qwen2-7B-Instruct`                  | Qwen2 7B            | No    | No          |
+| Qwen     | `Qwen/Qwen2.5-7B-Instruct`                | Qwen2.5 7B          | Yes   | No          |
+| DeepSeek | `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B` | DeepSeek R1 Qwen 7B | Yes   | No          |
+| DeepSeek | `deepseek-ai/DeepSeek-V3.1`               | DeepSeek V3.1       | Yes   | Yes         |
+| DeepSeek | `Pro/deepseek-ai/DeepSeek-V3.1`           | DeepSeek V3.1 Pro   | Yes   | Yes         |
 
-\*`qwen3-8b` supports both tools and thinking mode.
+\*Exclusive: Thinking and tools modes are mutually exclusive (cannot be used together).
 
-Use `/model <model-id>` to switch models, e.g., `/model qwen3-8b`.
+Use `/model <model-id>` to switch models, e.g., `/model Qwen/Qwen3-8B`.
 
 ### Tools Commands
 

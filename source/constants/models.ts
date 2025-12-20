@@ -3,6 +3,9 @@
  *
  * 统一定义所有支持的 AI 模型，包含元数据和能力信息
  * 通过硅基流动服务统一接入，baseUrl 由用户配置提供
+ *
+ * 注意：硅基流动 API 所有模型都支持 thinking 模式，
+ * 但部分模型的 thinking 和 tools 模式是互斥的（不能同时使用）
  */
 
 /**
@@ -21,7 +24,7 @@ export type ApiProtocol = "openai" | "anthropic";
  * 模型预设定义
  */
 export type ModelPreset = {
-	/** 唯一标识 */
+	/** 唯一标识（使用 apiModel 作为 ID） */
 	id: string;
 	/** 显示名称 */
 	name: string;
@@ -33,93 +36,109 @@ export type ModelPreset = {
 	description?: string;
 	/** 是否支持 function calling / tools */
 	supportsTools: boolean;
-	/** 是否支持推理/thinking mode */
-	supportsThinking: boolean;
-	/** API 调用时的模型名 */
-	apiModel: string;
+	/**
+	 * thinking 和 tools 模式是否互斥
+	 * - true: 不能同时使用 thinking 和 tools（如 DeepSeek V3.1）
+	 * - false: 可以同时使用 thinking 和 tools
+	 */
+	thinkingToolsExclusive: boolean;
 };
 
 /**
  * 预设模型列表
+ * 注意：id 字段使用 apiModel 的值作为唯一标识
  */
 export const MODEL_PRESETS: ModelPreset[] = [
 	// ============================================================================
 	// GLM 系列（智谱）
 	// ============================================================================
 	{
-		id: "glm-4-9b",
+		id: "THUDM/glm-4-9b-chat",
 		name: "GLM-4 9B",
 		series: "glm",
 		protocol: "openai",
 		description: "Chat model",
 		supportsTools: true,
-		supportsThinking: false,
-		apiModel: "THUDM/glm-4-9b-chat",
+		thinkingToolsExclusive: false,
 	},
 	{
-		id: "glm-z1-9b",
+		id: "THUDM/GLM-Z1-9B-0414",
 		name: "GLM-Z1 9B",
 		series: "glm",
 		protocol: "openai",
 		description: "Latest GLM",
 		supportsTools: true,
-		supportsThinking: false,
-		apiModel: "THUDM/GLM-Z1-9B-0414",
+		thinkingToolsExclusive: false,
 	},
 
 	// ============================================================================
 	// Qwen 系列
 	// ============================================================================
 	{
-		id: "qwen3-8b",
+		id: "Qwen/Qwen3-8B",
 		name: "Qwen3 8B",
 		series: "qwen",
 		protocol: "openai",
 		description: "Latest Qwen3",
 		supportsTools: true,
-		supportsThinking: true,
-		apiModel: "Qwen/Qwen3-8B",
+		thinkingToolsExclusive: false,
 	},
 	{
-		id: "qwen2-7b",
+		id: "Qwen/Qwen2-7B-Instruct",
 		name: "Qwen2 7B",
 		series: "qwen",
 		protocol: "openai",
 		description: "Instruct model",
 		supportsTools: false,
-		supportsThinking: false,
-		apiModel: "Qwen/Qwen2-7B-Instruct",
+		thinkingToolsExclusive: false,
 	},
 	{
-		id: "qwen2.5-7b",
+		id: "Qwen/Qwen2.5-7B-Instruct",
 		name: "Qwen2.5 7B",
 		series: "qwen",
 		protocol: "openai",
 		description: "Instruct model",
 		supportsTools: true,
-		supportsThinking: false,
-		apiModel: "Qwen/Qwen2.5-7B-Instruct",
+		thinkingToolsExclusive: false,
 	},
 
 	// ============================================================================
 	// DeepSeek 系列
 	// ============================================================================
 	{
-		id: "deepseek-r1-qwen-7b",
+		id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
 		name: "DeepSeek R1 Qwen 7B",
 		series: "deepseek",
 		protocol: "openai",
 		description: "Reasoning distill",
-		supportsTools: false,
-		supportsThinking: true,
-		apiModel: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+		supportsTools: true,
+		thinkingToolsExclusive: false,
+	},
+	{
+		id: "deepseek-ai/DeepSeek-V3.1",
+		name: "DeepSeek V3.1",
+		series: "deepseek",
+		protocol: "openai",
+		description: "Latest V3.1",
+		supportsTools: true,
+		thinkingToolsExclusive: true, // thinking 和 tools 互斥
+	},
+	{
+		id: "Pro/deepseek-ai/DeepSeek-V3.1",
+		name: "DeepSeek V3.1 Pro",
+		series: "deepseek",
+		protocol: "openai",
+		description: "V3.1 Pro edition",
+		supportsTools: true,
+		thinkingToolsExclusive: true, // thinking 和 tools 互斥
 	},
 ];
 
 /**
  * 默认模型 ID（开箱即用）
+ * 使用 apiModel 作为 ID
  */
-export const DEFAULT_MODEL_ID = "qwen3-8b";
+export const DEFAULT_MODEL_ID = "Qwen/Qwen3-8B";
 
 // ============================================================================
 // 辅助函数
