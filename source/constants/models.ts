@@ -114,24 +114,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		supportsTools: true,
 		thinkingToolsExclusive: false,
 	},
-	{
-		id: "deepseek-ai/DeepSeek-V3.1",
-		name: "DeepSeek V3.1",
-		series: "deepseek",
-		protocol: "openai",
-		description: "Latest V3.1",
-		supportsTools: true,
-		thinkingToolsExclusive: true, // thinking 和 tools 互斥
-	},
-	{
-		id: "Pro/deepseek-ai/DeepSeek-V3.1",
-		name: "DeepSeek V3.1 Pro",
-		series: "deepseek",
-		protocol: "openai",
-		description: "V3.1 Pro edition",
-		supportsTools: true,
-		thinkingToolsExclusive: true, // thinking 和 tools 互斥
-	},
 ];
 
 /**
