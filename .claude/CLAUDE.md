@@ -1215,40 +1215,15 @@ type StreamCallbacks = {
 
 ### Streaming Response
 
-AI responses are streamed in real-time using SSE (Server-Sent Events). The streaming implementation provides:
+AI responses are streamed in real-time using SSE (Server-Sent Events). See [Streaming Response Implementation](#streaming-response-implementation) for detailed documentation.
 
-1. **Real-time Content Display**: AI responses appear character-by-character as they're generated
-2. **Animated Loading Indicator**: A Braille spinner (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) shows during generation
-3. **Tool Call Support**: Tool calls are accumulated during streaming and executed when complete
+**Key Features**:
+- Real-time content display (word-by-word)
+- Animated Braille spinner during generation
+- Tool call accumulation and execution
+- Support for `reasoning_content` (DeepSeek-R1, QwQ models)
 
-**Usage Flow**:
-```
-User sends message
-    ↓
-App.tsx calls aiService.streamMessage() with callbacks
-    ↓
-AIService calls OpenAIClient.streamChat() (async generator)
-    ↓
-SSE chunks parsed: "data: {...}" lines
-    ↓
-onChunk() callback updates MessageOutput in real-time
-    ↓
-Stream ends (data: [DONE] or finish_reason != null)
-    ↓
-onEnd() callback finalizes the message
-    ↓
-MessageOutput removes spinner, shows complete message
-```
-
-**SSE Format** (SiliconFlow API):
-```
-data: {"choices":[{"delta":{"content":"Hello"}}],"finish_reason":null}
-data: {"choices":[{"delta":{"content":" world"}}],"finish_reason":null}
-data: {"choices":[{"delta":{}}],"finish_reason":"stop"}
-data: [DONE]
-```
-
-**Key Implementation Files**:
+**Key Files**:
 - `services/ai/clients/openai.ts`: `streamChat()` async generator
 - `services/ai/service.ts`: `streamMessage()` method
 - `services/ai/messageQueue.ts`: Streaming callbacks integration
@@ -2185,8 +2160,266 @@ MessageQueue callbacks
 MessageOutput renders response as Markdown
 ```
 
+### Streaming Response Implementation
+
+AI responses are streamed in real-time using SSE (Server-Sent Events), providing:
+
+1. **Real-time Content Display**: AI responses appear word-by-word as they're generated
+2. **Animated Loading Indicator**: A Braille spinner (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) shows during generation
+3. **Tool Call Support**: Tool calls are accumulated during streaming and executed when complete
+
+#### Streaming Architecture
+
+```
+User sends message
+    ↓
+MessageQueue.enqueue() with streaming callbacks
+    ↓
+processMessage() calls aiService.streamMessage()
+    ↓
+OpenAIClient.streamChat() - async generator
+    ↓
+SSE chunks parsed: "data: {...}" lines
+    ↓
+onStreamChunk() → updates MessageOutput in real-time
+    ↓
+Stream ends (data: [DONE] or finish_reason != null)
+    ↓
+onStreamEnd() → finalizes message, removes spinner
+```
+
+#### Key Components
+
+**OpenAIClient.streamChat()** (`services/ai/clients/openai.ts`):
+```typescript
+async *streamChat(
+  messages: ChatMessage[],
+  tools?: OpenAITool[],
+): AsyncGenerator<AIStreamChunk> {
+  // Set stream: true in request body
+  const body = { model, messages, stream: true, tools, tool_choice: "auto" };
+
+  // Parse SSE response
+  const reader = response.body.getReader();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+
+    for (const line of lines) {
+      if (line.startsWith("data: ")) {
+        const data = line.slice(6);
+        if (data === "[DONE]") return;
+
+        const chunk = JSON.parse(data);
+        // Handle content and tool_calls accumulation
+        yield { delta: { content }, finish_reason };
+      }
+    }
+  }
+}
+```
+
+**AIService.streamMessage()** (`services/ai/service.ts`):
+```typescript
+async streamMessage(
+  userMessage: string,
+  context?: MatchContext,
+  callbacks?: StreamCallbacks,
+): Promise<string> {
+  this.session.addUserMessage(userMessage);
+  const tools = this.getContextTools(context);
+
+  callbacks?.onStart?.();
+  const result = await this.streamChatWithTools(tools, callbacks);
+  callbacks?.onEnd?.(result);
+
+  return result;
+}
+```
+
+**StreamCallbacks Type** (`services/ai/types.ts`):
+```typescript
+type StreamCallbacks = {
+  onStart?: () => void;
+  onChunk?: (content: string) => void;  // Accumulated content
+  onEnd?: (finalContent: string) => void;
+};
+```
+
+#### Message Queue Integration
+
+The `MessageQueue` class integrates streaming callbacks:
+
+```typescript
+// services/ai/messageQueue.ts
+type MessageQueueCallbacks = {
+  onMessageStart: (id: string) => void;
+  onMessageComplete: (id: string, response: string) => void;
+  onMessageError: (id: string, error: Error) => void;
+  onQueueEmpty: () => void;
+  onStopped?: (queuedCount: number) => void;
+  // Streaming callbacks
+  onStreamStart?: (id: string) => void;
+  onStreamChunk?: (id: string, content: string) => void;
+  onStreamEnd?: (id: string, finalContent: string) => void;
+};
+
+type ProcessorStreamCallbacks = {
+  onStart?: () => void;
+  onChunk?: (content: string) => void;
+  onEnd?: (finalContent: string) => void;
+};
+```
+
+#### App.tsx Integration
+
+```typescript
+// Initialize message queue with streaming callbacks
+messageQueueRef.current = new MessageQueue(processMessage, {
+  onMessageStart: () => setIsLoading(true),
+  onMessageComplete: () => setIsLoading(false),
+  onMessageError: (_, error) => {
+    // Update streaming message with error or add new error message
+  },
+
+  // Streaming callbacks
+  onStreamStart: () => {
+    // Add empty streaming message
+    setMessages(prev => [...prev, { content: "", streaming: true }]);
+  },
+  onStreamChunk: (_, content) => {
+    // Update last message with accumulated content
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg?.streaming) {
+        newMessages[newMessages.length - 1] = { ...lastMsg, content };
+      }
+      return newMessages;
+    });
+  },
+  onStreamEnd: (_, finalContent) => {
+    // Mark streaming as complete
+    setMessages(prev => {
+      const newMessages = [...prev];
+      const lastMsg = newMessages[newMessages.length - 1];
+      if (lastMsg?.streaming) {
+        newMessages[newMessages.length - 1] = {
+          ...lastMsg,
+          content: finalContent,
+          streaming: false,
+        };
+      }
+      return newMessages;
+    });
+  },
+});
+```
+
+#### Spinner Animation
+
+**MessageOutput.tsx** displays an animated spinner during streaming:
+
+```typescript
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+const [spinnerIndex, setSpinnerIndex] = useState(0);
+const hasStreamingMessage = messages.some((m) => m.streaming);
+
+useEffect(() => {
+  if (!hasStreamingMessage) return;
+
+  const timer = setInterval(() => {
+    setSpinnerIndex((prev) => (prev + 1) % SPINNER_FRAMES.length);
+  }, 80); // ~12.5 FPS
+
+  return () => clearInterval(timer);
+}, [hasStreamingMessage]);
+
+// In renderContent()
+if (msg.streaming && isLastMessage) {
+  const spinnerChar = SPINNER_FRAMES[spinnerIndex];
+  content += " " + spinnerChar;
+}
+```
+
+#### SSE Response Format
+
+SiliconFlow API returns chunks in this format:
+
+```
+data: {"id":"...","choices":[{"delta":{"content":"Hello"},"finish_reason":null}]}
+data: {"id":"...","choices":[{"delta":{"content":" world"},"finish_reason":null}]}
+data: {"id":"...","choices":[{"delta":{},"finish_reason":"stop"}]}
+data: [DONE]
+```
+
+For tool calls:
+```
+data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_123","function":{"name":"git_status","arguments":""}}]}}]}
+data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{}"}}]}}]}
+data: {"choices":[{"finish_reason":"tool_calls"}]}
+```
+
+#### Tool Call Handling in Streaming
+
+Tool calls are accumulated during streaming since arguments come in multiple chunks:
+
+```typescript
+const accumulatedToolCalls: Map<number, {
+  id: string;
+  type: string;
+  function: { name: string; arguments: string };
+}> = new Map();
+
+// When processing delta.tool_calls
+for (const tc of delta.tool_calls) {
+  const existing = accumulatedToolCalls.get(tc.index);
+  if (existing) {
+    // Accumulate arguments
+    existing.function.arguments += tc.function?.arguments || "";
+  } else {
+    // New tool call
+    accumulatedToolCalls.set(tc.index, {
+      id: tc.id,
+      type: "function",
+      function: { name: tc.function.name, arguments: tc.function?.arguments || "" },
+    });
+  }
+}
+
+// When finish_reason === "tool_calls"
+streamChunk.delta.tool_calls = Array.from(accumulatedToolCalls.values());
+```
+
+#### FinishReason Types
+
+```typescript
+type FinishReason = "stop" | "eos" | "tool_calls" | "length" | "error";
+```
+
+- `stop`: Normal completion
+- `eos`: End of sequence (some models use this instead of `stop`)
+- `tool_calls`: AI wants to execute tools
+- `length`: Token limit reached
+- `error`: Error occurred
+
+#### Special Model Support
+
+The streaming implementation supports model-specific features:
+
+```typescript
+// DeepSeek-R1, QwQ models use reasoning_content instead of content
+content: delta.content || delta.reasoning_content || ""
+```
+
 ### Future Enhancements
 
-1. **Streaming Response**: Display AI reply character-by-character for better UX
-2. **Conversation Persistence**: Save/restore conversation history across sessions
-3. **Multi-model Routing**: Route different queries to different models based on complexity
+1. **Conversation Persistence**: Save/restore conversation history across sessions
+2. **Multi-model Routing**: Route different queries to different models based on complexity
