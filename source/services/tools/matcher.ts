@@ -12,6 +12,7 @@ import type {
 import type { DiscoveredTool, ToolCapability, IToolRegistry } from "./types.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { platform } from "node:os";
 
 /**
  * 关键词到工具 ID 的映射
@@ -91,16 +92,35 @@ const CAPABILITY_MAP: Record<string, ToolCapability> = {
 };
 
 /**
- * 项目类型到工具的映射
+ * Get default shell tools for the current platform
+ * Windows: powershell, pwsh, cmd (in priority order)
+ * Unix/Linux/macOS: bash
+ */
+function getDefaultShellTools(): string[] {
+	if (platform() === "win32") {
+		return ["powershell", "pwsh", "cmd"];
+	}
+	// Unix/Linux/macOS
+	return ["bash"];
+}
+
+/**
+ * Get shell tools for current platform
+ */
+const SHELL_TOOLS = getDefaultShellTools();
+
+/**
+ * 项目类型到工具的映射（包含平台相关的 shell 工具）
+ * Shell 工具在开头，优先被选择
  */
 const PROJECT_TYPE_TOOLS: Record<ProjectType, string[]> = {
-	node: ["node", "git", "vscode"],
-	python: ["python", "git", "vscode"],
-	java: ["java", "git", "vs2022", "vscode"],
-	dotnet: ["dotnet", "git", "vs2022", "vscode"],
-	rust: ["rust", "git", "vscode"],
-	go: ["go", "git", "vscode"],
-	unknown: ["git", "vscode"],
+	node: [...SHELL_TOOLS, "node", "git"],
+	python: [...SHELL_TOOLS, "python", "git"],
+	java: [...SHELL_TOOLS, "java", "git", "vs2022"],
+	dotnet: [...SHELL_TOOLS, "dotnet", "git", "vs2022"],
+	rust: [...SHELL_TOOLS, "rust", "git"],
+	go: [...SHELL_TOOLS, "go", "git"],
+	unknown: [...SHELL_TOOLS, "git"],
 };
 
 /**
@@ -476,8 +496,12 @@ export class ToolMatcher implements IToolMatcher {
 			"cargo.toml": ["rust"],
 			"go.mod": ["go"],
 			"go.sum": ["go"],
-			makefile: ["vscode"],
-			cmakelists: ["vscode"],
+			makefile: ["bash"],
+			// Shell-specific files
+			".bashrc": ["bash"],
+			".bash_profile": ["bash"],
+			".profile": ["bash"],
+			".zshrc": ["bash"],
 		};
 
 		return fileNameMap[fileName] || [];
@@ -488,19 +512,25 @@ export class ToolMatcher implements IToolMatcher {
 	 */
 	private inferToolsFromExtension(ext: string): string[] {
 		const extMap: Record<string, string[]> = {
-			".js": ["node", "vscode"],
-			".ts": ["node", "vscode"],
-			".jsx": ["node", "vscode"],
-			".tsx": ["node", "vscode"],
-			".py": ["python", "vscode"],
-			".java": ["java", "vscode"],
-			".cs": ["dotnet", "vs2022", "vscode"],
-			".rs": ["rust", "vscode"],
-			".go": ["go", "vscode"],
+			".js": ["node"],
+			".ts": ["node"],
+			".jsx": ["node"],
+			".tsx": ["node"],
+			".py": ["python"],
+			".java": ["java"],
+			".cs": ["dotnet", "vs2022"],
+			".rs": ["rust"],
+			".go": ["go"],
 			".sql": ["mysql", "postgresql", "sqlite"],
 			".dockerfile": ["docker"],
-			".yml": ["docker", "vscode"],
-			".yaml": ["docker", "vscode"],
+			".yml": ["docker"],
+			".yaml": ["docker"],
+			// Shell scripts
+			".sh": ["bash"],
+			".bash": ["bash"],
+			".ps1": ["powershell", "pwsh"],
+			".bat": ["cmd"],
+			".cmd": ["cmd"],
 		};
 
 		return extMap[ext] || [];

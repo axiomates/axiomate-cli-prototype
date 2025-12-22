@@ -11,6 +11,8 @@ import { detectNode, detectNvm, detectNpm } from "./node.js";
 import { detectPython } from "./python.js";
 import { detectJava, detectJavac } from "./java.js";
 import { detectPowershell, detectPwsh } from "./powershell.js";
+import { detectBash } from "./bash.js";
+import { detectCmd } from "./cmd.js";
 import { detectVscode } from "./vscode.js";
 import { detectVisualStudio, detectMsbuild } from "./visualstudio.js";
 import { detectBeyondCompare } from "./beyondcompare.js";
@@ -39,6 +41,8 @@ export const allDiscoverers: DiscoverFunction[] = [
 	// Shell
 	detectPowershell,
 	detectPwsh,
+	detectBash,
+	detectCmd,
 	// IDE
 	detectVscode,
 	detectVisualStudio,
