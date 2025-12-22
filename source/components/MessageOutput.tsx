@@ -301,26 +301,37 @@ export default function MessageOutput({
 	// 使用迭代方式计算，确保边界条件正确
 
 	// 计算给定 offset 下的显示状态
-	const computeDisplayState = (offset: number) => {
-		// 先用无指示器的高度计算
-		const baseContentHeight = height;
-		const baseStartLine = Math.max(0, totalLines - baseContentHeight - offset);
-		const baseHasAbove = baseStartLine > 0;
-		const baseHasBelow = offset > 0;
+	const computeDisplayState = useCallback(
+		(offset: number) => {
+			// 先用无指示器的高度计算
+			const baseContentHeight = height;
+			const baseStartLine = Math.max(0, totalLines - baseContentHeight - offset);
+			const baseHasAbove = baseStartLine > 0;
+			const baseHasBelow = offset > 0;
 
-		// 根据是否需要指示器，调整内容高度
-		const indicatorCount = (baseHasAbove ? 1 : 0) + (baseHasBelow ? 1 : 0);
-		const contentHeight = Math.max(1, height - indicatorCount);
-		const startLine = Math.max(0, totalLines - contentHeight - offset);
-		const hasAbove = startLine > 0;
-		const hasBelow = offset > 0;
+			// 根据是否需要指示器，调整内容高度
+			const indicatorCount = (baseHasAbove ? 1 : 0) + (baseHasBelow ? 1 : 0);
+			const adjustedContentHeight = Math.max(1, height - indicatorCount);
+			const startLine = Math.max(
+				0,
+				totalLines - adjustedContentHeight - offset,
+			);
+			const hasAbove = startLine > 0;
+			const hasBelow = offset > 0;
 
-		return { contentHeight, startLine, hasAbove, hasBelow };
-	};
+			return {
+				contentHeight: adjustedContentHeight,
+				startLine,
+				hasAbove,
+				hasBelow,
+			};
+		},
+		[height, totalLines],
+	);
 
 	// 计算真正的最大偏移
 	// 目标：找到使 startLine = 0 的最小 offset，让用户能滚动到完全看到顶部
-	const computeMaxOffset = () => {
+	const maxOffset = useMemo(() => {
 		// 从 0 开始，找到第一个使 startLine = 0 的 offset
 		for (let testOffset = 0; testOffset <= totalLines; testOffset++) {
 			const state = computeDisplayState(testOffset);
@@ -331,9 +342,7 @@ export default function MessageOutput({
 		}
 		// 如果循环结束都没找到（不应该发生），返回 totalLines
 		return totalLines;
-	};
-
-	const maxOffset = computeMaxOffset();
+	}, [totalLines, computeDisplayState]);
 
 	// 当高度或内容变化时，确保 scrollOffset 在有效范围内
 	useEffect(() => {
@@ -393,15 +402,30 @@ export default function MessageOutput({
 
 			if (newCursorIndex < currentStartLine) {
 				// 光标在屏幕上方，需要向上滚动
-				const newOffset = totalLines - newCursorIndex - contentHeight;
-				setScrollOffset(Math.min(Math.max(0, newOffset), maxOffset));
+				// 目标：让 newCursorIndex 成为新的 startLine
+				// 需要通过迭代找到正确的 offset（因为指示器会影响 contentHeight）
+				let targetOffset = totalLines - newCursorIndex - contentHeight;
+				// 迭代调整，确保 startLine 正好等于 newCursorIndex
+				for (let iter = 0; iter < 3; iter++) {
+					const state = computeDisplayState(targetOffset);
+					if (state.startLine < newCursorIndex) {
+						// startLine 太小，需要减少 offset
+						targetOffset = Math.max(0, targetOffset - 1);
+					} else if (state.startLine > newCursorIndex) {
+						// startLine 太大，需要增加 offset
+						targetOffset = Math.min(maxOffset, targetOffset + 1);
+					} else {
+						break;
+					}
+				}
+				setScrollOffset(Math.min(Math.max(0, targetOffset), maxOffset));
 			} else if (newCursorIndex >= currentEndLine) {
 				// 光标在屏幕下方，需要向下滚动
 				const newOffset = totalLines - newCursorIndex - 1;
 				setScrollOffset(Math.max(0, newOffset));
 			}
 		},
-		[totalLines, safeOffset, startLine, contentHeight, maxOffset],
+		[totalLines, safeOffset, startLine, contentHeight, maxOffset, computeDisplayState],
 	);
 
 	// 键盘控制
