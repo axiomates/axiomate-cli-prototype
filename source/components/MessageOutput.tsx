@@ -99,6 +99,11 @@ export default function MessageOutput({
 	// 浏览模式下的光标位置（全局索引，相对于 renderedLines）
 	const [cursorIndex, setCursorIndex] = useState(-1);
 
+	// 记录刚刚切换（展开/折叠）的组 ID，用于在操作后跳转光标到该组头部
+	const [justToggledGroupId, setJustToggledGroupId] = useState<string | null>(
+		null,
+	);
+
 	// 动画 spinner 状态
 	const [spinnerIndex, setSpinnerIndex] = useState(0);
 	const hasStreamingMessage = messages.some((m) => m.streaming);
@@ -385,13 +390,50 @@ export default function MessageOutput({
 	}, [renderedLines]);
 
 	// 切换到浏览模式时，光标定位到最后一行
+	// 注意：只在进入浏览模式时设置，不在 totalLines 变化时重设（避免覆盖折叠/展开后的光标位置）
 	useEffect(() => {
-		if (isOutputMode && totalLines > 0) {
+		if (isOutputMode && totalLines > 0 && cursorIndex === -1) {
+			// 首次进入浏览模式，定位到最后一行
 			setCursorIndex(totalLines - 1);
 		} else if (!isOutputMode) {
+			// 退出浏览模式，重置光标
 			setCursorIndex(-1);
 		}
-	}, [isOutputMode, totalLines]);
+	}, [isOutputMode, totalLines, cursorIndex]);
+
+	// 展开/折叠组后，跳转光标到该组的头部行
+	useEffect(() => {
+		if (!justToggledGroupId || !isOutputMode) return;
+
+		// 找到该组的头部行索引
+		const headerIndex = renderedLines.findIndex(
+			(line) => line.isGroupHeader && line.groupId === justToggledGroupId,
+		);
+
+		if (headerIndex >= 0) {
+			setCursorIndex(headerIndex);
+			// 需要延迟调用 ensureCursorVisible，因为此时 scrollOffset 等状态可能还没更新
+			// 使用 setTimeout 确保在下一个事件循环中执行
+			setTimeout(() => {
+				// 重新计算可见范围并滚动
+				const targetOffset = Math.max(
+					0,
+					totalLines - headerIndex - contentHeight,
+				);
+				setScrollOffset(Math.min(targetOffset, maxOffset));
+			}, 0);
+		}
+
+		// 清除标记
+		setJustToggledGroupId(null);
+	}, [
+		justToggledGroupId,
+		isOutputMode,
+		renderedLines,
+		totalLines,
+		contentHeight,
+		maxOffset,
+	]);
 
 	// 确保光标移动后可见（自动滚动）
 	const ensureCursorVisible = useCallback(
@@ -496,6 +538,8 @@ export default function MessageOutput({
 						cursorLine.groupId &&
 						onToggleCollapse
 					) {
+						// 记录 groupId，展开/折叠后跳转到组的头部行
+						setJustToggledGroupId(cursorLine.groupId);
 						onToggleCollapse(cursorLine.groupId);
 					}
 					return;
