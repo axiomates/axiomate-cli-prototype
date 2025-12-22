@@ -1113,7 +1113,6 @@ type ModelPreset = {
   series: ModelSeries;            // "glm" | "qwen" | "deepseek"
   protocol: ApiProtocol;          // "openai" | "anthropic"
   supportsTools: boolean;         // Function calling support
-  thinkingToolsExclusive: boolean; // true = thinking and tools are mutually exclusive
   contextWindow: number;          // Context window size in tokens (e.g., 32768)
 };
 ```

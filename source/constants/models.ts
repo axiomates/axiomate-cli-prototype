@@ -36,12 +36,6 @@ export type ModelPreset = {
 	description?: string;
 	/** 是否支持 function calling / tools */
 	supportsTools: boolean;
-	/**
-	 * thinking 和 tools 模式是否互斥
-	 * - true: 不能同时使用 thinking 和 tools（如 DeepSeek V3.1）
-	 * - false: 可以同时使用 thinking 和 tools
-	 */
-	thinkingToolsExclusive: boolean;
 	/** 上下文窗口大小（token 数） */
 	contextWindow: number;
 };
@@ -61,7 +55,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		protocol: "openai",
 		description: "Chat model",
 		supportsTools: true,
-		thinkingToolsExclusive: false,
 		contextWindow: 131072,
 	},
 	{
@@ -71,7 +64,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		protocol: "openai",
 		description: "Latest GLM",
 		supportsTools: true,
-		thinkingToolsExclusive: false,
 		contextWindow: 32768,
 	},
 
@@ -85,7 +77,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		protocol: "openai",
 		description: "Latest Qwen3",
 		supportsTools: true,
-		thinkingToolsExclusive: false,
 		contextWindow: 131072,
 	},
 	{
@@ -95,7 +86,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		protocol: "openai",
 		description: "Instruct model",
 		supportsTools: false,
-		thinkingToolsExclusive: false,
 		contextWindow: 32768,
 	},
 	{
@@ -105,7 +95,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		protocol: "openai",
 		description: "Instruct model",
 		supportsTools: true,
-		thinkingToolsExclusive: false,
 		contextWindow: 32768,
 	},
 
@@ -119,7 +108,6 @@ export const MODEL_PRESETS: ModelPreset[] = [
 		protocol: "openai",
 		description: "Reasoning distill",
 		supportsTools: true,
-		thinkingToolsExclusive: false,
 		contextWindow: 131072,
 	},
 ];

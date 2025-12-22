@@ -155,9 +155,6 @@ const internalHandlers: Record<string, InternalHandler> = {
 		// 返回成功消息，包含模型信息
 		const capabilities: string[] = [];
 		if (model.supportsTools) capabilities.push("tools");
-		if (model.thinkingToolsExclusive) {
-			capabilities.push("thinking (exclusive with tools)");
-		}
 
 		return {
 			type: "message" as const,
