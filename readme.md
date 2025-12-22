@@ -147,9 +147,8 @@ Available models (via SiliconFlow API). Model IDs use the full API model name:
 | Qwen     | `Qwen/Qwen3-8B`                           | Qwen3 8B            | Yes   | No          |
 | Qwen     | `Qwen/Qwen2-7B-Instruct`                  | Qwen2 7B            | No    | No          |
 | Qwen     | `Qwen/Qwen2.5-7B-Instruct`                | Qwen2.5 7B          | Yes   | No          |
+| DeepSeek | `Qwen/Qwen3-Coder-480B-A35B-Instruct`     | Qwen3 Coder 480B    | Yes   | Yes         |
 | DeepSeek | `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B` | DeepSeek R1 Qwen 7B | Yes   | No          |
-| DeepSeek | `deepseek-ai/DeepSeek-V3.1`               | DeepSeek V3.1       | Yes   | Yes         |
-| DeepSeek | `Pro/deepseek-ai/DeepSeek-V3.1`           | DeepSeek V3.1 Pro   | Yes   | Yes         |
 
 \*Exclusive: Thinking and tools modes are mutually exclusive (cannot be used together).
 
