@@ -137,7 +137,10 @@
 		"moreAbove": "... {{count}} more lines above ...",
 		"moreBelow": "... {{count}} more lines below ...",
 		"collapsed": "({{count}} lines)",
-		"linesCount": "{{count}} lines"
+		"linesCount": "{{count}} lines",
+		"scrollUpHint": "↑ {{count}} more lines (PageUp to scroll)",
+		"scrollDownHint": "↓ {{count}} more lines (PageDown to scroll)",
+		"groupLineCount": "({{count}} lines)"
 	},
 	"errors": {
 		"fileNotFound": "File not found: {{path}}",

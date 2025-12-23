@@ -5,6 +5,7 @@
  */
 
 import type { Message } from "../components/MessageOutput.js";
+import { t } from "../i18n/index.js";
 
 /**
  * 消息组
@@ -161,7 +162,7 @@ export function generateGroupHeaderParts(
 		userPreview,
 		separator: "→",
 		responsePreview,
-		lineCount: `(${lineCount} 行)`,
+		lineCount: t("messageOutput.groupLineCount", { count: lineCount }),
 	};
 }
 

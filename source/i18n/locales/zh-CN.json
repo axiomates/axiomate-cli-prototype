@@ -137,7 +137,10 @@
 		"moreAbove": "... 上方还有 {{count}} 行 ...",
 		"moreBelow": "... 下方还有 {{count}} 行 ...",
 		"collapsed": "（{{count}} 行）",
-		"linesCount": "{{count}} 行"
+		"linesCount": "{{count}} 行",
+		"scrollUpHint": "↑ 还有 {{count}} 行 (PageUp 翻页)",
+		"scrollDownHint": "↓ 还有 {{count}} 行 (PageDown 翻页)",
+		"groupLineCount": "({{count}} 行)"
 	},
 	"errors": {
 		"fileNotFound": "文件未找到：{{path}}",

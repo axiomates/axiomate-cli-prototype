@@ -8,6 +8,7 @@ import {
 	canCollapse,
 	type GroupHeaderParts,
 } from "../models/messageGroup.js";
+import { useTranslation } from "../hooks/useTranslation.js";
 
 export type Message = {
 	content: string;
@@ -92,6 +93,7 @@ export default function MessageOutput({
 	onExpandAll,
 	onCollapseAll,
 }: Props) {
+	const { t } = useTranslation();
 	const width = useTerminalWidth();
 	// scrollOffset: 从底部向上的偏移量（0 = 显示最新消息）
 	const [scrollOffset, setScrollOffset] = useState(0);
@@ -745,7 +747,7 @@ export default function MessageOutput({
 	if (hasMoreAbove) {
 		contentRows.push(
 			<Box key="indicator-above" justifyContent="center" height={1}>
-				<Text dimColor>↑ 还有 {linesAbove} 行 (PageUp 翻页)</Text>
+				<Text dimColor>{t("messageOutput.scrollUpHint", { count: linesAbove })}</Text>
 			</Box>,
 		);
 	}
@@ -949,7 +951,7 @@ export default function MessageOutput({
 	if (hasMoreBelow) {
 		contentRows.push(
 			<Box key="indicator-below" justifyContent="center" height={1}>
-				<Text dimColor>↓ 还有 {linesBelow} 行 (PageDown 翻页)</Text>
+				<Text dimColor>{t("messageOutput.scrollDownHint", { count: linesBelow })}</Text>
 			</Box>,
 		);
 	}
