@@ -91,7 +91,7 @@ export function HelpPanel({ columns }: HelpPanelProps) {
 				</Box>
 				<Box width="50%">
 					<Text color={THEME_LIGHT_YELLOW}>s/w </Text>
-					<Text color="gray">goto another group (View mode)</Text>
+					<Text color="gray">select between groups (View mode)</Text>
 				</Box>
 			</Box>
 		</Box>
