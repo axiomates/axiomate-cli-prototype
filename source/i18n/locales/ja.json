@@ -1,0 +1,181 @@
+{
+	"app": {
+		"inputMode": "入力",
+		"browseMode": "閲覧",
+		"modeSwitchHint": "Shift+↑↓",
+		"headerHintType": "入力",
+		"headerHintForCommands": "でコマンド、",
+		"headerHintForShortcuts": "でショートカット"
+	},
+	"welcome": {
+		"title": "axiomate へようこそ！",
+		"testVersion": "[テスト版]",
+		"testVersionDesc": "テスト用のAI APIキーが設定済みです。",
+		"pressAnyKey": "任意のキーを押してセットアップを完了...",
+		"configuring": "設定中...",
+		"restarting": "再起動中..."
+	},
+	"splash": {
+		"loading": "読み込み中...",
+		"discoveringTools": "ツールを検出中...",
+		"loadingAI": "AI設定を読み込み中..."
+	},
+	"input": {
+		"placeholder": "メッセージを入力、または / でコマンド...",
+		"slashMenuTitle": "コマンド",
+		"fileMenuTitle": "ファイル選択",
+		"helpPanelTitle": "キーボードショートカット",
+		"typeToFilter": "入力してフィルタ...",
+		"noMatches": "一致なし"
+	},
+	"help": {
+		"navigation": "ナビゲーション",
+		"actions": "アクション",
+		"modes": "特殊モード",
+		"enterSubmit": "Enter - メッセージ送信",
+		"upDownHistory": "↑/↓ - 履歴を移動（入力モード）",
+		"leftRightCursor": "←/→ - カーソル移動",
+		"tabComplete": "Tab - オートコンプリート",
+		"ctrlCExit": "Ctrl+C - 終了",
+		"slashCommands": "でコマンド",
+		"atFiles": "でファイル選択",
+		"questionHelp": "? - ヘルプ表示",
+		"shiftUpDownMode": "Shift+↑/↓ - フォーカスモード切替",
+		"browseUpDown": "↑/↓ - スクロール（閲覧モード）",
+		"pageUpDown": "PageUp/PageDown - ページスクロール",
+		"enterToggle": "Enter - グループ展開/折りたたみ",
+		"eExpand": "e - すべて展開",
+		"cCollapse": "c - すべて折りたたみ",
+		"ctrlEnter": "改行",
+		"ctrlA": "行頭に移動",
+		"ctrlE": "行末に移動",
+		"ctrlU": "カーソル前を削除",
+		"ctrlK": "カーソル後を削除",
+		"upDownBrowse": "履歴を閲覧",
+		"enterConfirm": "確定",
+		"pageUpDownScroll": "出力をスクロール",
+		"escapeBack": "戻る / キャンセル",
+		"shiftUpDownSwitch": "入力/閲覧モード切替",
+		"ecExpandCollapse": "グループ展開/折りたたみ（閲覧モード）",
+		"swSelectGroups": "グループ間を選択（閲覧モード）"
+	},
+	"commands": {
+		"model": {
+			"name": "model",
+			"description": "AIモデルを切り替え"
+		},
+		"tools": {
+			"name": "tools",
+			"description": "ローカル開発ツールを管理",
+			"list": "list",
+			"listDesc": "検出済みツール一覧",
+			"refresh": "refresh",
+			"refreshDesc": "ツールを再検出",
+			"stats": "stats",
+			"statsDesc": "ツール統計を表示"
+		},
+		"language": {
+			"name": "language",
+			"description": "インターフェース言語を切り替え",
+			"en": "en",
+			"enDesc": "English（英語）",
+			"zhCN": "zh-CN",
+			"zhCNDesc": "简体中文（簡体字中国語）",
+			"ja": "ja",
+			"jaDesc": "日本語"
+		},
+		"compact": {
+			"name": "compact",
+			"description": "会話コンテキストを要約・圧縮"
+		},
+		"new": {
+			"name": "new",
+			"description": "新しいセッションを開始（現在のコンテキストを破棄）"
+		},
+		"clear": {
+			"name": "clear",
+			"description": "画面をクリア（セッションコンテキストは保持）"
+		},
+		"stop": {
+			"name": "stop",
+			"description": "AI処理を停止しメッセージキューをクリア"
+		},
+		"exit": {
+			"name": "exit",
+			"description": "アプリケーションを終了"
+		}
+	},
+	"commandHandler": {
+		"unknownCommand": "不明なコマンド",
+		"modelSwitched": "モデルを切り替えました: {{model}}",
+		"modelCapabilities": "機能",
+		"modelProtocol": "プロトコル",
+		"languageSwitched": "言語を切り替えました: {{language}}",
+		"sessionCleared": "画面をクリアしました。",
+		"newSession": "新しいセッションを開始しました。",
+		"stopSuccess": "AI処理を停止しました。{{count}}件のキューメッセージをクリアしました。",
+		"stopNone": "処理中のAIはありません。",
+		"compactNotEnough": "圧縮するのに十分な会話がありません。",
+		"compactInProgress": "⏳ 会話を圧縮中...",
+		"compactSuccess": "✅ 会話の圧縮が完了しました。",
+		"compactFailed": "会話の圧縮に失敗しました: {{error}}",
+		"toolsRefreshing": "🔄 ツールを再検出中...",
+		"toolsRefreshed": "✅ ツールを更新しました。{{count}}個のツールが見つかりました。"
+	},
+	"ai": {
+		"notConfigured": "AIサービスが設定されていません。API設定を確認してください。",
+		"contextWarning": "⚠️ コンテキスト使用率が{{percent}}%に達しました。自動圧縮中...",
+		"autoCompacting": "会話コンテキストを自動圧縮中...",
+		"fileTruncated": "ファイル内容が切り詰められました。{{message}}",
+		"streamError": "ストリーミング中にエラーが発生: {{error}}",
+		"toolExecuting": "ツールを実行中: {{tool}}",
+		"toolSuccess": "ツールの実行が成功しました",
+		"toolError": "ツールの実行に失敗しました: {{error}}"
+	},
+	"messageOutput": {
+		"scrollUp": "↑ 上にもっとあります",
+		"scrollDown": "↓ 下にもっとあります",
+		"moreAbove": "... 上に{{count}}行 ...",
+		"moreBelow": "... 下に{{count}}行 ...",
+		"collapsed": "({{count}}行)",
+		"linesCount": "{{count}}行",
+		"scrollUpHint": "↑ 上に{{count}}行（PageUpでスクロール）",
+		"scrollDownHint": "↓ 下に{{count}}行（PageDownでスクロール）",
+		"groupLineCount": "({{count}}行)"
+	},
+	"errors": {
+		"fileNotFound": "ファイルが見つかりません: {{path}}",
+		"readError": "ファイルの読み取りエラー: {{path}}",
+		"parseError": "解析エラー: {{message}}",
+		"networkError": "ネットワークエラー: {{message}}",
+		"apiError": "APIエラー: {{message}}"
+	},
+	"toolCategories": {
+		"vcs": "バージョン管理",
+		"runtime": "ランタイム",
+		"shell": "シェル",
+		"ide": "IDE",
+		"diff": "差分ツール",
+		"container": "コンテナ",
+		"build": "ビルドツール",
+		"database": "データベース",
+		"other": "その他"
+	},
+	"common": {
+		"yes": "はい",
+		"no": "いいえ",
+		"ok": "OK",
+		"cancel": "キャンセル",
+		"retry": "再試行",
+		"loading": "読み込み中",
+		"error": "エラー",
+		"success": "成功",
+		"warning": "警告",
+		"info": "情報",
+		"file": "ファイル",
+		"directory": "ディレクトリ",
+		"installed": "インストール済み",
+		"notInstalled": "未インストール",
+		"version": "バージョン"
+	}
+}

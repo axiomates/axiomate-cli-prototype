@@ -1,6 +1,6 @@
 // i18n type definitions
 
-export type Locale = "en" | "zh-CN";
+export type Locale = "en" | "zh-CN" | "ja";
 
 export type Translations = {
 	// App layout

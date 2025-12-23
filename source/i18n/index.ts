@@ -3,11 +3,13 @@
 import { type Locale, type Translations } from "./types.js";
 import enTranslations from "./locales/en.json" with { type: "json" };
 import zhCNTranslations from "./locales/zh-CN.json" with { type: "json" };
+import jaTranslations from "./locales/ja.json" with { type: "json" };
 
 // Available translations
 const translations: Record<Locale, Translations> = {
 	en: enTranslations as Translations,
 	"zh-CN": zhCNTranslations as Translations,
+	ja: jaTranslations as Translations,
 };
 
 // Current locale (mutable singleton)
@@ -54,8 +56,14 @@ function notifyLocaleChange(newLocale: Locale): void {
 export function detectSystemLocale(): Locale {
 	try {
 		const systemLocale = Intl.DateTimeFormat().resolvedOptions().locale;
+		if (systemLocale.startsWith("en")) {
+			return "en";
+		}
 		if (systemLocale.startsWith("zh")) {
 			return "zh-CN";
+		}
+		if (systemLocale.startsWith("ja")) {
+			return "ja";
 		}
 	} catch {
 		// Intl API not available, fall through to default
@@ -147,7 +155,7 @@ export function getTranslations(): Translations {
  * Check if a locale is supported
  */
 export function isSupportedLocale(locale: string): locale is Locale {
-	return locale === "en" || locale === "zh-CN";
+	return locale === "en" || locale === "zh-CN" || locale === "ja";
 }
 
 // Re-export types

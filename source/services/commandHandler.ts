@@ -182,6 +182,14 @@ const internalHandlers: Record<string, InternalHandler> = {
 			content: t("commandHandler.languageSwitched", { language: "简体中文" }),
 		};
 	},
+
+	"language_ja": () => {
+		setLocale("ja");
+		return {
+			type: "message" as const,
+			content: t("commandHandler.languageSwitched", { language: "日本語" }),
+		};
+	},
 };
 
 /**

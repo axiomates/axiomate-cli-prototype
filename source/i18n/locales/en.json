@@ -80,7 +80,9 @@
 			"en": "en",
 			"enDesc": "English",
 			"zhCN": "zh-CN",
-			"zhCNDesc": "简体中文 (Simplified Chinese)"
+			"zhCNDesc": "简体中文 (Simplified Chinese)",
+			"ja": "ja",
+			"jaDesc": "日本語 (Japanese)"
 		},
 		"compact": {
 			"name": "compact",

@@ -82,6 +82,11 @@ export function getSlashCommands(): SlashCommand[] {
 					description: t("commands.language.zhCNDesc"),
 					action: { type: "internal", handler: "language_zh-CN" },
 				},
+				{
+					name: "ja",
+					description: t("commands.language.jaDesc"),
+					action: { type: "internal", handler: "language_ja" },
+				},
 			],
 		},
 		{
