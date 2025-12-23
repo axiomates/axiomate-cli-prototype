@@ -104,6 +104,15 @@ export default function MessageOutput({
 		null,
 	);
 
+	// 记录展开全部前的光标信息，用于保持光标位置和视口位置
+	const [expandAllCursorInfo, setExpandAllCursorInfo] = useState<{
+		groupId: string;
+		msgIndex: number; // 消息索引
+		lineIndexInMsg: number; // 在该消息内的行偏移
+		screenOffset: number; // 光标在屏幕上的位置（从顶部数第几行）
+		isGroupHeader: boolean; // 是否是组头部行
+	} | null>(null);
+
 	// 动画 spinner 状态
 	const [spinnerIndex, setSpinnerIndex] = useState(0);
 	const hasStreamingMessage = messages.some((m) => m.streaming);
@@ -435,6 +444,114 @@ export default function MessageOutput({
 		maxOffset,
 	]);
 
+	// 展开全部后，恢复光标位置和视口位置
+	useEffect(() => {
+		if (!expandAllCursorInfo || !isOutputMode) return;
+
+		let targetIndex = -1;
+
+		if (expandAllCursorInfo.isGroupHeader) {
+			// 原来在组头部行,直接找组头部
+			targetIndex = renderedLines.findIndex(
+				(line) =>
+					line.isGroupHeader &&
+					line.groupId === expandAllCursorInfo.groupId
+			);
+		} else {
+			// 原来在消息内容行,找到消息第一行再偏移
+			const firstLineIndex = renderedLines.findIndex(
+				(line) =>
+					line.groupId === expandAllCursorInfo.groupId &&
+					line.msgIndex === expandAllCursorInfo.msgIndex &&
+					line.isFirstLine &&
+					!line.isGroupHeader  // 排除组头部行
+			);
+
+			if (firstLineIndex >= 0) {
+				// 从第一行向后偏移
+				let offset = 0;
+				for (let i = firstLineIndex; i < renderedLines.length; i++) {
+					const line = renderedLines[i];
+					if (line?.msgIndex !== expandAllCursorInfo.msgIndex || line.isGroupHeader) {
+						// 超出消息范围或遇到组头部,停止
+						break;
+					}
+					if (offset === expandAllCursorInfo.lineIndexInMsg) {
+						targetIndex = i;
+						break;
+					}
+					offset++;
+				}
+			}
+		}
+
+		if (targetIndex >= 0) {
+			// 设置光标到目标行
+			setCursorIndex(targetIndex);
+
+			// 计算滚动位置,保持屏幕位置不变
+			// 使用 setTimeout 确保在状态更新后执行
+			setTimeout(() => {
+				// 计算期望的起始行位置
+				// 目标:让光标行显示在屏幕上的 screenOffset 位置
+				let targetStartLine = targetIndex - expandAllCursorInfo.screenOffset;
+
+				// 如果起始行 + 屏幕高度超出总行数,需要贴底显示
+				if (targetStartLine + contentHeight > totalLines) {
+					targetStartLine = Math.max(0, totalLines - contentHeight);
+				} else {
+					targetStartLine = Math.max(0, targetStartLine);
+				}
+
+				// 初步计算目标 offset
+				// 公式: startLine = totalLines - contentHeight - offset
+				// 所以: offset = totalLines - contentHeight - startLine
+				let targetOffset = totalLines - contentHeight - targetStartLine;
+
+				// 确保 offset 在有效范围内
+				targetOffset = Math.max(0, Math.min(targetOffset, maxOffset));
+
+				// 迭代调整,确保 startLine 尽可能接近 targetStartLine
+				// 由于指示器会影响 contentHeight,需要多次迭代
+				for (let iter = 0; iter < 10; iter++) {
+					const state = computeDisplayState(targetOffset);
+
+					// 如果 startLine 已经匹配,停止迭代
+					if (state.startLine === targetStartLine) {
+						break;
+					}
+
+					// 调整 offset
+					if (state.startLine < targetStartLine) {
+						// startLine 太小,需要增加 offset (显示更靠后的内容)
+						const newOffset = targetOffset + 1;
+						if (newOffset > maxOffset) break; // 已到边界
+						targetOffset = newOffset;
+					} else {
+						// state.startLine > targetStartLine
+						// startLine 太大,需要减少 offset (显示更靠前的内容)
+						const newOffset = targetOffset - 1;
+						if (newOffset < 0) break; // 已到边界
+						targetOffset = newOffset;
+					}
+				}
+
+				setScrollOffset(targetOffset);
+			}, 0);
+		}
+
+		// 清除标记
+		setExpandAllCursorInfo(null);
+	}, [
+		expandAllCursorInfo,
+		isOutputMode,
+		renderedLines,
+		totalLines,
+		contentHeight,
+		maxOffset,
+		computeDisplayState,
+	]);
+
 	// 确保光标移动后可见（自动滚动）
 	const ensureCursorVisible = useCallback(
 		(newCursorIndex: number) => {
@@ -547,6 +664,40 @@ export default function MessageOutput({
 
 				// e: 展开所有
 				if (input === "e" && onExpandAll) {
+					// 保存当前光标信息，用于展开后恢复位置
+					if (cursorIndex >= 0 && cursorIndex < renderedLines.length) {
+						const cursorLine = renderedLines[cursorIndex];
+						if (cursorLine?.groupId) {
+							let lineIndexInMsg = 0;
+
+							// 如果不是组头部行,需要计算在消息内的偏移
+							if (!cursorLine.isGroupHeader) {
+								// 找到该消息的第一行索引
+								let firstLineIdx = cursorIndex;
+								for (let i = cursorIndex; i >= 0; i--) {
+									const line = renderedLines[i];
+									if (line?.msgIndex !== cursorLine.msgIndex || line?.isGroupHeader) {
+										break;
+									}
+									if (line.isFirstLine) {
+										firstLineIdx = i;
+										break;
+									}
+								}
+								lineIndexInMsg = cursorIndex - firstLineIdx;
+							}
+
+							const screenOffset = cursorIndex - startLine;
+
+							setExpandAllCursorInfo({
+								groupId: cursorLine.groupId,
+								msgIndex: cursorLine.msgIndex,
+								lineIndexInMsg,
+								screenOffset,
+								isGroupHeader: !!cursorLine.isGroupHeader,
+							});
+						}
+					}
 					onExpandAll();
 					return;
 				}
@@ -554,6 +705,13 @@ export default function MessageOutput({
 				// c: 折叠所有
 				if (input === "c" && onCollapseAll) {
 					onCollapseAll();
+					// 折叠后，跳转到最后一个消息组的头部行
+					if (messageGroups.length > 0) {
+						const lastGroup = messageGroups[messageGroups.length - 1];
+						if (lastGroup) {
+							setJustToggledGroupId(lastGroup.id);
+						}
+					}
 					return;
 				}
 

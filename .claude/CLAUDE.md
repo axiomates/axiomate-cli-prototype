@@ -1171,6 +1171,77 @@ type MessageGroup = {
 - This is handled by `justToggledGroupId` state in `MessageOutput.tsx`
 - Prevents cursor from staying at an invalid position after content changes
 
+**Expand All ('e') Cursor Position Preservation**:
+
+When expanding all groups in browse mode, the implementation preserves both:
+1. **Exact cursor line**: The cursor stays on the same message line (not just same group)
+2. **Viewport position**: The line maintains its position in the visible area
+
+**Implementation** ([MessageOutput.tsx:107-114](source/components/MessageOutput.tsx#L107-L114)):
+
+```typescript
+const [expandAllCursorInfo, setExpandAllCursorInfo] = useState<{
+  groupId: string;           // Message group ID
+  msgIndex: number;          // Message index in messages array
+  lineIndexInMsg: number;    // Line offset within the message
+  screenOffset: number;      // Cursor position from viewport top
+  isGroupHeader: boolean;    // Whether cursor was on group header
+} | null>(null);
+```
+
+**Save Logic** ([MessageOutput.tsx:611-649](source/components/MessageOutput.tsx#L611-L649)):
+
+Before expanding, saves precise cursor position:
+- If on group header: only saves `groupId`
+- If on message content: calculates `lineIndexInMsg` by scanning backwards to find message's first line
+- Saves `screenOffset` (cursor's row from viewport top) for viewport restoration
+
+**Restore Logic** ([MessageOutput.tsx:447-541](source/components/MessageOutput.tsx#L447-L541)):
+
+After expanding, restores cursor position:
+1. Find target line:
+   - If `isGroupHeader`: find group header line
+   - Otherwise: find message's first line, then offset by `lineIndexInMsg`
+2. Calculate scroll position to maintain viewport:
+   ```typescript
+   targetStartLine = targetIndex - screenOffset
+   ```
+3. Handle boundary cases:
+   ```typescript
+   // When cursor near bottom, can't maintain original screenOffset
+   if (targetStartLine + contentHeight > totalLines) {
+     targetStartLine = Math.max(0, totalLines - contentHeight);
+   }
+   ```
+4. Convert to scroll offset (measured from bottom):
+   ```typescript
+   targetOffset = totalLines - contentHeight - targetStartLine
+   ```
+5. Iteratively adjust for dynamic indicators (hasAbove/hasBelow) that affect contentHeight
+
+**Collapse All ('c') Cursor Handling** ([MessageOutput.tsx:651-661](source/components/MessageOutput.tsx#L651-L661)):
+
+When collapsing all groups, cursor jumps to the last group's header (which remains visible):
+```typescript
+if (input === "c" && onCollapseAll) {
+  onCollapseAll();
+  if (messageGroups.length > 0) {
+    const lastGroup = messageGroups[messageGroups.length - 1];
+    if (lastGroup) {
+      setJustToggledGroupId(lastGroup.id);
+    }
+  }
+  return;
+}
+```
+
+**Key Design Decisions**:
+- Track exact line within message using `msgIndex` + `lineIndexInMsg` (not just `groupId`)
+- Distinguish between group header lines and message content lines
+- Handle edge case when cursor is near bottom (can't maintain original screenOffset)
+- Use `setTimeout(..., 0)` for async scroll update (Node.js environment, no `requestAnimationFrame`)
+- Iterative offset adjustment accounts for dynamic indicator height changes
+
 **State Management** (`app.tsx`):
 ```typescript
 // Collapse state
