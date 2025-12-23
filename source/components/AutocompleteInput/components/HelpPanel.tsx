@@ -64,6 +64,16 @@ export function HelpPanel({ columns }: HelpPanelProps) {
 					<Text color="gray">browse history</Text>
 				</Box>
 			</Box>
+						<Box flexDirection="row" flexWrap="wrap">
+				<Box width="50%">
+					<Text color={THEME_LIGHT_YELLOW}>Enter </Text>
+					<Text color="gray">Confirm</Text>
+				</Box>
+				<Box width="50%">
+					<Text color={THEME_LIGHT_YELLOW}>PageUp/PageDown </Text>
+					<Text color="gray">scroll output</Text>
+				</Box>
+			</Box>
 			<Box flexDirection="row" flexWrap="wrap">
 				<Box width="50%">
 					<Text color={THEME_LIGHT_YELLOW}>Escape </Text>
@@ -76,12 +86,12 @@ export function HelpPanel({ columns }: HelpPanelProps) {
 			</Box>
 			<Box flexDirection="row" flexWrap="wrap">
 				<Box width="50%">
-					<Text color={THEME_LIGHT_YELLOW}>PageUp/PageDown </Text>
-					<Text color="gray">scroll output</Text>
-				</Box>
-				<Box width="50%">
 					<Text color={THEME_LIGHT_YELLOW}>e/c </Text>
 					<Text color="gray">expand/collapse groups (View mode)</Text>
+				</Box>
+				<Box width="50%">
+					<Text color={THEME_LIGHT_YELLOW}>s/w </Text>
+					<Text color="gray">goto another group (View mode)</Text>
 				</Box>
 			</Box>
 		</Box>
