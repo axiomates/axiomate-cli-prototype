@@ -2626,9 +2626,38 @@ The application supports multiple languages with automatic system locale detecti
 
 The i18n system uses a **zero-dependency** implementation with:
 - System locale auto-detection via environment variables (`LANG`, `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`)
+- **Reactive language switching** - All UI updates instantly when language changes
+- **Listener pattern** - Components subscribe to locale changes via event listeners
 - Nested key path support (e.g., `"app.inputMode"`)
 - Template variable substitution (e.g., `{{percent}}`, `{{model}}`)
 - Automatic fallback to English for missing translations
+
+#### Instant Language Switching Design
+
+**Key Architecture Decisions:**
+
+1. **No React Context**: Uses a simpler listener pattern instead of Context API
+   - Fits existing codebase patterns (no Context used anywhere)
+   - Minimal code changes (only `useTranslation` hook modified)
+   - Works seamlessly with Ink's rendering model
+
+2. **Event-Driven Updates**: When `setLocale()` is called:
+   ```
+   User: /language zh-CN
+       ↓
+   commandHandler: setLocale("zh-CN")
+       ↓
+   i18n/index.ts: notifyLocaleChange("zh-CN")
+       ↓
+   All components: setLocaleState("zh-CN") via listeners
+       ↓
+   React: Components re-render with new translations
+   ```
+
+3. **Automatic Cache Invalidation**: Command menu regenerates on next open
+   - `constants/commands.ts` listens for locale changes
+   - Clears cached command tree when language switches
+   - Next `/` key press generates commands in new language
 
 ### Directory Structure
 
@@ -2703,6 +2732,55 @@ function MyComponent() {
   return <Text>{t("app.inputMode")}</Text>;
 }
 ```
+
+**Implementation** (`source/hooks/useTranslation.ts`):
+
+The hook uses a **reactive state + listener pattern** for instant updates:
+
+```typescript
+export function useTranslation() {
+  // Reactive locale state - triggers re-renders
+  const [locale, setLocaleState] = useState<Locale>(() => getCurrentLocale());
+
+  // Subscribe to locale changes on mount
+  useEffect(() => {
+    const listener = (newLocale: Locale) => {
+      setLocaleState(newLocale); // Triggers component re-render
+    };
+
+    addLocaleChangeListener(listener);
+
+    // Cleanup: remove listener on unmount
+    return () => {
+      removeLocaleChangeListener(listener);
+    };
+  }, []); // Empty deps - subscribe once
+
+  // Recreate t function when locale changes
+  const t = useCallback(
+    (key: string, params?: Record<string, string | number>) => {
+      return translate(key, params);
+    },
+    [locale], // Recreates when locale changes
+  );
+
+  return { t, locale };
+}
+```
+
+**How it works:**
+1. **Component mounts** → subscribes to locale change events
+2. **User runs `/language zh-CN`** → `setLocale("zh-CN")` called
+3. **i18n module** → calls all registered listeners
+4. **Hook's listener** → calls `setLocaleState("zh-CN")`
+5. **React** → re-renders component with new translations
+6. **Component unmounts** → cleanup removes listener (no memory leak)
+
+**Components using `useTranslation` (all update instantly):**
+- `Header.tsx` - Mode indicator and hints
+- `MessageOutput.tsx` - Scroll hints and group line counts
+- `HelpPanel.tsx` - Keyboard shortcut descriptions
+- `Welcome.tsx` - Welcome screen text
 
 ### Translation File Format
 
@@ -2887,10 +2965,13 @@ Users can manually switch languages at runtime using the `/language` slash comma
 - When language is switched via `/language` command:
   1. `setLocale()` updates the current locale
   2. All registered locale change listeners are notified
-  3. Command cache is cleared (via listener in `commands.ts`)
-  4. Success message is displayed in the NEW language
-  5. Next slash command menu will show in the new language
-  6. UI elements will update progressively (header, help panel, etc.)
+  3. Components using `useTranslation` re-render **instantly**:
+     - Header updates mode indicator and hints
+     - MessageOutput updates scroll hints
+     - Help panel (if open) updates keyboard shortcuts
+  4. Command cache is cleared (via listener in `commands.ts`)
+  5. Success message is displayed in the NEW language
+  6. Next slash command menu will show translated commands
 
 **Translation Keys** (in both `en.json` and `zh-CN.json`):
 ```json
@@ -2906,11 +2987,12 @@ Users can manually switch languages at runtime using the `/language` slash comma
     }
   },
   "commandHandler": {
-    "languageSwitched": "Language switched to: {{language}}" / "已切换语言至：{{language}}",
-    "languageReloadHint": "Note: Some UI elements will update on next command." / "注意：部分界面元素将在下次命令时更新。"
+    "languageSwitched": "Language switched to: {{language}}" / "已切换语言至：{{language}}"
   }
 }
 ```
+
+**Note**: The `languageReloadHint` key was removed since all UI now updates instantly.
 
 ### Testing i18n
 
@@ -2930,9 +3012,21 @@ LANG=zh_CN.UTF-8 npm start
 npm start
 
 # Type in the app:
-/language en      # Switch to English
-/language zh-CN   # Switch to Chinese
+/language zh-CN   # Instantly switches all UI to Chinese
+/language en      # Instantly switches all UI to English
+
+# Verify instant updates:
+# - Header mode indicator changes immediately
+# - Type / to see translated command descriptions
+# - Type ? to see translated keyboard shortcuts
+# - Scroll messages to see translated hints
 ```
+
+**Expected behavior:**
+- All visible UI text updates **immediately** when language is switched
+- No "will update later" message is shown
+- Command menu shows translated descriptions on next open
+- Scroll hints, headers, and help panel update without any user action
 
 **Test locale detection**:
 ```bash
