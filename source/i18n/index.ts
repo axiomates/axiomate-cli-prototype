@@ -48,23 +48,19 @@ function notifyLocaleChange(newLocale: Locale): void {
 }
 
 /**
- * Detect system locale from environment variables
- * Falls back to English if no match
+ * Detect system locale using Intl API (cross-platform)
+ * Falls back to English if no match or unsupported locale
  */
 export function detectSystemLocale(): Locale {
-	const lang =
-		process.env.LANG ||
-		process.env.LANGUAGE ||
-		process.env.LC_ALL ||
-		process.env.LC_MESSAGES ||
-		"";
-
-	// Match Chinese locales
-	if (lang.startsWith("zh")) {
-		return "zh-CN";
+	try {
+		const systemLocale = Intl.DateTimeFormat().resolvedOptions().locale;
+		if (systemLocale.startsWith("zh")) {
+			return "zh-CN";
+		}
+	} catch {
+		// Intl API not available, fall through to default
 	}
 
-	// Default to English
 	return "en";
 }
 

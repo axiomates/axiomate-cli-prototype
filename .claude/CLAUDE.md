@@ -2812,18 +2812,18 @@ export function useTranslation() {
 
 ### Locale Detection Logic
 
-**Detection Order** (`detectSystemLocale()`):
-1. Check `process.env.LANG`
-2. Check `process.env.LANGUAGE`
-3. Check `process.env.LC_ALL`
-4. Check `process.env.LC_MESSAGES`
-5. Match Chinese locales (`zh*` → `"zh-CN"`)
-6. Default to English (`"en"`)
+**Cross-Platform Detection** (`detectSystemLocale()`):
+
+Uses `Intl.DateTimeFormat().resolvedOptions().locale` for cross-platform locale detection:
+- Works on Windows, macOS, and Linux without any environment setup
+- Match Chinese locales (`zh*` → `"zh-CN"`)
+- Default to English (`"en"`) for unsupported locales
 
 **Examples**:
-- `LANG=zh_CN.UTF-8` → `"zh-CN"`
-- `LANG=en_US.UTF-8` → `"en"`
-- `LANG=ja_JP.UTF-8` → `"en"` (fallback)
+- System locale `zh-CN` → `"zh-CN"`
+- System locale `zh-TW` → `"zh-CN"`
+- System locale `en-US` → `"en"`
+- System locale `ja-JP` → `"en"` (fallback, Japanese not supported yet)
 
 ### Translated Components
 

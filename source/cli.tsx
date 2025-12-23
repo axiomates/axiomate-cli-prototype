@@ -11,7 +11,7 @@ import { initLocalSettings } from "./utils/localsettings.js";
 import { initPlatform } from "./utils/platform.js";
 import { initApp, type InitResult } from "./utils/init.js";
 import { pauseInput } from "./utils/stdin.js";
-import { initI18n } from "./i18n/index.js";
+import { initI18n, t } from "./i18n/index.js";
 
 // 暂停 stdin，Splash 阶段不接受任何输入
 pauseInput();
@@ -60,7 +60,7 @@ Options:
 // 两阶段渲染：先显示 Splash，初始化完成后切换到 App
 async function main() {
 	// 阶段 1: 渲染 Splash
-	let currentMessage = "Loading...";
+	let currentMessage = t("splash.loading");
 	const splashInstance = render(<Splash message={currentMessage} />);
 
 	// 异步初始化，更新进度
