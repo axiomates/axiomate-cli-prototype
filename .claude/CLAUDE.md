@@ -2663,6 +2663,33 @@ const msg = t("ai.contextWarning", { percent: "85" });
 // Chinese: "⚠️ 上下文使用率达 85%，自动压缩中..."
 ```
 
+**Locale Change Listeners**:
+
+The i18n system supports locale change listeners to react to language switches:
+
+```typescript
+import { addLocaleChangeListener, removeLocaleChangeListener, type Locale } from "./i18n/index.js";
+
+// Add a listener
+const listener = (newLocale: Locale) => {
+  console.log(`Language changed to: ${newLocale}`);
+  // Clear caches, update UI, etc.
+};
+
+addLocaleChangeListener(listener);
+
+// Remove a listener
+removeLocaleChangeListener(listener);
+```
+
+**Usage in constants/commands.ts**:
+```typescript
+// Automatically clear command cache when language changes
+addLocaleChangeListener(() => {
+  cachedCommands = null;  // Force regeneration with new translations
+});
+```
+
 ### React Hook
 
 For React components, use `useTranslation`:
@@ -2802,6 +2829,89 @@ This is required when `"module": "NodeNext"` in `tsconfig.json`.
 5. **Preserve formatting** - Maintain markdown, colors, and special characters
 6. **Split for coloring** - Split strings if parts need different colors (e.g., Header hint)
 
+### Manual Language Switching
+
+Users can manually switch languages at runtime using the `/language` slash command:
+
+**Command Structure**:
+```
+/language
+  /en        - Switch to English
+  /zh-CN     - Switch to Simplified Chinese (切换到简体中文)
+```
+
+**Implementation** ([constants/commands.ts](source/constants/commands.ts#L51-L66)):
+```typescript
+{
+  name: "language",
+  description: t("commands.language.description"),
+  children: [
+    {
+      name: "en",
+      description: t("commands.language.enDesc"),
+      action: { type: "internal", handler: "language_en" },
+    },
+    {
+      name: "zh-CN",
+      description: t("commands.language.zhCNDesc"),
+      action: { type: "internal", handler: "language_zh-CN" },
+    },
+  ],
+}
+```
+
+**Command Handlers** ([commandHandler.ts](source/services/commandHandler.ts#L169-L188)):
+```typescript
+"language_en": () => {
+  setLocale("en");
+  return {
+    type: "message" as const,
+    content:
+      t("commandHandler.languageSwitched", { language: "English" }) +
+      `\n${t("commandHandler.languageReloadHint")}`,
+  };
+},
+
+"language_zh-CN": () => {
+  setLocale("zh-CN");
+  return {
+    type: "message" as const,
+    content:
+      t("commandHandler.languageSwitched", { language: "简体中文" }) +
+      `\n${t("commandHandler.languageReloadHint")}`,
+  };
+},
+```
+
+**Behavior**:
+- When language is switched via `/language` command:
+  1. `setLocale()` updates the current locale
+  2. All registered locale change listeners are notified
+  3. Command cache is cleared (via listener in `commands.ts`)
+  4. Success message is displayed in the NEW language
+  5. Next slash command menu will show in the new language
+  6. UI elements will update progressively (header, help panel, etc.)
+
+**Translation Keys** (in both `en.json` and `zh-CN.json`):
+```json
+{
+  "commands": {
+    "language": {
+      "name": "language",
+      "description": "Switch interface language" / "切换界面语言",
+      "en": "en",
+      "enDesc": "English" / "English（英文）",
+      "zhCN": "zh-CN",
+      "zhCNDesc": "简体中文 (Simplified Chinese)" / "简体中文"
+    }
+  },
+  "commandHandler": {
+    "languageSwitched": "Language switched to: {{language}}" / "已切换语言至：{{language}}",
+    "languageReloadHint": "Note: Some UI elements will update on next command." / "注意：部分界面元素将在下次命令时更新。"
+  }
+}
+```
+
 ### Testing i18n
 
 **Test English**:
@@ -2812,6 +2922,16 @@ LANG=en_US.UTF-8 npm start
 **Test Chinese**:
 ```bash
 LANG=zh_CN.UTF-8 npm start
+```
+
+**Test Runtime Language Switching**:
+```bash
+# Start in any language
+npm start
+
+# Type in the app:
+/language en      # Switch to English
+/language zh-CN   # Switch to Chinese
 ```
 
 **Test locale detection**:
