@@ -1,0 +1,167 @@
+{
+	"app": {
+		"inputMode": "输入",
+		"browseMode": "浏览",
+		"modeSwitchHint": "Shift+↑↓",
+		"headerHintType": "输入",
+		"headerHintForCommands": "打开命令，",
+		"headerHintForShortcuts": "显示快捷键"
+	},
+	"welcome": {
+		"title": "欢迎使用 axiomate！",
+		"testVersion": "[测试版本]",
+		"testVersionDesc": "已预配置测试用 AI API 密钥。",
+		"pressAnyKey": "按任意键完成配置...",
+		"configuring": "配置中...",
+		"restarting": "重启中..."
+	},
+	"splash": {
+		"loading": "加载中...",
+		"discoveringTools": "发现工具...",
+		"loadingAI": "加载 AI 配置..."
+	},
+	"input": {
+		"placeholder": "输入消息或 / 打开命令...",
+		"slashMenuTitle": "命令列表",
+		"fileMenuTitle": "选择文件",
+		"helpPanelTitle": "键盘快捷键",
+		"typeToFilter": "输入以过滤...",
+		"noMatches": "无匹配项"
+	},
+	"help": {
+		"navigation": "导航",
+		"actions": "操作",
+		"modes": "特殊模式",
+		"enterSubmit": "Enter - 发送消息",
+		"upDownHistory": "↑/↓ - 浏览历史（输入模式）",
+		"leftRightCursor": "←/→ - 移动光标",
+		"tabComplete": "Tab - 自动完成",
+		"ctrlCExit": "Ctrl+C - 退出",
+		"slashCommands": "打开命令",
+		"atFiles": "选择文件",
+		"questionHelp": "? - 显示帮助",
+		"shiftUpDownMode": "Shift+↑/↓ - 切换焦点模式",
+		"browseUpDown": "↑/↓ - 滚动（浏览模式）",
+		"pageUpDown": "PageUp/PageDown - 翻页",
+		"enterToggle": "Enter - 展开/折叠分组",
+		"eExpand": "e - 展开全部",
+		"cCollapse": "c - 折叠全部",
+		"ctrlEnter": "换行",
+		"ctrlA": "跳转到行首",
+		"ctrlE": "跳转到行尾",
+		"ctrlU": "清除光标前内容",
+		"ctrlK": "清除光标后内容",
+		"upDownBrowse": "浏览历史",
+		"enterConfirm": "确认",
+		"pageUpDownScroll": "滚动输出",
+		"escapeBack": "返回 / 取消",
+		"shiftUpDownSwitch": "切换输入/浏览模式",
+		"ecExpandCollapse": "展开/折叠分组（浏览模式）",
+		"swSelectGroups": "在分组间切换（浏览模式）"
+	},
+	"commands": {
+		"model": {
+			"name": "model",
+			"description": "切换 AI 模型"
+		},
+		"tools": {
+			"name": "tools",
+			"description": "管理本地开发工具",
+			"list": "list",
+			"listDesc": "列出所有已发现的工具",
+			"refresh": "refresh",
+			"refreshDesc": "重新发现工具",
+			"stats": "stats",
+			"statsDesc": "显示工具统计信息"
+		},
+		"compact": {
+			"name": "compact",
+			"description": "总结并压缩对话上下文"
+		},
+		"new": {
+			"name": "new",
+			"description": "开始新会话（丢弃当前上下文）"
+		},
+		"clear": {
+			"name": "clear",
+			"description": "清空屏幕（保留会话上下文）"
+		},
+		"stop": {
+			"name": "stop",
+			"description": "停止当前 AI 处理并清空消息队列"
+		},
+		"exit": {
+			"name": "exit",
+			"description": "退出应用"
+		}
+	},
+	"commandHandler": {
+		"unknownCommand": "未知命令",
+		"modelSwitched": "已切换模型至：{{model}}",
+		"modelCapabilities": "功能",
+		"modelProtocol": "协议",
+		"sessionCleared": "屏幕已清空。",
+		"newSession": "已开始新会话。",
+		"stopSuccess": "已停止 AI 处理。清除了 {{count}} 条排队消息。",
+		"stopNone": "没有正在进行的 AI 处理。",
+		"compactNotEnough": "对话内容不足，无需压缩。",
+		"compactInProgress": "⏳ 正在压缩对话...",
+		"compactSuccess": "✅ 对话压缩成功。",
+		"compactFailed": "对话压缩失败：{{error}}",
+		"toolsRefreshing": "🔄 重新发现工具中...",
+		"toolsRefreshed": "✅ 工具已刷新。发现 {{count}} 个工具。"
+	},
+	"ai": {
+		"notConfigured": "AI 服务未配置，请检查 API 设置。",
+		"contextWarning": "⚠️ 上下文使用率达 {{percent}}%，自动压缩中...",
+		"autoCompacting": "自动压缩对话上下文中...",
+		"fileTruncated": "文件内容已截断。{{message}}",
+		"streamError": "流式传输出错：{{error}}",
+		"toolExecuting": "执行工具：{{tool}}",
+		"toolSuccess": "工具执行成功",
+		"toolError": "工具执行失败：{{error}}"
+	},
+	"messageOutput": {
+		"scrollUp": "↑ 上方有更多内容",
+		"scrollDown": "↓ 下方有更多内容",
+		"moreAbove": "... 上方还有 {{count}} 行 ...",
+		"moreBelow": "... 下方还有 {{count}} 行 ...",
+		"collapsed": "（{{count}} 行）",
+		"linesCount": "{{count}} 行"
+	},
+	"errors": {
+		"fileNotFound": "文件未找到：{{path}}",
+		"readError": "读取文件出错：{{path}}",
+		"parseError": "解析错误：{{message}}",
+		"networkError": "网络错误：{{message}}",
+		"apiError": "API 错误：{{message}}"
+	},
+	"toolCategories": {
+		"vcs": "版本控制",
+		"runtime": "运行时",
+		"shell": "Shell",
+		"ide": "IDE",
+		"diff": "差异工具",
+		"container": "容器",
+		"build": "构建工具",
+		"database": "数据库",
+		"other": "其他"
+	},
+	"common": {
+		"yes": "是",
+		"no": "否",
+		"ok": "确定",
+		"cancel": "取消",
+		"retry": "重试",
+		"loading": "加载中",
+		"error": "错误",
+		"success": "成功",
+		"warning": "警告",
+		"info": "信息",
+		"file": "文件",
+		"directory": "目录",
+		"installed": "已安装",
+		"notInstalled": "未安装",
+		"version": "版本"
+	}
+}

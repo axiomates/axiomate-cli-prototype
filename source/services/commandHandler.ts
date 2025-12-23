@@ -11,6 +11,7 @@ import { SLASH_COMMANDS } from "../constants/commands.js";
 import { getToolRegistry } from "./tools/registry.js";
 import { getModelById } from "../constants/models.js";
 import { setCurrentModelId } from "../utils/config.js";
+import { t } from "../i18n/index.js";
 
 /**
  * 内部命令处理器映射
@@ -109,7 +110,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 			const registry = getToolRegistry();
 			await registry.discover();
 			const stats = registry.getStats();
-			return `已重新扫描工具。\n已安装: ${stats.installed} 个\n未安装: ${stats.notInstalled} 个`;
+			return t("commandHandler.toolsRefreshed", { count: stats.installed });
 		},
 	}),
 
@@ -122,15 +123,14 @@ const internalHandlers: Record<string, InternalHandler> = {
 			}
 			const stats = registry.getStats();
 			const lines = [
-				`## 工具统计`,
-				`- 总计: ${stats.total} 个`,
-				`- 已安装: ${stats.installed} 个`,
-				`- 未安装: ${stats.notInstalled} 个`,
+				`## ${t("common.info")}`,
+				`- ${t("common.installed")}: ${stats.installed}`,
+				`- ${t("common.notInstalled")}: ${stats.notInstalled}`,
 				``,
-				`### 按类别统计（已安装）`,
+				`### ${t("toolCategories.other")}`,
 			];
 			for (const [category, count] of Object.entries(stats.byCategory)) {
-				lines.push(`- ${category}: ${count} 个`);
+				lines.push(`- ${category}: ${count}`);
 			}
 			return lines.join("\n");
 		},
@@ -141,12 +141,12 @@ const internalHandlers: Record<string, InternalHandler> = {
 		// path = ["model", "gpt-4o"] -> modelId = "gpt-4o"
 		const modelId = path[path.length - 1];
 		if (!modelId) {
-			return { type: "error" as const, message: "未指定模型" };
+			return { type: "error" as const, message: t("commandHandler.unknownCommand") };
 		}
 
 		const model = getModelById(modelId);
 		if (!model) {
-			return { type: "error" as const, message: `未知模型: ${modelId}` };
+			return { type: "error" as const, message: t("commandHandler.unknownCommand") };
 		}
 
 		// 保存到配置
@@ -158,7 +158,11 @@ const internalHandlers: Record<string, InternalHandler> = {
 
 		return {
 			type: "message" as const,
-			content: `已切换到 **${model.name}** (${model.id})\n\nCapabilities: ${capabilities.join(", ") || "none"}\nProtocol: ${model.protocol}`,
+			content:
+				t("commandHandler.modelSwitched", {
+					model: `**${model.name}** (${model.id})`,
+				}) +
+				`\n\n${t("commandHandler.modelCapabilities")}: ${capabilities.join(", ") || "none"}\n${t("commandHandler.modelProtocol")}: ${model.protocol}`,
 		};
 	},
 };

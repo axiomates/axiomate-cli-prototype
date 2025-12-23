@@ -11,6 +11,7 @@ import { initLocalSettings } from "./utils/localsettings.js";
 import { initPlatform } from "./utils/platform.js";
 import { initApp, type InitResult } from "./utils/init.js";
 import { pauseInput } from "./utils/stdin.js";
+import { initI18n } from "./i18n/index.js";
 
 // 暂停 stdin，Splash 阶段不接受任何输入
 pauseInput();
@@ -20,6 +21,7 @@ initConfig();
 initAppData();
 initLocalSettings();
 initPlatform(); // 平台相关初始化（Windows Terminal 配置等）
+initI18n(); // 初始化 i18n（自动检测系统语言）
 
 const cli = meow({
 	importMeta: import.meta,

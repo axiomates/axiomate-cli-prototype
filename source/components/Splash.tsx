@@ -10,17 +10,20 @@
 import { Text } from "ink";
 import { APP_NAME, VERSION } from "../constants/meta.js";
 import { THEME_LIGHT_YELLOW, THEME_PINK } from "../constants/colors.js";
+import { t } from "../i18n/index.js";
 
 type Props = {
 	message?: string;
 };
 
-export default function Splash({ message = "Loading..." }: Props) {
+export default function Splash({ message }: Props) {
+	const displayMessage = message || t("splash.loading");
+
 	return (
 		<Text bold>
 			<Text color={THEME_PINK}>{APP_NAME}</Text>
 			<Text color={THEME_LIGHT_YELLOW}> v{VERSION}</Text>
-			<Text dimColor> {message}</Text>
+			<Text dimColor> {displayMessage}</Text>
 		</Text>
 	);
 }

@@ -33,6 +33,7 @@ import {
 } from "./services/ai/messageQueue.js";
 import type { InitResult } from "./utils/init.js";
 import { resumeInput } from "./utils/stdin.js";
+import { t } from "./i18n/index.js";
 
 /**
  * 应用焦点模式
@@ -134,7 +135,7 @@ export default function App({ initResult }: Props) {
 		): Promise<string> => {
 			const aiService = aiServiceRef.current;
 			if (!aiService) {
-				throw new Error("AI 服务未配置");
+				throw new Error(t("ai.notConfigured"));
 			}
 
 			const cwd = process.cwd();
@@ -168,7 +169,9 @@ export default function App({ initResult }: Props) {
 				setMessages((prev) => [
 					...prev,
 					{
-						content: `⚠️ Context usage at ${compactCheck.usagePercent.toFixed(0)}%, auto-compacting...`,
+						content: t("ai.contextWarning", {
+							percent: compactCheck.usagePercent.toFixed(0),
+						}),
 						type: "system" as const,
 						markdown: false,
 					},
@@ -233,8 +236,8 @@ export default function App({ initResult }: Props) {
 			onStopped: (queuedCount) => {
 				const msg =
 					queuedCount > 0
-						? `Stopped. Cleared ${queuedCount} queued message(s).`
-						: "Stopped.";
+						? t("commandHandler.stopSuccess", { count: queuedCount })
+						: t("commandHandler.stopNone");
 				// 如果有正在流式生成的消息，标记为结束
 				setMessages((prev) => {
 					const lastMsg = prev[prev.length - 1];
@@ -345,7 +348,7 @@ export default function App({ initResult }: Props) {
 			if (!aiServiceRef.current) {
 				setMessages((prev) => [
 					...prev,
-					{ content: "AI 服务未配置，请检查 API 设置", markdown: false },
+					{ content: t("ai.notConfigured"), markdown: false },
 				]);
 				return;
 			}
@@ -354,7 +357,7 @@ export default function App({ initResult }: Props) {
 			if (!messageQueueRef.current) {
 				setMessages((prev) => [
 					...prev,
-					{ content: "消息队列未初始化", markdown: false },
+					{ content: "Message queue not initialized", markdown: false },
 				]);
 				return;
 			}
@@ -395,7 +398,7 @@ export default function App({ initResult }: Props) {
 		if (aiServiceRef.current) {
 			aiServiceRef.current.clearHistory();
 		}
-		setMessages([{ content: "Started a new session.", type: "system" }]);
+		setMessages([{ content: t("commandHandler.newSession"), type: "system" }]);
 	}, []);
 
 	// 执行 compact（总结并压缩会话）
@@ -405,7 +408,7 @@ export default function App({ initResult }: Props) {
 			setMessages((prev) => [
 				...prev,
 				{
-					content: "AI service not configured.",
+					content: t("ai.notConfigured"),
 					type: "system",
 					markdown: false,
 				},
@@ -420,10 +423,7 @@ export default function App({ initResult }: Props) {
 			setMessages((prev) => [
 				...prev,
 				{
-					content:
-						compactCheck.realMessageCount === 0
-							? "No conversation to compact."
-							: "Not enough conversation to compact (need at least 2 messages).",
+					content: t("commandHandler.compactNotEnough"),
 					type: "system",
 					markdown: false,
 				},
@@ -435,7 +435,7 @@ export default function App({ initResult }: Props) {
 		setMessages((prev) => [
 			...prev,
 			{
-				content: "⏳ Compacting conversation...",
+				content: t("commandHandler.compactInProgress"),
 				type: "system",
 				markdown: false,
 			},
@@ -454,7 +454,7 @@ export default function App({ initResult }: Props) {
 			setMessages([
 				{
 					content:
-						"✅ Conversation compacted successfully.\n\n---\n\n" + summary,
+						t("commandHandler.compactSuccess") + "\n\n---\n\n" + summary,
 					type: "system",
 				},
 			]);
@@ -462,7 +462,9 @@ export default function App({ initResult }: Props) {
 			setMessages((prev) => [
 				...prev,
 				{
-					content: `Error during compact: ${error instanceof Error ? error.message : String(error)}`,
+					content: t("commandHandler.compactFailed", {
+						error: error instanceof Error ? error.message : String(error),
+					}),
 					type: "system",
 					markdown: false,
 				},

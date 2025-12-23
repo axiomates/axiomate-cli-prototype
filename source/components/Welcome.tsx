@@ -15,6 +15,7 @@ import useTerminalHeight from "../hooks/useTerminalHeight.js";
 import { updateConfig } from "../utils/config.js";
 import { restartApp } from "../utils/platform.js";
 import { resumeInput } from "../utils/stdin.js";
+import { useTranslation } from "../hooks/useTranslation.js";
 import Divider from "./Divider.js";
 
 // 测试模式预设值（未来替换为用户注册登录）
@@ -28,6 +29,7 @@ type Props = {
 
 export default function Welcome({ onComplete }: Props) {
 	const terminalHeight = useTerminalHeight();
+	const { t } = useTranslation();
 	const [status, setStatus] = useState<"welcome" | "configuring" | "done">(
 		"welcome",
 	);
@@ -72,8 +74,8 @@ export default function Welcome({ onComplete }: Props) {
 	// 状态文本
 	const statusText = {
 		welcome: "",
-		configuring: "Configuring...",
-		done: "Restarting...",
+		configuring: t("welcome.configuring"),
+		done: t("welcome.restarting"),
 	}[status];
 
 	return (
@@ -100,13 +102,11 @@ export default function Welcome({ onComplete }: Props) {
 				gap={1}
 			>
 				<Text bold color={THEME_PINK}>
-					Welcome to axiomate!
+					{t("welcome.title")}
 				</Text>
 				<Box flexDirection="column" alignItems="center">
-					<Text color={THEME_LIGHT_YELLOW}>[Test Version]</Text>
-					<Text dimColor>
-						A pre-configured AI API key is included for testing.
-					</Text>
+					<Text color={THEME_LIGHT_YELLOW}>{t("welcome.testVersion")}</Text>
+					<Text dimColor>{t("welcome.testVersionDesc")}</Text>
 				</Box>
 			</Box>
 
@@ -117,7 +117,7 @@ export default function Welcome({ onComplete }: Props) {
 
 			{/* 底部状态栏 */}
 			<Box flexShrink={0} justifyContent="space-between" width="100%">
-				<Text color="green">Press any key to complete setup...</Text>
+				<Text color="green">{t("welcome.pressAnyKey")}</Text>
 				{statusText && <Text color="yellow">{statusText}</Text>}
 			</Box>
 		</Box>

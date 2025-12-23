@@ -119,9 +119,16 @@ source/
 │           ├── inprocess.ts   # InProcessMcpProvider class
 │           └── stdio.ts       # STDIO transport setup
 ├── mcp-server.ts              # Standalone MCP server entry point
+├── i18n/                      # Internationalization (i18n)
+│   ├── types.ts               # Locale, Translations type definitions
+│   ├── index.ts               # i18n core (detectSystemLocale, initI18n, t)
+│   └── locales/               # Translation files
+│       ├── en.json            # English translations
+│       └── zh-CN.json         # Simplified Chinese translations
 ├── hooks/
 │   ├── useTerminalWidth.ts    # Terminal width hook
-│   └── useTerminalHeight.ts   # Terminal height hook
+│   ├── useTerminalHeight.ts   # Terminal height hook
+│   └── useTranslation.ts      # i18n React hook
 ├── utils/
 │   ├── config.ts              # User config (~/.axiomate.json)
 │   ├── appdata.ts             # App data directories (~/.axiomate/)
@@ -141,7 +148,7 @@ The application uses a **three-phase rendering** architecture with first-time us
 ```
 cli.tsx (entry point)
     │
-    ├── Sync init: initConfig(), initAppData(), initLocalSettings(), initPlatform()
+    ├── Sync init: initConfig(), initAppData(), initLocalSettings(), initPlatform(), initI18n()
     │
     ├── Phase 1: render(<Splash />)
     │   └── initApp() with progress callback
@@ -2605,3 +2612,209 @@ content: delta.content || delta.reasoning_content || ""
 
 1. **Conversation Persistence**: Save/restore conversation history across sessions
 2. **Multi-model Routing**: Route different queries to different models based on complexity
+
+## Internationalization (i18n)
+
+The application supports multiple languages with automatic system locale detection.
+
+### Supported Languages
+
+- **English** (`en`) - Default fallback
+- **Simplified Chinese** (`zh-CN`)
+
+### Architecture
+
+The i18n system uses a **zero-dependency** implementation with:
+- System locale auto-detection via environment variables (`LANG`, `LANGUAGE`, `LC_ALL`, `LC_MESSAGES`)
+- Nested key path support (e.g., `"app.inputMode"`)
+- Template variable substitution (e.g., `{{percent}}`, `{{model}}`)
+- Automatic fallback to English for missing translations
+
+### Directory Structure
+
+```
+source/i18n/
+├── types.ts          # Type definitions (Locale, Translations)
+├── index.ts          # Core i18n implementation
+└── locales/
+    ├── en.json       # English translations
+    └── zh-CN.json    # Simplified Chinese translations
+```
+
+### Core API
+
+**Initialization** (`source/i18n/index.ts`):
+```typescript
+// Detect and initialize with system locale
+const locale = initI18n();  // Returns "en" or "zh-CN"
+
+// Get current locale
+const current = getCurrentLocale();
+
+// Manually set locale
+setLocale("zh-CN");
+
+// Translation function
+const text = t("welcome.title");  // "Welcome to axiomate!" or "欢迎使用 axiomate！"
+
+// With parameters
+const msg = t("ai.contextWarning", { percent: "85" });
+// English: "⚠️ Context usage at 85%, auto-compacting..."
+// Chinese: "⚠️ 上下文使用率达 85%，自动压缩中..."
+```
+
+### React Hook
+
+For React components, use `useTranslation`:
+
+```typescript
+import { useTranslation } from "../hooks/useTranslation.js";
+
+function MyComponent() {
+  const { t, locale } = useTranslation();
+
+  return <Text>{t("app.inputMode")}</Text>;
+}
+```
+
+### Translation File Format
+
+**Structure** (`locales/en.json`, `locales/zh-CN.json`):
+```json
+{
+  "app": {
+    "inputMode": "Input",
+    "browseMode": "Browse",
+    "headerHintType": "Type",
+    "headerHintForCommands": "for commands,",
+    "headerHintForShortcuts": "for shortcuts"
+  },
+  "welcome": {
+    "title": "Welcome to axiomate!",
+    "testVersion": "[Test Version]"
+  },
+  "commands": {
+    "model": {
+      "description": "Switch AI model"
+    }
+  },
+  "commandHandler": {
+    "modelSwitched": "Model switched to: {{model}}",
+    "stopSuccess": "Stopped AI processing. Cleared {{count}} queued message(s)."
+  }
+}
+```
+
+### Locale Detection Logic
+
+**Detection Order** (`detectSystemLocale()`):
+1. Check `process.env.LANG`
+2. Check `process.env.LANGUAGE`
+3. Check `process.env.LC_ALL`
+4. Check `process.env.LC_MESSAGES`
+5. Match Chinese locales (`zh*` → `"zh-CN"`)
+6. Default to English (`"en"`)
+
+**Examples**:
+- `LANG=zh_CN.UTF-8` → `"zh-CN"`
+- `LANG=en_US.UTF-8` → `"en"`
+- `LANG=ja_JP.UTF-8` → `"en"` (fallback)
+
+### Translated Components
+
+All user-facing text is translated:
+
+**UI Components**:
+- `Splash.tsx` - Startup splash screen
+- `Welcome.tsx` - First-time user welcome page
+- `Header.tsx` - Application header with hints
+- `HelpPanel.tsx` - Keyboard shortcuts help
+
+**System Messages**:
+- Command descriptions (`constants/commands.ts`)
+- Command handler messages (`services/commandHandler.ts`)
+- App notifications (`app.tsx`)
+- AI service messages
+
+**Special Handling**:
+- Command descriptions use lazy-loaded Proxy for runtime translation
+- Header hint uses colored components for `/` and `?` symbols
+- Model switch messages include dynamic model names
+
+### Adding New Languages
+
+1. **Create translation file**:
+   ```bash
+   # Add source/i18n/locales/fr.json
+   ```
+
+2. **Update Locale type** (`source/i18n/types.ts`):
+   ```typescript
+   export type Locale = "en" | "zh-CN" | "fr";
+   ```
+
+3. **Import and register** (`source/i18n/index.ts`):
+   ```typescript
+   import frTranslations from "./locales/fr.json" with { type: "json" };
+
+   const translations: Record<Locale, Translations> = {
+     en: enTranslations as Translations,
+     "zh-CN": zhCNTranslations as Translations,
+     fr: frTranslations as Translations,
+   };
+   ```
+
+4. **Update detection logic** (if needed):
+   ```typescript
+   export function detectSystemLocale(): Locale {
+     const lang = process.env.LANG || "";
+     if (lang.startsWith("zh")) return "zh-CN";
+     if (lang.startsWith("fr")) return "fr";
+     return "en";  // Default
+   }
+   ```
+
+### JSON Import Note
+
+Translation files use **import assertions** for JSON imports (TypeScript NodeNext):
+
+```typescript
+import enTranslations from "./locales/en.json" with { type: "json" };
+```
+
+This is required when `"module": "NodeNext"` in `tsconfig.json`.
+
+### Key Naming Conventions
+
+- Use **nested structure** for organization
+- Use **camelCase** for keys
+- Group by **feature/component**: `app.*`, `welcome.*`, `commands.*`
+- Use descriptive names: `headerHintForCommands` instead of `hint1`
+- System messages go in `commandHandler.*`, `ai.*`, `errors.*`
+- Common terms go in `common.*`
+
+### Best Practices
+
+1. **Never hardcode user-facing text** - Always use translation keys
+2. **Test both languages** - Run app with different `LANG` settings
+3. **Keep translations in sync** - When adding keys to `en.json`, also add to `zh-CN.json`
+4. **Use template variables** - For dynamic content like `{{count}}`, `{{model}}`
+5. **Preserve formatting** - Maintain markdown, colors, and special characters
+6. **Split for coloring** - Split strings if parts need different colors (e.g., Header hint)
+
+### Testing i18n
+
+**Test English**:
+```bash
+LANG=en_US.UTF-8 npm start
+```
+
+**Test Chinese**:
+```bash
+LANG=zh_CN.UTF-8 npm start
+```
+
+**Test locale detection**:
+```bash
+node -e "import('./dist/i18n/index.js').then(m => console.log(m.detectSystemLocale()))"
+```

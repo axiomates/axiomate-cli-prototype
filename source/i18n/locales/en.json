@@ -1,0 +1,167 @@
+{
+	"app": {
+		"inputMode": "Input",
+		"browseMode": "Browse",
+		"modeSwitchHint": "Shift+↑↓",
+		"headerHintType": "Type",
+		"headerHintForCommands": "for commands,",
+		"headerHintForShortcuts": "for shortcuts"
+	},
+	"welcome": {
+		"title": "Welcome to axiomate!",
+		"testVersion": "[Test Version]",
+		"testVersionDesc": "A pre-configured AI API key is included for testing.",
+		"pressAnyKey": "Press any key to complete setup...",
+		"configuring": "Configuring...",
+		"restarting": "Restarting..."
+	},
+	"splash": {
+		"loading": "Loading...",
+		"discoveringTools": "Discovering tools...",
+		"loadingAI": "Loading AI config..."
+	},
+	"input": {
+		"placeholder": "Type a message or / for commands...",
+		"slashMenuTitle": "Commands",
+		"fileMenuTitle": "Select File",
+		"helpPanelTitle": "Keyboard Shortcuts",
+		"typeToFilter": "Type to filter...",
+		"noMatches": "No matches"
+	},
+	"help": {
+		"navigation": "Navigation",
+		"actions": "Actions",
+		"modes": "Special Modes",
+		"enterSubmit": "Enter - Submit message",
+		"upDownHistory": "↑/↓ - Navigate history (input mode)",
+		"leftRightCursor": "←/→ - Move cursor",
+		"tabComplete": "Tab - Autocomplete",
+		"ctrlCExit": "Ctrl+C - Exit",
+		"slashCommands": "for commands",
+		"atFiles": "to select files",
+		"questionHelp": "? - Show help",
+		"shiftUpDownMode": "Shift+↑/↓ - Switch focus mode",
+		"browseUpDown": "↑/↓ - Scroll (browse mode)",
+		"pageUpDown": "PageUp/PageDown - Scroll page",
+		"enterToggle": "Enter - Expand/collapse group",
+		"eExpand": "e - Expand all",
+		"cCollapse": "c - Collapse all",
+		"ctrlEnter": "new line",
+		"ctrlA": "move to start",
+		"ctrlE": "move to end",
+		"ctrlU": "clear before cursor",
+		"ctrlK": "clear after cursor",
+		"upDownBrowse": "browse history",
+		"enterConfirm": "Confirm",
+		"pageUpDownScroll": "scroll output",
+		"escapeBack": "go back / cancel",
+		"shiftUpDownSwitch": "switch Input/View mode",
+		"ecExpandCollapse": "expand/collapse groups (View mode)",
+		"swSelectGroups": "select between groups (View mode)"
+	},
+	"commands": {
+		"model": {
+			"name": "model",
+			"description": "Switch AI model"
+		},
+		"tools": {
+			"name": "tools",
+			"description": "Manage local development tools",
+			"list": "list",
+			"listDesc": "List all discovered tools",
+			"refresh": "refresh",
+			"refreshDesc": "Re-discover tools",
+			"stats": "stats",
+			"statsDesc": "Show tool statistics"
+		},
+		"compact": {
+			"name": "compact",
+			"description": "Summarize and compress conversation context"
+		},
+		"new": {
+			"name": "new",
+			"description": "Start a new session (discard current context)"
+		},
+		"clear": {
+			"name": "clear",
+			"description": "Clear screen only (keeps session context)"
+		},
+		"stop": {
+			"name": "stop",
+			"description": "Stop current AI processing and clear message queue"
+		},
+		"exit": {
+			"name": "exit",
+			"description": "Exit the application"
+		}
+	},
+	"commandHandler": {
+		"unknownCommand": "Unknown command",
+		"modelSwitched": "Model switched to: {{model}}",
+		"modelCapabilities": "Capabilities",
+		"modelProtocol": "Protocol",
+		"sessionCleared": "Screen cleared.",
+		"newSession": "Started a new session.",
+		"stopSuccess": "Stopped AI processing. Cleared {{count}} queued message(s).",
+		"stopNone": "No AI processing in progress.",
+		"compactNotEnough": "Not enough conversation to compact.",
+		"compactInProgress": "⏳ Compacting conversation...",
+		"compactSuccess": "✅ Conversation compacted successfully.",
+		"compactFailed": "Failed to compact conversation: {{error}}",
+		"toolsRefreshing": "🔄 Re-discovering tools...",
+		"toolsRefreshed": "✅ Tools refreshed. Found {{count}} tools."
+	},
+	"ai": {
+		"notConfigured": "AI service not configured. Please check your API settings.",
+		"contextWarning": "⚠️ Context usage at {{percent}}%, auto-compacting...",
+		"autoCompacting": "Auto-compacting conversation context...",
+		"fileTruncated": "File content truncated. {{message}}",
+		"streamError": "Error during streaming: {{error}}",
+		"toolExecuting": "Executing tool: {{tool}}",
+		"toolSuccess": "Tool executed successfully",
+		"toolError": "Tool execution failed: {{error}}"
+	},
+	"messageOutput": {
+		"scrollUp": "↑ More above",
+		"scrollDown": "↓ More below",
+		"moreAbove": "... {{count}} more lines above ...",
+		"moreBelow": "... {{count}} more lines below ...",
+		"collapsed": "({{count}} lines)",
+		"linesCount": "{{count}} lines"
+	},
+	"errors": {
+		"fileNotFound": "File not found: {{path}}",
+		"readError": "Error reading file: {{path}}",
+		"parseError": "Parse error: {{message}}",
+		"networkError": "Network error: {{message}}",
+		"apiError": "API error: {{message}}"
+	},
+	"toolCategories": {
+		"vcs": "Version Control",
+		"runtime": "Runtime",
+		"shell": "Shell",
+		"ide": "IDE",
+		"diff": "Diff Tool",
+		"container": "Container",
+		"build": "Build Tool",
+		"database": "Database",
+		"other": "Other"
+	},
+	"common": {
+		"yes": "Yes",
+		"no": "No",
+		"ok": "OK",
+		"cancel": "Cancel",
+		"retry": "Retry",
+		"loading": "Loading",
+		"error": "Error",
+		"success": "Success",
+		"warning": "Warning",
+		"info": "Info",
+		"file": "File",
+		"directory": "Directory",
+		"installed": "Installed",
+		"notInstalled": "Not Installed",
+		"version": "Version"
+	}
+}
