@@ -67,10 +67,9 @@ export function createToolsMcpServer(registry: ToolRegistry): McpServer {
 	});
 
 	// 注册工具列表查询
-	server.tool(
+	server.registerTool(
 		"list_available_tools",
-		"列出所有可用/未安装的本地开发工具",
-		{},
+		{ description: "列出所有可用/未安装的本地开发工具" },
 		async () => {
 			const installed = registry.getInstalled().map((t) => ({
 				id: t.id,
@@ -105,53 +104,61 @@ export function createToolsMcpServer(registry: ToolRegistry): McpServer {
 	);
 
 	// 注册工具统计
-	server.tool("get_tools_stats", "获取工具统计信息", {}, async () => {
-		const stats = registry.getStats();
-		return {
-			content: [
-				{
-					type: "text" as const,
-					text: JSON.stringify(stats, null, 2),
-				},
-			],
-		};
-	});
+	server.registerTool(
+		"get_tools_stats",
+		{ description: "获取工具统计信息" },
+		async () => {
+			const stats = registry.getStats();
+			return {
+				content: [
+					{
+						type: "text" as const,
+						text: JSON.stringify(stats, null, 2),
+					},
+				],
+			};
+		},
+	);
 
 	// 为每个已安装工具的每个动作注册 MCP Tool
 	for (const tool of registry.getInstalled()) {
 		for (const action of tool.actions) {
 			const toolId = generateToolId(tool, action);
 			const description = `[${tool.name}] ${action.description}`;
-			const schema = paramsToZodSchema(action.parameters);
+			const inputSchema = paramsToZodSchema(action.parameters);
 
-			server.tool(toolId, description, schema, async (args) => {
-				const result = await executeToolAction(
-					tool,
-					action,
-					args as Record<string, unknown>,
-				);
+			server.registerTool(
+				toolId,
+				{ description, inputSchema },
+				async (args) => {
+					const result = await executeToolAction(
+						tool,
+						action,
+						args as Record<string, unknown>,
+					);
 
-				if (result.success) {
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: result.stdout || "(无输出)",
-							},
-						],
-					};
-				} else {
-					return {
-						content: [
-							{
-								type: "text" as const,
-								text: `错误: ${result.error || result.stderr || "命令执行失败"}\n退出码: ${result.exitCode}`,
-							},
-						],
-						isError: true,
-					};
-				}
-			});
+					if (result.success) {
+						return {
+							content: [
+								{
+									type: "text" as const,
+									text: result.stdout || "(无输出)",
+								},
+							],
+						};
+					} else {
+						return {
+							content: [
+								{
+									type: "text" as const,
+									text: `错误: ${result.error || result.stderr || "命令执行失败"}\n退出码: ${result.exitCode}`,
+								},
+							],
+							isError: true,
+						};
+					}
+				},
+			);
 		}
 	}
 
