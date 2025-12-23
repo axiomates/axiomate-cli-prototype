@@ -11,8 +11,8 @@
 		"title": "Welcome to axiomate!",
 		"testVersion": "[Test Version]",
 		"testVersionDesc": "A pre-configured AI API key is included for testing.",
-		"pressAnyKey": "Press any key to complete setup...",
-		"configuring": "Configuring...",
+		"pressAnyKey": "Press any key to continue...",
+		"configuring": "Creating config...",
 		"restarting": "Restarting..."
 	},
 	"splash": {

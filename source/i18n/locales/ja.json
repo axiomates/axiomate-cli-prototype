@@ -11,8 +11,8 @@
 		"title": "axiomate へようこそ！",
 		"testVersion": "[テスト版]",
 		"testVersionDesc": "テスト用のAI APIキーが設定済みです。",
-		"pressAnyKey": "任意のキーを押してセットアップを完了...",
-		"configuring": "設定中...",
+		"pressAnyKey": "任意のキーを押して続行...",
+		"configuring": "設定ファイルを作成中...",
 		"restarting": "再起動中..."
 	},
 	"splash": {

@@ -1,13 +1,13 @@
 import { render } from "ink-testing-library";
 import { describe, expect, it } from "vitest";
 import App from "../source/app.js";
-import { getDefaultModel } from "../source/constants/models.js";
 import type { InitResult } from "../source/utils/init.js";
 
 // Mock initResult for App component
+// 测试环境没有配置文件，currentModel 为 null 是正常的
 const mockInitResult: InitResult = {
 	aiService: null,
-	currentModel: getDefaultModel(),
+	currentModel: null,
 };
 
 describe("App", () => {

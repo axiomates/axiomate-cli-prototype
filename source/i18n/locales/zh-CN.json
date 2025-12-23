@@ -11,8 +11,8 @@
 		"title": "欢迎使用 axiomate！",
 		"testVersion": "[测试版本]",
 		"testVersionDesc": "已预配置测试用 AI API 密钥。",
-		"pressAnyKey": "按任意键完成配置...",
-		"configuring": "配置中...",
+		"pressAnyKey": "按任意键继续...",
+		"configuring": "正在创建配置...",
 		"restarting": "重启中..."
 	},
 	"splash": {

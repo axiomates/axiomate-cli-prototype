@@ -1,13 +1,18 @@
 /**
  * 自动补全 Hook
+ *
+ * Uses AI-powered autocomplete for normal text input.
+ * Slash commands use local filtering (no AI).
  */
 
 import { useCallback, useRef, useEffect, useMemo } from "react";
 import type { EditorState, EditorAction, SlashCommand } from "../types.js";
 import { isSlashMode, isHistoryMode, buildCommandText } from "../types.js";
-
-// 命令列表用于自动补全
-const COMMANDS = ["git add", "git commit -m"];
+import { getAutocompleteClient } from "../../../services/ai/autocompleteClient.js";
+import {
+	AUTOCOMPLETE_DEBOUNCE_MS,
+	MIN_INPUT_LENGTH,
+} from "../../../constants/autocomplete.js";
 
 type UseAutocompleteOptions = {
 	state: EditorState;
@@ -34,8 +39,6 @@ export function useAutocomplete({
 	dispatch,
 	slashCommands,
 }: UseAutocompleteOptions): UseAutocompleteReturn {
-	const abortControllerRef = useRef<AbortController | null>(null);
-
 	// 从 state 获取数据
 	const { instance, uiMode, suggestion } = state;
 	const { text: input, commandPath } = instance;
@@ -94,40 +97,37 @@ export function useAutocomplete({
 		return null;
 	}, [inSlashMode, filteredCommands, selectedIndex, commandPath, input]);
 
-	// 命令自动补全函数
-	const getCommandSuggestion = useCallback(
-		async (text: string, signal: AbortSignal): Promise<string | null> => {
-			// 模拟异步延迟
-			await new Promise<void>((resolve, reject) => {
-				const timeout = setTimeout(resolve, 100);
-				signal.addEventListener("abort", () => {
-					clearTimeout(timeout);
-					reject(new DOMException("Aborted", "AbortError"));
-				});
-			});
+	// Debounce timer ref
+	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-			if (signal.aborted) {
+	// AI-powered autocomplete function
+	const getAISuggestion = useCallback(
+		async (text: string): Promise<string | null> => {
+			// Skip if input is too short
+			if (text.length < MIN_INPUT_LENGTH) {
 				return null;
 			}
 
-			// 查找匹配的命令
-			const lowerInput = text.toLowerCase();
-			const match = COMMANDS.find(
-				(cmd) => cmd.toLowerCase().startsWith(lowerInput) && cmd !== text,
-			);
+			// Get suggestion from AI client (handles its own cancellation)
+			const client = getAutocompleteClient();
+			const result = await client.getSuggestion(text, {
+				cwd: process.cwd(),
+			});
 
-			if (match) {
-				return match.slice(text.length);
-			}
-
-			return null;
+			return result.suggestion;
 		},
 		[],
 	);
 
-	// 触发自动补全
+	// 触发自动补全 (with debounce for AI requests)
 	const triggerAutocomplete = useCallback(
-		async (text: string, browsing: boolean) => {
+		(text: string, browsing: boolean) => {
+			// Clear any pending debounce timer
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+				debounceTimerRef.current = null;
+			}
+
 			// 历史浏览模式下不触发自动补全
 			if (browsing) {
 				return;
@@ -139,32 +139,32 @@ export function useAutocomplete({
 				return;
 			}
 
-			// 取消之前的请求
-			if (abortControllerRef.current) {
-				abortControllerRef.current.abort();
-			}
-
-			if (!text) {
+			// @ 文件选择模式下不触发自动补全
+			if (text.startsWith("@")) {
 				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				return;
 			}
 
-			const controller = new AbortController();
-			abortControllerRef.current = controller;
+			// Empty or too short input
+			if (!text || text.length < MIN_INPUT_LENGTH) {
+				dispatch({ type: "SET_SUGGESTION", suggestion: null });
+				// Cancel any in-progress AI request
+				getAutocompleteClient().cancel();
+				return;
+			}
 
-			try {
-				const result = await getCommandSuggestion(text, controller.signal);
-				if (!controller.signal.aborted) {
+			// Debounce AI requests
+			debounceTimerRef.current = setTimeout(async () => {
+				try {
+					const result = await getAISuggestion(text);
 					dispatch({ type: "SET_SUGGESTION", suggestion: result });
-				}
-			} catch {
-				// 忽略取消错误
-				if (!controller.signal.aborted) {
+				} catch {
+					// Silent error handling
 					dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				}
-			}
+			}, AUTOCOMPLETE_DEBOUNCE_MS);
 		},
-		[dispatch, getCommandSuggestion],
+		[dispatch, getAISuggestion],
 	);
 
 	// 当输入变化时触发自动补全
@@ -172,12 +172,15 @@ export function useAutocomplete({
 		triggerAutocomplete(input, inHistoryMode);
 	}, [input, inHistoryMode, triggerAutocomplete]);
 
-	// 清理
+	// 清理: Cancel pending requests and timers on unmount
 	useEffect(() => {
 		return () => {
-			if (abortControllerRef.current) {
-				abortControllerRef.current.abort();
+			// Clear debounce timer
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
 			}
+			// Cancel any in-progress AI request
+			getAutocompleteClient().cancel();
 		};
 	}, []);
 

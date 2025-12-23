@@ -89,16 +89,12 @@ export {
 	DEFAULT_MODEL_ID,
 } from "./config.js";
 
-// 模型预设（从 constants 导出）
+// 模型配置（从 constants 导出）
 export {
-	MODEL_PRESETS,
+	getAllModels,
 	getModelById,
-	getModelsBySeries,
-	getAllSeries,
-	getSeriesDisplayName,
 	getDefaultModel,
-	type ModelPreset,
-	type ModelSeries,
+	type ModelConfig,
 	type ApiProtocol,
 } from "../../constants/models.js";
 
@@ -113,13 +109,19 @@ import {
 	getModelApiConfig,
 	isApiConfigValid,
 } from "./config.js";
-import type { ModelPreset } from "../../constants/models.js";
+import type { ModelConfig } from "../../constants/models.js";
 
 /**
- * 根据模型预设创建 AI 客户端
+ * 根据模型配置创建 AI 客户端
+ * @returns AI 客户端实例，如果模型没有配置则返回 null
  */
-export function createAIClient(model: ModelPreset): IAIClient {
+export function createAIClient(model: ModelConfig): IAIClient | null {
 	const apiConfig = getModelApiConfig(model);
+
+	// Model not configured
+	if (!apiConfig) {
+		return null;
+	}
 
 	const clientConfig = {
 		apiKey: apiConfig.apiKey,
@@ -149,7 +151,17 @@ export function createAIServiceFromConfig(
 	}
 
 	const model = getCurrentModel();
+	// 没有配置模型（首次启动前或配置损坏）
+	if (!model) {
+		return null;
+	}
+
 	const client = createAIClient(model);
+
+	// Model not configured (shouldn't happen if isApiConfigValid() passed)
+	if (!client) {
+		return null;
+	}
 
 	return new AIService(
 		{
@@ -168,7 +180,7 @@ export function createAIServiceFromConfig(
  * 获取当前模型信息（用于 App 状态）
  */
 export function getCurrentModelInfo(): {
-	model: ModelPreset;
+	model: ModelConfig | null;
 	isConfigured: boolean;
 } {
 	const model = getCurrentModel();

@@ -9,13 +9,13 @@ import {
 	createAIServiceFromConfig,
 	getCurrentModel,
 	type IAIService,
-	type ModelPreset,
+	type ModelConfig,
 } from "../services/ai/index.js";
 import { t } from "../i18n/index.js";
 
 export type InitResult = {
 	aiService: IAIService | null;
-	currentModel: ModelPreset;
+	currentModel: ModelConfig | null;
 };
 
 export type InitProgress = {

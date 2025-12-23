@@ -1,14 +1,14 @@
 import type { SlashCommand } from "../components/AutocompleteInput/index.js";
-import { MODEL_PRESETS } from "./models.js";
+import { getAllModels } from "./models.js";
 import { t, addLocaleChangeListener } from "../i18n/index.js";
 
 /**
- * 根据模型预设生成模型选择命令
+ * 根据模型配置生成模型选择命令
  */
 function generateModelCommands(): SlashCommand[] {
-	return MODEL_PRESETS.map((preset) => ({
-		name: preset.id,
-		description: `${preset.name}${preset.description ? ` - ${preset.description}` : ""}`,
+	return getAllModels().map((model) => ({
+		name: model.model,
+		description: `${model.name}${model.description ? ` - ${model.description}` : ""}`,
 		action: { type: "internal" as const, handler: "model_select" },
 	}));
 }

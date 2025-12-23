@@ -5,24 +5,54 @@ import * as os from "node:os";
 const CONFIG_FILENAME = ".axiomate.json";
 
 /**
- * 运行时配置（已合并默认值）
+ * API 协议类型
  */
-export type Config = {
-	AXIOMATE_BASE_URL: string;
-	AXIOMATE_API_KEY: string;
-	AXIOMATE_MODEL: string;
+export type ApiProtocol = "openai" | "anthropic";
+
+/**
+ * 模型配置（存储在配置文件中）
+ */
+export type ModelConfig = {
+	/** API 模型名（如 "Qwen/Qwen3-8B"） */
+	model: string;
+	/** 显示名称 */
+	name: string;
+	/** API 协议类型 */
+	protocol: ApiProtocol;
+	/** 简短描述 */
+	description?: string;
+	/** 是否支持 function calling / tools */
+	supportsTools: boolean;
+	/** 上下文窗口大小（token 数） */
+	contextWindow: number;
+	/** API Base URL */
+	baseUrl: string;
+	/** API Key */
+	apiKey: string;
 };
 
 /**
- * 配置文件的结构（所有字段可选）
+ * 运行时配置结构
+ */
+export type Config = {
+	/** 所有模型配置，key 为 model 字段的值 */
+	models: Record<string, ModelConfig>;
+	/** 当前选中的模型 ID（model 字段的值） */
+	currentModel: string;
+	/** 自动补全使用的模型 ID */
+	autocompleteModel: string;
+};
+
+/**
+ * 配置文件结构（所有字段可选）
  */
 export type ConfigFile = Partial<Config>;
 
 // 默认配置
 const DEFAULT_CONFIG: Config = {
-	AXIOMATE_BASE_URL: "",
-	AXIOMATE_API_KEY: "",
-	AXIOMATE_MODEL: "",
+	models: {},
+	currentModel: "",
+	autocompleteModel: "",
 };
 
 // 运行时配置（单例）
@@ -61,12 +91,13 @@ export function initConfig(): Config {
 	runtimeConfig = {
 		...DEFAULT_CONFIG,
 		...fileConfig,
+		models: fileConfig.models ?? {},
 	};
 	return runtimeConfig;
 }
 
 /**
- * 保存配置到文件，返回保存的配置
+ * 保存配置到文件
  */
 function saveConfigFile(config: ConfigFile): ConfigFile {
 	ensureConfigFileExists();
@@ -76,22 +107,19 @@ function saveConfigFile(config: ConfigFile): ConfigFile {
 }
 
 /**
- * 读取配置文件，如果不存在或格式不正确则返回空配置
+ * 读取配置文件
  */
 function loadConfigFile(): ConfigFile {
 	const configPath = getConfigPath();
 
-	// 文件不存在，创建空配置文件并返回
 	if (!fs.existsSync(configPath)) {
 		return saveConfigFile({});
 	}
 
-	// 文件存在，尝试解析
 	try {
 		const content = fs.readFileSync(configPath, "utf-8");
 		const config = JSON.parse(content);
 
-		// 验证是否为普通对象
 		if (
 			typeof config !== "object" ||
 			config === null ||
@@ -102,7 +130,6 @@ function loadConfigFile(): ConfigFile {
 
 		return config as ConfigFile;
 	} catch {
-		// JSON 解析失败，重置为空配置文件
 		return saveConfigFile({});
 	}
 }
@@ -119,7 +146,6 @@ function ensureConfigFileExists(): void {
 
 /**
  * 获取用户主目录下的配置文件路径
- * 跨平台兼容：Windows 使用 C:\Users\%USERNAME%，Unix 使用 ~
  */
 export function getConfigPath(): string {
 	const homeDir = os.homedir();
@@ -127,36 +153,130 @@ export function getConfigPath(): string {
 }
 
 /**
- * 检查是否为首次使用（配置未完成）
+ * 检查是否为首次使用
  *
- * 满足以下任一条件即为首次使用：
- * - 配置文件不存在（此时 loadConfigFile 会返回空对象）
- * - 配置文件解析失败（此时 loadConfigFile 会重置为空对象）
- * - AXIOMATE_BASE_URL 不存在或为空字符串
- * - AXIOMATE_API_KEY 不存在或为空字符串
+ * 返回 true 如果：
+ * - 配置文件不存在
+ * - 配置文件不是有效的 JSON 对象
+ * - 缺少任意必要字段：currentModel、models、autocompleteModel
+ * - models 为空对象
+ *
+ * 缺少任意配置都视为首次启动，会覆盖原有配置
  */
 export function isFirstTimeUser(): boolean {
-	const config = getConfig();
-	return (
-		!config.AXIOMATE_BASE_URL ||
-		config.AXIOMATE_BASE_URL.trim() === "" ||
-		!config.AXIOMATE_API_KEY ||
-		config.AXIOMATE_API_KEY.trim() === ""
-	);
+	const configPath = getConfigPath();
+
+	if (!fs.existsSync(configPath)) {
+		return true;
+	}
+
+	try {
+		const content = fs.readFileSync(configPath, "utf-8");
+		const parsed = JSON.parse(content);
+
+		if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+			return true;
+		}
+
+		// 检查 models 是否存在且有配置
+		const models = parsed.models;
+		if (!models || typeof models !== "object" || Object.keys(models).length === 0) {
+			return true;
+		}
+
+		// 检查 currentModel 是否存在且非空，且在 models 中有配置
+		if (!parsed.currentModel || typeof parsed.currentModel !== "string" || parsed.currentModel.trim() === "") {
+			return true;
+		}
+		if (!(parsed.currentModel in models)) {
+			return true;
+		}
+
+		// 检查 autocompleteModel 是否存在且非空，且在 models 中有配置
+		if (!parsed.autocompleteModel || typeof parsed.autocompleteModel !== "string" || parsed.autocompleteModel.trim() === "") {
+			return true;
+		}
+		if (!(parsed.autocompleteModel in models)) {
+			return true;
+		}
+
+		return false;
+	} catch {
+		return true;
+	}
 }
 
 /**
  * 获取当前模型 ID
- * 如果未设置，返回空字符串（调用方应使用 DEFAULT_MODEL_ID）
  */
 export function getCurrentModelId(): string {
 	const config = getConfig();
-	return config.AXIOMATE_MODEL || "";
+	return config.currentModel || "";
 }
 
 /**
  * 设置当前模型 ID
  */
 export function setCurrentModelId(modelId: string): void {
-	updateConfig({ AXIOMATE_MODEL: modelId });
+	updateConfig({ currentModel: modelId });
+}
+
+/**
+ * 获取所有模型配置列表
+ */
+export function getAllModels(): ModelConfig[] {
+	const config = getConfig();
+	return Object.values(config.models);
+}
+
+/**
+ * 根据 model ID 获取模型配置
+ */
+export function getModelById(modelId: string): ModelConfig | undefined {
+	const config = getConfig();
+	return config.models[modelId];
+}
+
+/**
+ * 获取模型的 API 配置
+ */
+export function getModelApiConfig(
+	modelId: string,
+): { baseUrl: string; apiKey: string; model: string; protocol: ApiProtocol } | null {
+	const modelConfig = getModelById(modelId);
+	if (!modelConfig?.baseUrl || !modelConfig?.apiKey) {
+		return null;
+	}
+
+	return {
+		baseUrl: modelConfig.baseUrl,
+		apiKey: modelConfig.apiKey,
+		model: modelConfig.model,
+		protocol: modelConfig.protocol,
+	};
+}
+
+/**
+ * 检查 API 配置是否有效（当前模型有配置）
+ */
+export function isApiConfigValid(): boolean {
+	const modelId = getCurrentModelId();
+	if (!modelId) return false;
+	const apiConfig = getModelApiConfig(modelId);
+	return apiConfig !== null;
+}
+
+/**
+ * 获取自动补全模型 ID
+ */
+export function getAutocompleteModelId(): string {
+	const config = getConfig();
+	return config.autocompleteModel || "";
+}
+
+/**
+ * 设置自动补全模型 ID
+ */
+export function setAutocompleteModelId(modelId: string): void {
+	updateConfig({ autocompleteModel: modelId });
 }

@@ -160,7 +160,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 			type: "message" as const,
 			content:
 				t("commandHandler.modelSwitched", {
-					model: `**${model.name}** (${model.id})`,
+					model: `**${model.name}** (${model.model})`,
 				}) +
 				`\n\n${t("commandHandler.modelCapabilities")}: ${capabilities.join(", ") || "none"}\n${t("commandHandler.modelProtocol")}: ${model.protocol}`,
 		};

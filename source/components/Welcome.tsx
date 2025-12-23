@@ -1,9 +1,13 @@
 /**
  * 欢迎页面组件
  *
- * 用户首次使用时显示，完成初始配置后重启应用
- * 当前为测试模式，直接写入预设的 API 配置
- * 未来扩展：用户注册/登录流程
+ * 用户首次使用时显示，创建默认配置后重启应用
+ * 测试期间：自动配置硅基流动 API 和测试密钥
+ *
+ * 注意：DEFAULT_MODEL_PRESETS 定义在此文件中，因为：
+ * 1. 这是临时的测试预设
+ * 2. 正式版本会根据用户账号派发可用的模型配置
+ * 3. 将来会被用户注册/登录流程替代
  */
 
 import { Box, Text, useInput } from "ink";
@@ -12,16 +16,109 @@ import { THEME_LIGHT_YELLOW, THEME_PINK } from "../constants/colors.js";
 import { APP_NAME, VERSION } from "../constants/meta.js";
 import { DEFAULT_MODEL_ID } from "../constants/models.js";
 import useTerminalHeight from "../hooks/useTerminalHeight.js";
-import { updateConfig } from "../utils/config.js";
+import { updateConfig, type ModelConfig } from "../utils/config.js";
 import { restartApp } from "../utils/platform.js";
 import { resumeInput } from "../utils/stdin.js";
 import { useTranslation } from "../hooks/useTranslation.js";
 import Divider from "./Divider.js";
 
-// 测试模式预设值（未来替换为用户注册登录）
-const PRESET_BASE_URL = "https://api.siliconflow.cn/v1";
-const PRESET_API_KEY = "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk";
-const PRESET_MODEL = DEFAULT_MODEL_ID;
+/**
+ * 默认模型预设列表（测试期间使用）
+ *
+ * 包含完整的模型配置，包括 baseUrl 和 apiKey
+ * 每个模型可以有不同的 API 端点和密钥
+ * 正式版本会根据用户账号派发可用的模型配置
+ *
+ * TODO: 正式发布时移除或改为用户注册流程
+ */
+const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
+	// GLM 系列（智谱）- 使用 SiliconFlow
+	{
+		model: "THUDM/glm-4-9b-chat",
+		name: "GLM-4 9B",
+		protocol: "openai",
+		description: "Chat model",
+		supportsTools: true,
+		contextWindow: 131072,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+	{
+		model: "THUDM/GLM-Z1-9B-0414",
+		name: "GLM-Z1 9B",
+		protocol: "openai",
+		description: "Latest GLM",
+		supportsTools: true,
+		contextWindow: 32768,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+
+	// Qwen 系列 - 使用 SiliconFlow
+	{
+		model: "Qwen/Qwen3-8B",
+		name: "Qwen3 8B",
+		protocol: "openai",
+		description: "Latest Qwen3",
+		supportsTools: true,
+		contextWindow: 131072,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+	{
+		model: "Qwen/Qwen2-7B-Instruct",
+		name: "Qwen2 7B",
+		protocol: "openai",
+		description: "Instruct model",
+		supportsTools: false,
+		contextWindow: 32768,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+	{
+		model: "Qwen/Qwen2.5-7B-Instruct",
+		name: "Qwen2.5 7B",
+		protocol: "openai",
+		description: "Instruct model",
+		supportsTools: true,
+		contextWindow: 32768,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+	{
+		model: "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+		name: "Qwen3 Coder 480B",
+		protocol: "openai",
+		description: "Instruct model",
+		supportsTools: true,
+		contextWindow: 262144,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+
+	// DeepSeek 系列 - 使用 SiliconFlow
+	{
+		model: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+		name: "DeepSeek R1 Qwen 7B",
+		protocol: "openai",
+		description: "Reasoning distill",
+		supportsTools: true,
+		contextWindow: 131072,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+];
+
+/**
+ * 将预设列表转换为配置对象
+ */
+function generateModelConfigs(): Record<string, ModelConfig> {
+	const models: Record<string, ModelConfig> = {};
+	for (const preset of DEFAULT_MODEL_PRESETS) {
+		models[preset.model] = preset;
+	}
+	return models;
+}
 
 type Props = {
 	onComplete?: () => void; // 可选回调（主要用于测试）
@@ -51,11 +148,11 @@ export default function Welcome({ onComplete }: Props) {
 			// 用户按任意键
 			setStatus("configuring");
 
-			// 写入预设配置（包括默认模型）
+			// 创建默认配置（测试期间：自动配置所有模型的 API）
 			updateConfig({
-				AXIOMATE_BASE_URL: PRESET_BASE_URL,
-				AXIOMATE_API_KEY: PRESET_API_KEY,
-				AXIOMATE_MODEL: PRESET_MODEL,
+				models: generateModelConfigs(),
+				currentModel: DEFAULT_MODEL_ID,
+				autocompleteModel: "THUDM/GLM-Z1-9B-0414",
 			});
 
 			setStatus("done");
@@ -105,7 +202,7 @@ export default function Welcome({ onComplete }: Props) {
 					{t("welcome.title")}
 				</Text>
 				<Box flexDirection="column" alignItems="center">
-					<Text color={THEME_LIGHT_YELLOW}>{t("welcome.testVersion")}</Text>
+					<Text color="yellow">{t("welcome.testVersion")}</Text>
 					<Text dimColor>{t("welcome.testVersionDesc")}</Text>
 				</Box>
 			</Box>

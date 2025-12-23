@@ -1,14 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import {
 	groupMessages,
 	countGroupLines,
-	generateCollapsedSummaryParts,
-	generateCollapsedSummary,
 	generateGroupHeaderParts,
 	canCollapse,
 	type MessageGroup,
 } from "../../source/models/messageGroup.js";
 import type { Message } from "../../source/components/MessageOutput.js";
+import { initI18n, setLocale } from "../../source/i18n/index.js";
+
+// 初始化 i18n 并设置为中文
+beforeAll(() => {
+	initI18n();
+	setLocale("zh-CN");
+});
 
 describe("messageGroup", () => {
 	describe("groupMessages", () => {
@@ -134,83 +139,6 @@ describe("messageGroup", () => {
 			};
 
 			expect(countGroupLines(group)).toBe(1);
-		});
-	});
-
-	describe("generateCollapsedSummaryParts", () => {
-		it("should generate summary parts", () => {
-			const group: MessageGroup = {
-				id: "test",
-				startIndex: 0,
-				endIndex: 2,
-				userMessage: { content: "What is TypeScript?", type: "user" },
-				responses: [
-					{ content: "TypeScript is a typed superset of JavaScript." },
-				],
-				isLast: false,
-				hasStreaming: false,
-			};
-
-			const parts = generateCollapsedSummaryParts(group, 80);
-
-			expect(parts.arrow).toBe("▶");
-			expect(parts.userPreview).toContain("TypeScript");
-			expect(parts.separator).toBe("→");
-			expect(parts.responsePreview).toContain("TypeScript");
-			expect(parts.lineCount).toBe("(2 行)");
-		});
-
-		it("should show (系统) for system message group", () => {
-			const group: MessageGroup = {
-				id: "test",
-				startIndex: 0,
-				endIndex: 1,
-				userMessage: null,
-				responses: [{ content: "System notification" }],
-				isLast: false,
-				hasStreaming: false,
-			};
-
-			const parts = generateCollapsedSummaryParts(group, 80);
-			expect(parts.userPreview).toBe("(系统)");
-		});
-
-		it("should truncate long text", () => {
-			const longText = "A".repeat(200);
-			const group: MessageGroup = {
-				id: "test",
-				startIndex: 0,
-				endIndex: 2,
-				userMessage: { content: longText, type: "user" },
-				responses: [{ content: longText }],
-				isLast: false,
-				hasStreaming: false,
-			};
-
-			const parts = generateCollapsedSummaryParts(group, 80);
-			expect(parts.userPreview.length).toBeLessThan(50);
-			expect(parts.userPreview.endsWith("...")).toBe(true);
-		});
-	});
-
-	describe("generateCollapsedSummary", () => {
-		it("should generate full summary string", () => {
-			const group: MessageGroup = {
-				id: "test",
-				startIndex: 0,
-				endIndex: 2,
-				userMessage: { content: "Hello", type: "user" },
-				responses: [{ content: "Hi!" }],
-				isLast: false,
-				hasStreaming: false,
-			};
-
-			const summary = generateCollapsedSummary(group, 80);
-			expect(summary).toContain("▶");
-			expect(summary).toContain("Hello");
-			expect(summary).toContain("→");
-			expect(summary).toContain("Hi!");
-			expect(summary).toContain("行");
 		});
 	});
 

@@ -180,28 +180,38 @@ cli.tsx (entry point)
 
 ### First-Time User Detection
 
-Defined in `utils/config.ts`:
+Defined in `utils/config.ts`. Returns `true` if any of these conditions are met:
+
+1. Config file (`~/.axiomate.json`) doesn't exist
+2. Config file is not valid JSON or not an object
+3. `models` is missing, not an object, or empty
+4. `currentModel` is missing, empty, or **not found in models**
+5. `autocompleteModel` is missing, empty, or **not found in models**
 
 ```typescript
-/**
- * Check if this is first-time use (configuration incomplete)
- *
- * Returns true if any of:
- * - Config file doesn't exist (loadConfigFile returns empty object)
- * - Config file parse failed (loadConfigFile resets to empty object)
- * - AXIOMATE_BASE_URL is missing or empty string
- * - AXIOMATE_API_KEY is missing or empty string
- */
 export function isFirstTimeUser(): boolean {
-  const config = getConfig();
-  return (
-    !config.AXIOMATE_BASE_URL ||
-    config.AXIOMATE_BASE_URL.trim() === "" ||
-    !config.AXIOMATE_API_KEY ||
-    config.AXIOMATE_API_KEY.trim() === ""
-  );
+  // Check file exists
+  if (!fs.existsSync(configPath)) return true;
+
+  // Check valid JSON object
+  const parsed = JSON.parse(content);
+  if (typeof parsed !== "object" || parsed === null) return true;
+
+  // Check models has configurations
+  const models = parsed.models;
+  if (!models || Object.keys(models).length === 0) return true;
+
+  // Check currentModel exists AND is in models
+  if (!parsed.currentModel || !(parsed.currentModel in models)) return true;
+
+  // Check autocompleteModel exists AND is in models
+  if (!parsed.autocompleteModel || !(parsed.autocompleteModel in models)) return true;
+
+  return false;
 }
 ```
+
+**Key Design**: Missing ANY required field triggers first-time setup, which overwrites the config with fresh presets. This ensures config consistency.
 
 ### Welcome Component
 
@@ -229,6 +239,40 @@ Located in `components/Welcome.tsx`:
 - Status display: waiting → configuring → restarting
 - Calls `restartApp()` after writing config to apply changes
 
+**Model Presets** (`DEFAULT_MODEL_PRESETS`):
+
+The model presets are defined in `Welcome.tsx` (not in `constants/models.ts`) because:
+1. They are temporary test presets with hardcoded API keys
+2. Production will dispatch models based on user account
+3. Will be replaced by user registration/login flow
+
+Each preset includes complete `ModelConfig` with per-model `baseUrl` and `apiKey`:
+
+```typescript
+const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
+  {
+    model: "Qwen/Qwen3-8B",
+    name: "Qwen3 8B",
+    protocol: "openai",
+    supportsTools: true,
+    contextWindow: 131072,
+    baseUrl: "https://api.siliconflow.cn/v1",
+    apiKey: "sk-xxx...",
+  },
+  // ... more models
+];
+```
+
+**Config Generation**:
+
+```typescript
+updateConfig({
+  models: generateModelConfigs(),      // Record<string, ModelConfig>
+  currentModel: DEFAULT_MODEL_ID,      // "Qwen/Qwen3-8B"
+  autocompleteModel: "THUDM/GLM-Z1-9B-0414",
+});
+```
+
 **Splash Component** (`components/Splash.tsx`):
 ```typescript
 // Simple one-line display: "axiomate-cli v0.1.0 Loading..."
@@ -247,7 +291,7 @@ export default function Splash({ message = "Loading..." }: Props) {
 ```typescript
 type InitResult = {
   aiService: IAIService | null;
-  currentModel: ModelPreset;
+  currentModel: ModelConfig | null;  // null if no config
 };
 
 type InitProgress = {
@@ -763,13 +807,41 @@ npm run test:watch # Watch mode
 ## Configuration Files
 
 - `~/.axiomate.json` - User configuration (via `utils/config.ts`)
-  - `AXIOMATE_BASE_URL` - API endpoint (e.g., `https://api.siliconflow.cn/v1`)
-  - `AXIOMATE_API_KEY` - API key
-  - `AXIOMATE_MODEL` - Selected model ID (e.g., `qwen3-8b`)
+  - `models` - Per-model configurations (Record<string, ModelConfig>)
+  - `currentModel` - Selected model ID (e.g., `Qwen/Qwen3-8B`)
+  - `autocompleteModel` - Model for AI autocomplete (e.g., `THUDM/GLM-Z1-9B-0414`)
 - `~/.axiomate/` - App data directory
   - `logs/` - Log files with daily rotation
   - `history/` - Command history
 - `.axiomate/localsettings.json` - Project-local settings
+
+### Config Structure
+
+```typescript
+type Config = {
+  /** All model configurations, key is the model field value */
+  models: Record<string, ModelConfig>;
+  /** Currently selected model ID */
+  currentModel: string;
+  /** Model ID for autocomplete */
+  autocompleteModel: string;
+};
+
+type ModelConfig = {
+  model: string;           // API model name (e.g., "Qwen/Qwen3-8B")
+  name: string;            // Display name
+  protocol: ApiProtocol;   // "openai" | "anthropic"
+  description?: string;    // Short description
+  supportsTools: boolean;  // Function calling support
+  contextWindow: number;   // Context size in tokens
+  baseUrl: string;         // API endpoint
+  apiKey: string;          // API key
+};
+```
+
+### Per-Model API Configuration
+
+Each model has its own `baseUrl` and `apiKey`, allowing different API endpoints for different models. The model presets are defined in `Welcome.tsx` as `DEFAULT_MODEL_PRESETS` (temporary for testing, will be replaced by user account-based configuration in production).
 
 ## Platform-Specific Notes
 
@@ -1294,36 +1366,35 @@ useEffect(() => {
 
 ### Model System
 
-Models are defined in `constants/models.ts`. The `id` field uses the full API model name (apiModel):
+Model configurations are stored in user config file (`~/.axiomate.json`). Each model has its own API credentials.
+
+**ModelConfig Type** (defined in `utils/config.ts`):
 
 ```typescript
-type ModelPreset = {
-  id: string;                     // Unique ID = apiModel (e.g., "Qwen/Qwen3-8B")
-  name: string;                   // Display name
-  series: ModelSeries;            // "glm" | "qwen" | "deepseek"
-  protocol: ApiProtocol;          // "openai" | "anthropic"
-  supportsTools: boolean;         // Function calling support
-  contextWindow: number;          // Context window size in tokens (e.g., 32768)
+type ModelConfig = {
+  model: string;              // API model name (e.g., "Qwen/Qwen3-8B")
+  name: string;               // Display name
+  protocol: ApiProtocol;      // "openai" | "anthropic"
+  description?: string;       // Short description
+  supportsTools: boolean;     // Function calling support
+  contextWindow: number;      // Context window size in tokens
+  baseUrl: string;            // API Base URL (per-model)
+  apiKey: string;             // API Key (per-model)
 };
 ```
 
-Available models (via SiliconFlow):
+**Model Presets Location**:
 
-| ID (apiModel)                            | Series   | Context | Tools | Exclusive* |
-|------------------------------------------|----------|---------|-------|------------|
-| `THUDM/glm-4-9b-chat`                    | GLM      | 32K     | ✓     | ✗          |
-| `THUDM/GLM-Z1-9B-0414`                   | GLM      | 32K     | ✓     | ✗          |
-| `Qwen/Qwen3-8B`                          | Qwen     | 32K     | ✓     | ✗          |
-| `Qwen/Qwen2-7B-Instruct`                 | Qwen     | 32K     | ✗     | ✗          |
-| `Qwen/Qwen2.5-7B-Instruct`               | Qwen     | 32K     | ✓     | ✗          |
-| `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B`| DeepSeek | 32K     | ✓     | ✗          |
-| `deepseek-ai/DeepSeek-V3.1`              | DeepSeek | 64K     | ✓     | ✓          |
-| `Pro/deepseek-ai/DeepSeek-V3.1`          | DeepSeek | 64K     | ✓     | ✓          |
+Model preset list (`DEFAULT_MODEL_PRESETS`) is defined in `components/Welcome.tsx`, NOT in `constants/models.ts`. This is intentional because:
+1. It's temporary test presets only
+2. Production version will dispatch available models based on user account
+3. Will be replaced by user registration/login flow in the future
 
-*Exclusive: Thinking and tools modes are mutually exclusive (cannot be used together).
-*Context: Context window size (32K = 32768 tokens, 64K = 65536 tokens).
+Default model: `Qwen/Qwen3-8B` (defined as `DEFAULT_MODEL_ID` in `constants/models.ts`)
 
-Default model: `Qwen/Qwen3-8B`
+**First-Time Initialization**:
+
+When user first runs the app, `Welcome.tsx` generates complete model configs with pre-configured API credentials (SiliconFlow test key) and writes to `~/.axiomate.json`.
 
 ### Directory Structure
 
@@ -1637,29 +1708,61 @@ function detectProjectType(cwd: string): ProjectType {
 
 ### AI Configuration
 
-Config is stored in `~/.axiomate.json`:
+Config is stored in `~/.axiomate.json` with per-model API credentials:
 
 ```typescript
 // utils/config.ts
 type Config = {
-  AXIOMATE_BASE_URL: string;  // API endpoint (e.g., "https://api.siliconflow.cn/v1")
-  AXIOMATE_API_KEY: string;   // API key
-  AXIOMATE_MODEL: string;     // Selected model ID (e.g., "qwen3-8b")
+  currentModel: string;                    // Currently selected model ID
+  models: Record<string, ModelConfig>;     // Per-model configurations
+};
+
+type ModelConfig = {
+  model: string;              // API model name (key in models record)
+  name: string;               // Display name
+  protocol: ApiProtocol;      // "openai" | "anthropic"
+  description?: string;       // Short description
+  supportsTools: boolean;     // Function calling support
+  contextWindow: number;      // Context window size
+  baseUrl: string;            // API Base URL (per-model)
+  apiKey: string;             // API Key (per-model)
 };
 ```
 
-**Model Selection**:
+**Config File Example** (`~/.axiomate.json`):
+```json
+{
+  "currentModel": "Qwen/Qwen3-8B",
+  "models": {
+    "Qwen/Qwen3-8B": {
+      "model": "Qwen/Qwen3-8B",
+      "name": "Qwen3 8B",
+      "protocol": "openai",
+      "supportsTools": true,
+      "contextWindow": 32768,
+      "baseUrl": "https://api.siliconflow.cn/v1",
+      "apiKey": "sk-xxx"
+    }
+  }
+}
+```
+
+**Config Helper Functions** (`utils/config.ts`):
 
 ```typescript
-// services/ai/config.ts
-function getCurrentModel(): ModelPreset;      // Get current model preset
-function getModelApiConfig(model): { baseUrl, apiKey, apiModel, protocol };
-function isApiConfigValid(): boolean;         // Check if API is configured
+function getConfig(): Config;                           // Get current config
+function updateConfig(updates: Partial<Config>): Config; // Update and save
+function isFirstTimeUser(): boolean;                    // Check if config file exists
+function getCurrentModelId(): string;                   // Get current model ID
+function setCurrentModelId(modelId: string): void;      // Set current model
+function getAllModels(): ModelConfig[];                 // Get all model configs
+function getModelById(modelId: string): ModelConfig | undefined;
+function getModelApiConfig(modelId: string): { baseUrl, apiKey, model, protocol } | null;
+function isApiConfigValid(): boolean;                   // Check if current model has valid API config
 ```
 
 **Commands**:
-- `/model list` - Show available models with capabilities
-- `/model <model-id>` - Switch to a specific model (e.g., `/model qwen3-8b`)
+- `/model <model-id>` - Switch to a specific model (e.g., `/model Qwen/Qwen3-8B`)
 
 ### Protocol Adapters
 
@@ -2612,6 +2715,73 @@ content: delta.content || delta.reasoning_content || ""
 
 1. **Conversation Persistence**: Save/restore conversation history across sessions
 2. **Multi-model Routing**: Route different queries to different models based on complexity
+
+## AI Autocomplete
+
+The input field supports AI-powered autocomplete for normal text input.
+
+### Configuration
+
+Located in `constants/autocomplete.ts`:
+
+```typescript
+// Model is read from config (~/.axiomate.json)
+export function getAutocompleteModel(): string {
+  const modelId = getAutocompleteModelId();
+  return modelId || "THUDM/GLM-Z1-9B-0414"; // Default fallback
+}
+
+export const AUTOCOMPLETE_CONFIG = {
+  maxTokens: 30,        // Short completions
+  timeout: 3000,        // 3 second timeout
+  temperature: 0.3,     // Low for focused completions
+} as const;
+
+export const AUTOCOMPLETE_DEBOUNCE_MS = 500;  // Wait 500ms after typing stops
+export const MIN_INPUT_LENGTH = 3;             // Minimum chars to trigger
+```
+
+### Trigger Conditions
+
+AI autocomplete triggers when ALL conditions are met:
+1. Input length ≥ 3 characters
+2. Input does NOT start with `/` (slash command mode)
+3. Input does NOT start with `@` (file selection mode)
+4. Not in history browsing mode (↑/↓ navigation)
+5. 500ms debounce after last keystroke
+
+### Architecture
+
+```
+User types text
+    ↓
+Check trigger conditions (length >= 3, not / or @, not history mode)
+    ↓
+Clear previous debounce timer
+    ↓
+Wait 500ms (debounce)
+    ↓
+AutocompleteClient.getSuggestion(text, context)
+    ↓
+Display gray suggestion text after cursor
+    ↓
+User presses Tab → accept suggestion
+```
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `constants/autocomplete.ts` | Configuration and `getAutocompleteModel()` |
+| `services/ai/autocompleteClient.ts` | API client with request cancellation and LRU cache |
+| `components/AutocompleteInput/hooks/useAutocomplete.ts` | React hook for autocomplete logic |
+
+### AutocompleteClient Features
+
+- **Single request management**: New request auto-cancels previous one
+- **LRU Cache**: 50 entries, 1 minute TTL
+- **Silent error handling**: No UI disruption on errors
+- **Separate from main AI queue**: Does not block normal AI requests
 
 ## Internationalization (i18n)
 
