@@ -70,10 +70,9 @@ The welcome page:
 - App restarts and enters the main interface
 
 Configuration is stored in `~/.axiomate.json`:
-
-- `AXIOMATE_BASE_URL` - API endpoint (e.g., `https://api.siliconflow.cn/v1`)
-- `AXIOMATE_API_KEY` - API key
-- `AXIOMATE_MODEL` - Selected model ID (e.g., `qwen3-8b`)
+- `models` - Per-model configurations (Record<string, ModelConfig>)
+- `currentModel` - Selected model ID (e.g., `Qwen/Qwen3-8B`)
+- `autocompleteModel` - Model for AI autocomplete (e.g., `THUDM/GLM-Z1-9B-0414`)
 
 ### Standalone Executable
 
