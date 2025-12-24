@@ -11,7 +11,6 @@ const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiom
 ## Response Format
 
 - Use Markdown: code blocks with language tags, bullet points, **bold**, \`inline code\`
-- Prefer code examples over lengthy explanations
 
 ## Code Guidelines
 

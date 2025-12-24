@@ -86,14 +86,14 @@ const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
 	},
 	{
-		model: "Qwen/Qwen3-Coder-480B-A35B-Instruct",
-		name: "Qwen3 Coder 480B",
+		model: "qwen3-coder-plus",
+		name: "Qwen3 Coder Plus",
 		protocol: "openai",
-		description: "Instruct model",
+		description: "Super coder model",
 		supportsTools: true,
-		contextWindow: 262144,
-		baseUrl: "https://api.siliconflow.cn/v1",
-		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+		contextWindow: 1048576,
+		baseUrl: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+		apiKey: "sk-170cc96e16174ba9aea4785036230167",
 	},
 
 	// DeepSeek 系列 - 使用 SiliconFlow
