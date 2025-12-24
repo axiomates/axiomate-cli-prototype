@@ -36,7 +36,7 @@ export const AUTOCOMPLETE_DEBOUNCE_MS = 500;
 /**
  * Minimum input length to trigger autocomplete
  */
-export const MIN_INPUT_LENGTH = 3;
+export const MIN_INPUT_LENGTH = 6;
 
 /**
  * System prompt for autocomplete

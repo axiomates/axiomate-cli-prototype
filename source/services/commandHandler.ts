@@ -9,8 +9,12 @@ import type {
 } from "../components/AutocompleteInput/index.js";
 import { SLASH_COMMANDS } from "../constants/commands.js";
 import { getToolRegistry } from "./tools/registry.js";
-import { getModelById } from "../constants/models.js";
-import { setCurrentModelId } from "../utils/config.js";
+import {
+	getModelById,
+	setCurrentModelId,
+	setAutocompleteModelId,
+	setAutocompleteEnabled,
+} from "../utils/config.js";
 import { t, setLocale } from "../i18n/index.js";
 
 /**
@@ -188,6 +192,45 @@ const internalHandlers: Record<string, InternalHandler> = {
 		return {
 			type: "message" as const,
 			content: t("commandHandler.languageSwitched", { language: "日本語" }),
+		};
+	},
+
+	// 自动补全开关处理器
+	autocomplete_on: () => {
+		setAutocompleteEnabled(true);
+		return {
+			type: "message" as const,
+			content: t("commandHandler.autocompleteEnabled"),
+		};
+	},
+
+	autocomplete_off: () => {
+		setAutocompleteEnabled(false);
+		return {
+			type: "message" as const,
+			content: t("commandHandler.autocompleteDisabled"),
+		};
+	},
+
+	// 自动补全模型选择处理器
+	autocomplete_model_select: (path: string[]) => {
+		// path = ["autocomplete", "model", "<model-id>"]
+		const modelId = path[path.length - 1];
+		if (!modelId) {
+			return { type: "error" as const, message: t("commandHandler.unknownCommand") };
+		}
+
+		const model = getModelById(modelId);
+		if (!model) {
+			return { type: "error" as const, message: t("commandHandler.unknownCommand") };
+		}
+
+		// 保存到配置
+		setAutocompleteModelId(modelId);
+
+		return {
+			type: "message" as const,
+			content: t("commandHandler.autocompleteModelSwitched", { model: model.name }),
 		};
 	},
 };

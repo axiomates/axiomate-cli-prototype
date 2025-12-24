@@ -1,5 +1,5 @@
 import type { SlashCommand } from "../components/AutocompleteInput/index.js";
-import { getAllModels } from "./models.js";
+import { getAllModels } from "../utils/config.js";
 import { t, addLocaleChangeListener } from "../i18n/index.js";
 
 /**
@@ -10,6 +10,17 @@ function generateModelCommands(): SlashCommand[] {
 		name: model.model,
 		description: `${model.name}${model.description ? ` - ${model.description}` : ""}`,
 		action: { type: "internal" as const, handler: "model_select" },
+	}));
+}
+
+/**
+ * 根据模型配置生成自动补全模型选择命令
+ */
+function generateAutocompleteModelCommands(): SlashCommand[] {
+	return getAllModels().map((model) => ({
+		name: model.model,
+		description: `${model.name}${model.description ? ` - ${model.description}` : ""}`,
+		action: { type: "internal" as const, handler: "autocomplete_model_select" },
 	}));
 }
 
@@ -86,6 +97,27 @@ export function getSlashCommands(): SlashCommand[] {
 					name: "ja",
 					description: t("commands.language.jaDesc"),
 					action: { type: "internal", handler: "language_ja" },
+				},
+			],
+		},
+		{
+			name: "autocomplete",
+			description: t("commands.autocomplete.description"),
+			children: [
+				{
+					name: "on",
+					description: t("commands.autocomplete.onDesc"),
+					action: { type: "internal", handler: "autocomplete_on" },
+				},
+				{
+					name: "off",
+					description: t("commands.autocomplete.offDesc"),
+					action: { type: "internal", handler: "autocomplete_off" },
+				},
+				{
+					name: "model",
+					description: t("commands.autocomplete.modelDesc"),
+					children: generateAutocompleteModelCommands(),
 				},
 			],
 		},

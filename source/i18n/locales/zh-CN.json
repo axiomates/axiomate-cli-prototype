@@ -103,6 +103,13 @@
 		"exit": {
 			"name": "exit",
 			"description": "退出应用"
+		},
+		"autocomplete": {
+			"name": "autocomplete",
+			"description": "配置 AI 自动补全",
+			"onDesc": "启用自动补全",
+			"offDesc": "禁用自动补全",
+			"modelDesc": "选择自动补全模型"
 		}
 	},
 	"commandHandler": {
@@ -120,7 +127,10 @@
 		"compactSuccess": "✅ 对话压缩成功。",
 		"compactFailed": "对话压缩失败：{{error}}",
 		"toolsRefreshing": "🔄 重新发现工具中...",
-		"toolsRefreshed": "✅ 工具已刷新。发现 {{count}} 个工具。"
+		"toolsRefreshed": "✅ 工具已刷新。发现 {{count}} 个工具。",
+		"autocompleteEnabled": "AI 自动补全已启用",
+		"autocompleteDisabled": "AI 自动补全已禁用",
+		"autocompleteModelSwitched": "自动补全模型已切换至：{{model}}"
 	},
 	"ai": {
 		"notConfigured": "AI 服务未配置，请检查 API 设置。",

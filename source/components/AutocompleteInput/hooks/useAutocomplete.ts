@@ -13,6 +13,7 @@ import {
 	AUTOCOMPLETE_DEBOUNCE_MS,
 	MIN_INPUT_LENGTH,
 } from "../../../constants/autocomplete.js";
+import { isAutocompleteEnabled } from "../../../utils/config.js";
 
 type UseAutocompleteOptions = {
 	state: EditorState;
@@ -141,6 +142,12 @@ export function useAutocomplete({
 
 			// @ 文件选择模式下不触发自动补全
 			if (text.startsWith("@")) {
+				dispatch({ type: "SET_SUGGESTION", suggestion: null });
+				return;
+			}
+
+			// 检查是否启用自动补全
+			if (!isAutocompleteEnabled()) {
 				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				return;
 			}

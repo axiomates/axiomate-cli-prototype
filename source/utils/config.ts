@@ -41,6 +41,8 @@ export type Config = {
 	currentModel: string;
 	/** 自动补全使用的模型 ID */
 	autocompleteModel: string;
+	/** 是否启用 AI 自动补全（默认 true） */
+	autocompleteEnabled: boolean;
 };
 
 /**
@@ -53,6 +55,7 @@ const DEFAULT_CONFIG: Config = {
 	models: {},
 	currentModel: "",
 	autocompleteModel: "",
+	autocompleteEnabled: true,
 };
 
 // 运行时配置（单例）
@@ -279,4 +282,20 @@ export function getAutocompleteModelId(): string {
  */
 export function setAutocompleteModelId(modelId: string): void {
 	updateConfig({ autocompleteModel: modelId });
+}
+
+/**
+ * 检查是否启用 AI 自动补全
+ * 默认为 true（如果配置文件中未指定）
+ */
+export function isAutocompleteEnabled(): boolean {
+	const config = getConfig();
+	return config.autocompleteEnabled !== false;
+}
+
+/**
+ * 设置是否启用 AI 自动补全
+ */
+export function setAutocompleteEnabled(enabled: boolean): void {
+	updateConfig({ autocompleteEnabled: enabled });
 }

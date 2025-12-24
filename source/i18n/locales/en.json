@@ -103,6 +103,13 @@
 		"exit": {
 			"name": "exit",
 			"description": "Exit the application"
+		},
+		"autocomplete": {
+			"name": "autocomplete",
+			"description": "Configure AI autocomplete",
+			"onDesc": "Enable autocomplete",
+			"offDesc": "Disable autocomplete",
+			"modelDesc": "Select autocomplete model"
 		}
 	},
 	"commandHandler": {
@@ -120,7 +127,10 @@
 		"compactSuccess": "✅ Conversation compacted successfully.",
 		"compactFailed": "Failed to compact conversation: {{error}}",
 		"toolsRefreshing": "🔄 Re-discovering tools...",
-		"toolsRefreshed": "✅ Tools refreshed. Found {{count}} tools."
+		"toolsRefreshed": "✅ Tools refreshed. Found {{count}} tools.",
+		"autocompleteEnabled": "AI autocomplete enabled",
+		"autocompleteDisabled": "AI autocomplete disabled",
+		"autocompleteModelSwitched": "Autocomplete model switched to: {{model}}"
 	},
 	"ai": {
 		"notConfigured": "AI service not configured. Please check your API settings.",
