@@ -1,6 +1,6 @@
 /**
- * 工具匹配器
- * 根据用户查询、上下文信息匹配合适的工具
+ * Tool Matcher
+ * Matches appropriate tools based on user queries and context information
  */
 
 import type {
@@ -15,10 +15,10 @@ import * as path from "node:path";
 import { platform } from "node:os";
 
 /**
- * 关键词到工具 ID 的映射
+ * Keyword to tool ID mapping
  */
 const KEYWORD_MAP: Record<string, string[]> = {
-	// 版本控制
+	// Version control
 	git: [
 		"git",
 		"version control",
@@ -34,7 +34,7 @@ const KEYWORD_MAP: Record<string, string[]> = {
 	],
 	svn: ["svn", "subversion"],
 
-	// 运行时
+	// Runtimes
 	node: [
 		"node",
 		"nodejs",
@@ -52,8 +52,12 @@ const KEYWORD_MAP: Record<string, string[]> = {
 	rust: ["rust", "cargo", "rustc"],
 	go: ["go", "golang"],
 
-	// 工具
-	bc4: [
+	// C++ and build tools
+	cmake: ["cmake", "cmakelist", "cmakelists"],
+	cpp: ["c++", "cpp", "g++", "clang++", "msvc"],
+
+	// Tools
+	beyondcompare: [
 		"beyond compare",
 		"beyondcompare",
 		"bc4",
@@ -63,17 +67,17 @@ const KEYWORD_MAP: Record<string, string[]> = {
 		"file comparison",
 	],
 	vscode: ["vscode", "vs code", "visual studio code", "code"],
-	vs2022: ["visual studio", "vs2022", "vs 2022", "msbuild"],
+	vs2022: ["visual studio", "vs2022", "vs 2022"],
 	docker: ["docker", "container", "dockerfile", "compose"],
 
-	// 数据库
+	// Databases
 	mysql: ["mysql", "mariadb"],
 	postgresql: ["postgresql", "postgres", "psql"],
-	sqlite: ["sqlite", "sqlite3"],
+	sqlite3: ["sqlite", "sqlite3"],
 };
 
 /**
- * 能力到工具的映射
+ * Capability to tool mapping
  */
 const CAPABILITY_MAP: Record<string, ToolCapability> = {
 	"compare files": "diff",
@@ -93,56 +97,51 @@ const CAPABILITY_MAP: Record<string, ToolCapability> = {
 
 /**
  * Get default shell tools for the current platform
- * Windows: python (if available), powershell, pwsh, cmd
- *   - Python is preferred because it has better UTF-8 encoding handling
- *   - PowerShell 5.1 has encoding issues with Unicode characters
+ * Windows: powershell, pwsh, cmd (for Windows system operations)
  * Unix/Linux/macOS: bash
+ *
+ * Note: Python is NOT a shell tool - it's a runtime/programming language.
+ * Shell tools are for OS interaction, not file operations.
  */
 function getDefaultShellTools(): string[] {
 	if (platform() === "win32") {
-		// Python 优先，因为它的 UTF-8 编码处理更可靠
-		// PowerShell 5.1 对 Unicode 字符处理不可靠
-		return ["python", "powershell", "pwsh", "cmd"];
+		return ["powershell", "pwsh", "cmd"];
 	}
 	// Unix/Linux/macOS
 	return ["bash"];
 }
 
 /**
- * Default shell tools (without Python check, used for static initialization)
- * Will be overridden by dynamic detection in autoSelect
- */
-const SHELL_TOOLS = getDefaultShellTools();
-
-/**
- * 项目类型到工具的映射（包含平台相关的 shell 工具）
- * Shell 工具在开头，优先被选择
+ * Project type to tools mapping
+ * - Shell tools are NOT included here (they are added dynamically in autoSelect)
+ * - Python is included for file operations (better encoding support)
+ * - vs2022 is only for .NET projects, not Java
  */
 const PROJECT_TYPE_TOOLS: Record<ProjectType, string[]> = {
-	node: [...SHELL_TOOLS, "node", "git"],
-	python: [...SHELL_TOOLS, "python", "git"],
-	java: [...SHELL_TOOLS, "java", "git", "vs2022"],
-	dotnet: [...SHELL_TOOLS, "dotnet", "git", "vs2022"],
-	rust: [...SHELL_TOOLS, "rust", "git"],
-	go: [...SHELL_TOOLS, "go", "git"],
-	unknown: [...SHELL_TOOLS, "git"],
+	node: ["node", "git"],
+	python: ["python", "git"],
+	java: ["java", "git", "gradle", "maven"],
+	cpp: ["cmake", "git"],
+	dotnet: ["dotnet", "git", "vs2022", "msbuild"],
+	rust: ["rust", "git"],
+	go: ["go", "git"],
+	unknown: ["git"],
 };
 
 /**
- * 目录/文件存在性检测规则
- * 用于 autoSelect 自动推断需要的工具
+ * Directory/file detection rules for autoSelect
  */
 type DirectoryDetectionRule = {
-	/** 检测的路径（相对于 cwd） */
+	/** Path to detect (relative to cwd) */
 	path: string;
-	/** 是否为目录 */
+	/** Whether it's a directory */
 	isDirectory: boolean;
-	/** 匹配后添加的工具 ID */
+	/** Tool IDs to add when matched */
 	tools: string[];
 };
 
 const DIRECTORY_DETECTION_RULES: DirectoryDetectionRule[] = [
-	// 版本控制
+	// Version control
 	{ path: ".git", isDirectory: true, tools: ["git"] },
 	{ path: ".svn", isDirectory: true, tools: ["svn"] },
 
@@ -154,7 +153,7 @@ const DIRECTORY_DETECTION_RULES: DirectoryDetectionRule[] = [
 	{ path: "compose.yaml", isDirectory: false, tools: ["docker"] },
 	{ path: ".dockerignore", isDirectory: false, tools: ["docker"] },
 
-	// Node.js 生态
+	// Node.js ecosystem
 	{ path: "node_modules", isDirectory: true, tools: ["node"] },
 	{ path: "package-lock.json", isDirectory: false, tools: ["node"] },
 	{ path: "yarn.lock", isDirectory: false, tools: ["node"] },
@@ -163,7 +162,7 @@ const DIRECTORY_DETECTION_RULES: DirectoryDetectionRule[] = [
 	{ path: ".nvmrc", isDirectory: false, tools: ["node"] },
 	{ path: ".node-version", isDirectory: false, tools: ["node"] },
 
-	// Python 生态
+	// Python ecosystem
 	{ path: ".venv", isDirectory: true, tools: ["python"] },
 	{ path: "venv", isDirectory: true, tools: ["python"] },
 	{ path: ".python-version", isDirectory: false, tools: ["python"] },
@@ -172,10 +171,14 @@ const DIRECTORY_DETECTION_RULES: DirectoryDetectionRule[] = [
 	{ path: "poetry.lock", isDirectory: false, tools: ["python"] },
 
 	// Java/Gradle/Maven
-	{ path: ".gradle", isDirectory: true, tools: ["java"] },
-	{ path: "gradlew", isDirectory: false, tools: ["java"] },
-	{ path: "mvnw", isDirectory: false, tools: ["java"] },
-	{ path: ".mvn", isDirectory: true, tools: ["java"] },
+	{ path: ".gradle", isDirectory: true, tools: ["java", "gradle"] },
+	{ path: "gradlew", isDirectory: false, tools: ["java", "gradle"] },
+	{ path: "mvnw", isDirectory: false, tools: ["java", "maven"] },
+	{ path: ".mvn", isDirectory: true, tools: ["java", "maven"] },
+
+	// C++ / CMake
+	{ path: "CMakeLists.txt", isDirectory: false, tools: ["cmake"] },
+	{ path: "CMakeCache.txt", isDirectory: false, tools: ["cmake"] },
 
 	// Rust
 	{ path: "Cargo.lock", isDirectory: false, tools: ["rust"] },
@@ -184,20 +187,20 @@ const DIRECTORY_DETECTION_RULES: DirectoryDetectionRule[] = [
 	// Go
 	{ path: "go.sum", isDirectory: false, tools: ["go"] },
 
-	// .NET
+	// .NET (vs2022 only for .NET projects)
 	{ path: "bin", isDirectory: true, tools: ["dotnet"] },
 	{ path: "obj", isDirectory: true, tools: ["dotnet"] },
-	{ path: "*.csproj", isDirectory: false, tools: ["dotnet", "vs2022"] },
-	{ path: "*.sln", isDirectory: false, tools: ["dotnet", "vs2022"] },
+	{ path: "*.csproj", isDirectory: false, tools: ["dotnet", "vs2022", "msbuild"] },
+	{ path: "*.sln", isDirectory: false, tools: ["dotnet", "vs2022", "msbuild"] },
 
-	// 数据库
-	{ path: "*.db", isDirectory: false, tools: ["sqlite"] },
-	{ path: "*.sqlite", isDirectory: false, tools: ["sqlite"] },
-	{ path: "*.sqlite3", isDirectory: false, tools: ["sqlite"] },
+	// Databases
+	{ path: "*.db", isDirectory: false, tools: ["sqlite3"] },
+	{ path: "*.sqlite", isDirectory: false, tools: ["sqlite3"] },
+	{ path: "*.sqlite3", isDirectory: false, tools: ["sqlite3"] },
 ];
 
 /**
- * 检测项目类型
+ * Detect project type from directory
  */
 export function detectProjectType(cwd: string): ProjectType {
 	const checks: Array<{ file: string; type: ProjectType }> = [
@@ -208,6 +211,7 @@ export function detectProjectType(cwd: string): ProjectType {
 		{ file: "pom.xml", type: "java" },
 		{ file: "build.gradle", type: "java" },
 		{ file: "build.gradle.kts", type: "java" },
+		{ file: "CMakeLists.txt", type: "cpp" },
 		{ file: "*.csproj", type: "dotnet" },
 		{ file: "*.sln", type: "dotnet" },
 		{ file: "Cargo.toml", type: "rust" },
@@ -216,7 +220,7 @@ export function detectProjectType(cwd: string): ProjectType {
 
 	for (const check of checks) {
 		if (check.file.includes("*")) {
-			// glob 模式
+			// glob pattern
 			const ext = check.file.replace("*", "");
 			try {
 				const files = fs.readdirSync(cwd);
@@ -224,7 +228,7 @@ export function detectProjectType(cwd: string): ProjectType {
 					return check.type;
 				}
 			} catch {
-				// 忽略读取错误
+				// Ignore read errors
 			}
 		} else {
 			const filePath = path.join(cwd, check.file);
@@ -238,26 +242,26 @@ export function detectProjectType(cwd: string): ProjectType {
 }
 
 /**
- * 工具匹配器实现
+ * Tool matcher implementation
  */
 export class ToolMatcher implements IToolMatcher {
 	constructor(private registry: IToolRegistry) {}
 
 	/**
-	 * 根据查询匹配工具
+	 * Match tools by query
 	 */
 	match(query: string, context?: MatchContext): MatchResult[] {
 		const results: MatchResult[] = [];
 		const queryLower = query.toLowerCase();
 		const installedTools = this.registry.getInstalled();
 
-		// 1. 关键词匹配
+		// 1. Keyword matching
 		for (const [toolId, keywords] of Object.entries(KEYWORD_MAP)) {
 			const matchedKeyword = keywords.find((kw) => queryLower.includes(kw));
 			if (matchedKeyword) {
 				const tool = this.registry.getTool(toolId);
 				if (tool?.installed) {
-					// 为每个 action 创建匹配结果
+					// Create match result for each action
 					for (const action of tool.actions) {
 						const actionScore = this.calculateActionScore(
 							action.name,
@@ -268,20 +272,20 @@ export class ToolMatcher implements IToolMatcher {
 							tool,
 							action,
 							score: 0.7 + actionScore * 0.3,
-							reason: `关键词匹配: "${matchedKeyword}"`,
+							reason: `Keyword match: "${matchedKeyword}"`,
 						});
 					}
 				}
 			}
 		}
 
-		// 2. 能力匹配
+		// 2. Capability matching
 		for (const [desc, capability] of Object.entries(CAPABILITY_MAP)) {
 			if (queryLower.includes(desc)) {
 				const tools = this.registry.getByCapability(capability);
 				for (const tool of tools) {
 					if (!tool.installed) continue;
-					// 避免重复
+					// Avoid duplicates
 					if (results.some((r) => r.tool.id === tool.id)) continue;
 
 					for (const action of tool.actions) {
@@ -289,18 +293,18 @@ export class ToolMatcher implements IToolMatcher {
 							tool,
 							action,
 							score: 0.6,
-							reason: `能力匹配: "${capability}"`,
+							reason: `Capability match: "${capability}"`,
 						});
 					}
 				}
 			}
 		}
 
-		// 3. 上下文感知匹配
+		// 3. Context-aware matching
 		if (context) {
 			const contextTools = this.autoSelect(context);
 			for (const tool of contextTools) {
-				// 避免重复
+				// Avoid duplicates
 				if (results.some((r) => r.tool.id === tool.id)) continue;
 
 				for (const action of tool.actions) {
@@ -308,15 +312,15 @@ export class ToolMatcher implements IToolMatcher {
 						tool,
 						action,
 						score: 0.4,
-						reason: `上下文推荐 (${context.projectType || "当前目录"})`,
+						reason: `Context recommendation (${context.projectType || "current directory"})`,
 					});
 				}
 			}
 		}
 
-		// 4. 工具名称/描述模糊匹配
+		// 4. Fuzzy matching by tool name/description
 		for (const tool of installedTools) {
-			// 避免重复
+			// Avoid duplicates
 			if (results.some((r) => r.tool.id === tool.id)) continue;
 
 			const nameMatch =
@@ -329,18 +333,18 @@ export class ToolMatcher implements IToolMatcher {
 						tool,
 						action,
 						score: 0.3,
-						reason: "名称/描述匹配",
+						reason: "Name/description match",
 					});
 				}
 			}
 		}
 
-		// 按分数排序
+		// Sort by score
 		return results.sort((a, b) => b.score - a.score);
 	}
 
 	/**
-	 * 计算动作匹配分数
+	 * Calculate action match score
 	 */
 	private calculateActionScore(
 		actionName: string,
@@ -358,7 +362,7 @@ export class ToolMatcher implements IToolMatcher {
 	}
 
 	/**
-	 * 根据能力匹配工具
+	 * Match tools by capability
 	 */
 	matchByCapability(capability: string): DiscoveredTool[] {
 		const cap = CAPABILITY_MAP[capability.toLowerCase()];
@@ -369,7 +373,7 @@ export class ToolMatcher implements IToolMatcher {
 	}
 
 	/**
-	 * 根据项目上下文自动选择工具
+	 * Auto-select tools based on project context
 	 */
 	autoSelect(context: MatchContext): DiscoveredTool[] {
 		const results: DiscoveredTool[] = [];
@@ -384,29 +388,30 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		};
 
-		// 0. 在 Windows 上动态获取 shell 工具列表（Python 优先如果可用）
-		const dynamicShellTools = getDefaultShellTools();
+		// 1. Always add shell tools for OS interaction
+		const shellTools = getDefaultShellTools();
+		for (const toolId of shellTools) {
+			addTool(toolId);
+		}
 
-		// 1. 根据项目类型选择
+		// 2. Always add Python if available (preferred for file operations due to better encoding support)
+		addTool("python");
+
+		// 3. Detect project type
 		let projectType = context.projectType;
 		if (!projectType && context.cwd) {
 			projectType = detectProjectType(context.cwd);
 		}
 
+		// 4. Add project-specific tools
 		if (projectType) {
-			// 使用动态 shell 工具列表替代静态列表
-			const baseTools = PROJECT_TYPE_TOOLS[projectType] || [];
-			// 替换 shell 工具为动态检测的列表
-			const nonShellTools = baseTools.filter(
-				(t) => !SHELL_TOOLS.includes(t) && !["python"].includes(t),
-			);
-			const toolIds = [...dynamicShellTools, ...nonShellTools];
-			for (const toolId of toolIds) {
+			const projectTools = PROJECT_TYPE_TOOLS[projectType] || [];
+			for (const toolId of projectTools) {
 				addTool(toolId);
 			}
 		}
 
-		// 2. 根据目录内容检测工具（.git, Dockerfile 等）
+		// 5. Detect tools from directory contents (.git, Dockerfile, CMakeLists.txt, etc.)
 		if (context.cwd) {
 			const detectedTools = this.detectToolsFromDirectory(context.cwd);
 			for (const toolId of detectedTools) {
@@ -414,7 +419,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 3. 根据选中的文件推断工具
+		// 6. Infer tools from selected files
 		if (context.selectedFiles) {
 			for (const file of context.selectedFiles) {
 				const ext = path.extname(file).toLowerCase();
@@ -423,7 +428,7 @@ export class ToolMatcher implements IToolMatcher {
 					addTool(toolId);
 				}
 
-				// 检测特殊文件名
+				// Detect special file names
 				const fileName = path.basename(file).toLowerCase();
 				const fileNameTools = this.inferToolsFromFileName(fileName);
 				for (const toolId of fileNameTools) {
@@ -432,7 +437,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 4. 根据当前文件推断工具
+		// 7. Infer tools from current files
 		if (context.currentFiles) {
 			for (const file of context.currentFiles) {
 				const ext = path.extname(file).toLowerCase();
@@ -441,7 +446,7 @@ export class ToolMatcher implements IToolMatcher {
 					addTool(toolId);
 				}
 
-				// 检测特殊文件名
+				// Detect special file names
 				const fileName = path.basename(file).toLowerCase();
 				const fileNameTools = this.inferToolsFromFileName(fileName);
 				for (const toolId of fileNameTools) {
@@ -454,7 +459,7 @@ export class ToolMatcher implements IToolMatcher {
 	}
 
 	/**
-	 * 根据目录内容检测需要的工具
+	 * Detect tools from directory contents
 	 */
 	private detectToolsFromDirectory(cwd: string): string[] {
 		const tools: string[] = [];
@@ -462,7 +467,7 @@ export class ToolMatcher implements IToolMatcher {
 		for (const rule of DIRECTORY_DETECTION_RULES) {
 			try {
 				if (rule.path.includes("*")) {
-					// glob 模式匹配
+					// glob pattern matching
 					const ext = rule.path.replace("*", "");
 					const files = fs.readdirSync(cwd);
 					if (files.some((f) => f.endsWith(ext))) {
@@ -478,7 +483,7 @@ export class ToolMatcher implements IToolMatcher {
 					}
 				}
 			} catch {
-				// 忽略读取错误
+				// Ignore read errors
 			}
 		}
 
@@ -486,7 +491,7 @@ export class ToolMatcher implements IToolMatcher {
 	}
 
 	/**
-	 * 根据文件名推断工具
+	 * Infer tools from file name
 	 */
 	private inferToolsFromFileName(fileName: string): string[] {
 		const fileNameMap: Record<string, string[]> = {
@@ -504,9 +509,10 @@ export class ToolMatcher implements IToolMatcher {
 			"pyproject.toml": ["python"],
 			"setup.py": ["python"],
 			pipfile: ["python"],
-			"pom.xml": ["java"],
-			"build.gradle": ["java"],
-			"build.gradle.kts": ["java"],
+			"pom.xml": ["java", "maven"],
+			"build.gradle": ["java", "gradle"],
+			"build.gradle.kts": ["java", "gradle"],
+			"cmakelists.txt": ["cmake"],
 			"cargo.toml": ["rust"],
 			"go.mod": ["go"],
 			"go.sum": ["go"],
@@ -522,7 +528,7 @@ export class ToolMatcher implements IToolMatcher {
 	}
 
 	/**
-	 * 根据文件扩展名推断工具
+	 * Infer tools from file extension
 	 */
 	private inferToolsFromExtension(ext: string): string[] {
 		const extMap: Record<string, string[]> = {
@@ -532,10 +538,16 @@ export class ToolMatcher implements IToolMatcher {
 			".tsx": ["node"],
 			".py": ["python"],
 			".java": ["java"],
-			".cs": ["dotnet", "vs2022"],
+			".cs": ["dotnet", "vs2022", "msbuild"],
+			".cpp": ["cmake"],
+			".cc": ["cmake"],
+			".cxx": ["cmake"],
+			".c": ["cmake"],
+			".h": ["cmake"],
+			".hpp": ["cmake"],
 			".rs": ["rust"],
 			".go": ["go"],
-			".sql": ["mysql", "postgresql", "sqlite"],
+			".sql": ["mysql", "postgresql", "sqlite3"],
 			".dockerfile": ["docker"],
 			".yml": ["docker"],
 			".yaml": ["docker"],
@@ -552,7 +564,7 @@ export class ToolMatcher implements IToolMatcher {
 }
 
 /**
- * 获取匹配器实例
+ * Create tool matcher instance
  */
 export function createToolMatcher(registry: IToolRegistry): IToolMatcher {
 	return new ToolMatcher(registry);

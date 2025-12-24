@@ -1,5 +1,18 @@
 /**
- * PowerShell 工具发现器
+ * PowerShell tool discoverer
+ *
+ * IMPORTANT: PowerShell is for Windows system operations ONLY.
+ * DO NOT use PowerShell for file read/write operations - use Python instead.
+ *
+ * PowerShell 5.1 has known encoding issues:
+ * - Console encoding may not match file encoding
+ * - UTF-8 with BOM handling is inconsistent
+ * - Non-ASCII characters may be corrupted
+ *
+ * For file operations, Python is preferred because it properly handles:
+ * - Encoding detection (UTF-8, UTF-8 BOM, GBK, etc.)
+ * - Line ending detection and preservation (LF/CRLF)
+ * - UTF-8 as default with proper fallback
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -14,98 +27,102 @@ import {
 const powershellDefinition: ToolDefinition = {
 	id: "powershell",
 	name: "PowerShell",
-	description: "Microsoft PowerShell 命令行工具",
+	description:
+		"Windows PowerShell 5.1 for Windows system operations. NOT recommended for file read/write - use Python instead.",
 	category: "shell",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "run",
-			description: "执行 PowerShell 命令",
+			description:
+				"Execute PowerShell command for Windows system operations",
 			parameters: [
 				{
 					name: "command",
-					description: "PowerShell 命令",
+					description: "PowerShell command",
 					type: "string",
 					required: true,
 				},
 			],
-			// 强制 UTF-8 编码：设置控制台输出编码 + 使用 -Encoding UTF8 读写文件
+			// Use cmd /C to run chcp (CMD command) before PowerShell
+			// chcp 65001 sets console to UTF-8 for proper output display
 			commandTemplate:
-				'powershell -NoProfile -Command "[Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; {{command}}"',
+				'cmd /C "chcp 65001 >nul & powershell -NoProfile -Command {{command}}"',
 		},
 		{
 			name: "run_script",
-			description: "运行 PowerShell 脚本",
+			description: "Run PowerShell script file",
 			parameters: [
 				{
 					name: "file",
-					description: "PS1 脚本文件",
+					description: "PS1 script file path",
 					type: "file",
 					required: true,
 				},
 			],
-			// -File 模式无法设置编码，改用 -Command 执行脚本
 			commandTemplate:
-				'powershell -NoProfile -Command "[Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; & \'{{file}}\'"',
+				'cmd /C "chcp 65001 >nul & powershell -NoProfile -File {{file}}"',
 		},
 		{
 			name: "version",
-			description: "查看 PowerShell 版本",
+			description: "Show PowerShell version",
 			parameters: [],
 			commandTemplate:
-				"powershell -NoProfile -Command $PSVersionTable.PSVersion.ToString()",
+				'cmd /C "chcp 65001 >nul & powershell -NoProfile -Command $PSVersionTable.PSVersion.ToString()"',
 		},
 	],
 	installHint:
-		"Windows 自带 PowerShell 5.1\n跨平台 PowerShell 7: https://github.com/PowerShell/PowerShell",
+		"Windows includes PowerShell 5.1 by default.\nFor PowerShell 7+: winget install --id Microsoft.PowerShell --source winget, see https://github.com/PowerShell/PowerShell",
 };
 
-// PowerShell Core (pwsh) - 跨平台版本
+// PowerShell Core (pwsh) - cross-platform version
 const pwshDefinition: ToolDefinition = {
 	id: "pwsh",
 	name: "PowerShell Core",
-	description: "跨平台 PowerShell 7+",
+	description:
+		"Cross-platform PowerShell 7+. Better encoding support than Windows PowerShell 5.1.",
 	category: "shell",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "run",
-			description: "执行 PowerShell 命令",
+			description: "Execute PowerShell command",
 			parameters: [
 				{
 					name: "command",
-					description: "PowerShell 命令",
+					description: "PowerShell command",
 					type: "string",
 					required: true,
 				},
 			],
-			commandTemplate: 'pwsh -Command "{{command}}"',
+			// chcp 65001 sets console to UTF-8 for proper output display
+			commandTemplate: 'chcp 65001 >nul & pwsh -Command "{{command}}"',
 		},
 		{
 			name: "run_script",
-			description: "运行 PowerShell 脚本",
+			description: "Run PowerShell script file",
 			parameters: [
 				{
 					name: "file",
-					description: "PS1 脚本文件",
+					description: "PS1 script file path",
 					type: "file",
 					required: true,
 				},
 			],
-			commandTemplate: "pwsh -File {{file}}",
+			commandTemplate: "chcp 65001 >nul & pwsh -File {{file}}",
 		},
 		{
 			name: "version",
-			description: "查看版本",
+			description: "Show version",
 			parameters: [],
-			commandTemplate: "pwsh --version",
+			commandTemplate: "chcp 65001 >nul & pwsh --version",
 		},
 	],
-	installHint: "从 https://github.com/PowerShell/PowerShell 下载安装",
+	installHint: "Download from https://github.com/PowerShell/PowerShell",
 };
 
 export async function detectPowershell(): Promise<DiscoveredTool> {
-	// Windows 上是 powershell.exe
+	// powershell.exe on Windows
 	if (!(await commandExists("powershell"))) {
 		return createNotInstalledTool(powershellDefinition);
 	}

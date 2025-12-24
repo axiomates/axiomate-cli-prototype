@@ -1,5 +1,5 @@
 /**
- * Visual Studio 工具发现器
+ * Visual Studio tool discoverer
  */
 
 import { join } from "node:path";
@@ -15,17 +15,17 @@ import {
 const vsDefinition: ToolDefinition = {
 	id: "vs2022",
 	name: "Visual Studio 2022",
-	description: "Microsoft Visual Studio 集成开发环境",
+	description: "Microsoft Visual Studio IDE for .NET development",
 	category: "ide",
 	capabilities: ["edit", "build", "debug"],
 	actions: [
 		{
 			name: "open",
-			description: "打开解决方案或项目",
+			description: "Open solution or project",
 			parameters: [
 				{
 					name: "path",
-					description: "解决方案(.sln)或项目文件路径",
+					description: "Solution (.sln) or project file path",
 					type: "file",
 					required: true,
 				},
@@ -34,17 +34,17 @@ const vsDefinition: ToolDefinition = {
 		},
 		{
 			name: "build",
-			description: "构建解决方案",
+			description: "Build solution",
 			parameters: [
 				{
 					name: "solution",
-					description: "解决方案文件路径",
+					description: "Solution file path",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "config",
-					description: "配置（Debug/Release）",
+					description: "Configuration (Debug/Release)",
 					type: "string",
 					required: false,
 					default: "Debug",
@@ -54,17 +54,17 @@ const vsDefinition: ToolDefinition = {
 		},
 		{
 			name: "rebuild",
-			description: "重新构建解决方案",
+			description: "Rebuild solution",
 			parameters: [
 				{
 					name: "solution",
-					description: "解决方案文件路径",
+					description: "Solution file path",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "config",
-					description: "配置（Debug/Release）",
+					description: "Configuration (Debug/Release)",
 					type: "string",
 					required: false,
 					default: "Debug",
@@ -74,11 +74,11 @@ const vsDefinition: ToolDefinition = {
 		},
 		{
 			name: "clean",
-			description: "清理解决方案",
+			description: "Clean solution",
 			parameters: [
 				{
 					name: "solution",
-					description: "解决方案文件路径",
+					description: "Solution file path",
 					type: "file",
 					required: true,
 				},
@@ -87,10 +87,10 @@ const vsDefinition: ToolDefinition = {
 		},
 	],
 	installHint:
-		"从 https://visualstudio.microsoft.com/downloads/ 下载 Visual Studio 2022",
+		"Download Visual Studio 2022 from https://visualstudio.microsoft.com/downloads/",
 };
 
-// MSBuild 定义
+// MSBuild definition
 const msbuildDefinition: ToolDefinition = {
 	id: "msbuild",
 	name: "MSBuild",
@@ -100,17 +100,17 @@ const msbuildDefinition: ToolDefinition = {
 	actions: [
 		{
 			name: "build",
-			description: "构建项目或解决方案",
+			description: "Build project or solution",
 			parameters: [
 				{
 					name: "project",
-					description: "项目/解决方案文件路径",
+					description: "Project/solution file path",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "config",
-					description: "配置",
+					description: "Configuration",
 					type: "string",
 					required: false,
 					default: "Debug",
@@ -120,11 +120,11 @@ const msbuildDefinition: ToolDefinition = {
 		},
 		{
 			name: "restore",
-			description: "恢复 NuGet 包",
+			description: "Restore NuGet packages",
 			parameters: [
 				{
 					name: "project",
-					description: "项目/解决方案文件路径",
+					description: "Project/solution file path",
 					type: "file",
 					required: true,
 				},
@@ -133,11 +133,11 @@ const msbuildDefinition: ToolDefinition = {
 		},
 		{
 			name: "clean",
-			description: "清理构建输出",
+			description: "Clean build output",
 			parameters: [
 				{
 					name: "project",
-					description: "项目/解决方案文件路径",
+					description: "Project/solution file path",
 					type: "file",
 					required: true,
 				},
@@ -145,7 +145,7 @@ const msbuildDefinition: ToolDefinition = {
 			commandTemplate: 'msbuild "{{project}}" /t:Clean',
 		},
 	],
-	installHint: "MSBuild 随 Visual Studio 或 .NET SDK 一起安装",
+	installHint: "MSBuild is included with Visual Studio or .NET SDK",
 };
 
 export async function detectVisualStudio(): Promise<DiscoveredTool> {
@@ -159,7 +159,7 @@ export async function detectVisualStudio(): Promise<DiscoveredTool> {
 		return createNotInstalledTool(vsDefinition);
 	}
 
-	// 从版本号提取主版本 (17.x.x for VS 2022)
+	// Extract major version from version number (17.x.x for VS 2022)
 	const versionMatch = vs.version.match(/^(\d+\.\d+)/);
 	const version = versionMatch ? versionMatch[1] : vs.version;
 
@@ -185,7 +185,7 @@ export async function detectMsbuild(): Promise<DiscoveredTool> {
 
 	const version = await getVersion(msbuildPath, ["-version"], {
 		parseOutput: (output) => {
-			// 最后一行通常是版本号
+			// Last line is usually the version number
 			const lines = output.trim().split("\n");
 			return lines[lines.length - 1].trim();
 		},

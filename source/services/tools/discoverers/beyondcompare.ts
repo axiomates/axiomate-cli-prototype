@@ -1,5 +1,5 @@
 /**
- * Beyond Compare 工具发现器
+ * Beyond Compare tool discoverer
  */
 
 import { platform } from "node:os";
@@ -16,23 +16,23 @@ const isWindows = platform() === "win32";
 const bcDefinition: ToolDefinition = {
 	id: "beyondcompare",
 	name: "Beyond Compare",
-	description: "强大的文件和文件夹比较工具",
+	description: "Powerful file and folder comparison tool",
 	category: "diff",
 	capabilities: ["diff", "merge"],
 	actions: [
 		{
 			name: "diff",
-			description: "比较两个文件或文件夹",
+			description: "Compare two files or folders",
 			parameters: [
 				{
 					name: "left",
-					description: "左侧文件/文件夹",
+					description: "Left file/folder",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "right",
-					description: "右侧文件/文件夹",
+					description: "Right file/folder",
 					type: "string",
 					required: true,
 				},
@@ -41,29 +41,29 @@ const bcDefinition: ToolDefinition = {
 		},
 		{
 			name: "merge",
-			description: "三方合并",
+			description: "Three-way merge",
 			parameters: [
 				{
 					name: "left",
-					description: "左侧版本",
+					description: "Left version",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "right",
-					description: "右侧版本",
+					description: "Right version",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "base",
-					description: "基础版本",
+					description: "Base version",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "output",
-					description: "输出文件",
+					description: "Output file",
 					type: "file",
 					required: true,
 				},
@@ -73,17 +73,17 @@ const bcDefinition: ToolDefinition = {
 		},
 		{
 			name: "folder_sync",
-			description: "文件夹同步",
+			description: "Folder synchronization",
 			parameters: [
 				{
 					name: "source",
-					description: "源文件夹",
+					description: "Source folder",
 					type: "directory",
 					required: true,
 				},
 				{
 					name: "target",
-					description: "目标文件夹",
+					description: "Target folder",
 					type: "directory",
 					required: true,
 				},
@@ -91,16 +91,16 @@ const bcDefinition: ToolDefinition = {
 			commandTemplate: '"{{execPath}}" /sync "{{source}}" "{{target}}"',
 		},
 	],
-	installHint: "从 https://www.scootersoftware.com/download 下载安装",
+	installHint: "Download from https://www.scootersoftware.com/download",
 };
 
 export async function detectBeyondCompare(): Promise<DiscoveredTool> {
 	if (!isWindows) {
-		// macOS/Linux 上的检测路径不同，简化处理
+		// macOS/Linux detection paths are different, simplified handling
 		return createNotInstalledTool(bcDefinition);
 	}
 
-	// 尝试从注册表获取安装路径
+	// Try to get install path from registry
 	const regPaths = [
 		"HKLM\\SOFTWARE\\Scooter Software\\Beyond Compare 4",
 		"HKLM\\SOFTWARE\\Scooter Software\\Beyond Compare 5",
@@ -115,7 +115,7 @@ export async function detectBeyondCompare(): Promise<DiscoveredTool> {
 		const installPath = await queryRegistry(regPath, "ExePath");
 		if (installPath && fileExists(installPath)) {
 			bcPath = installPath;
-			// 从注册表路径推断版本
+			// Infer version from registry path
 			if (regPath.includes("Beyond Compare 5")) {
 				bcVersion = "5";
 			} else if (regPath.includes("Beyond Compare 4")) {
@@ -125,7 +125,7 @@ export async function detectBeyondCompare(): Promise<DiscoveredTool> {
 		}
 	}
 
-	// 如果注册表没找到，尝试常见安装路径
+	// If not found in registry, try common install paths
 	if (!bcPath) {
 		const defaultPaths = [
 			"C:\\Program Files\\Beyond Compare 5\\BComp.exe",

@@ -1,5 +1,5 @@
 /**
- * Windows CMD 工具发现器
+ * Windows CMD tool discoverer
  */
 
 import { platform } from "node:os";
@@ -14,48 +14,49 @@ import {
 const cmdDefinition: ToolDefinition = {
 	id: "cmd",
 	name: "CMD",
-	description: "Windows 命令提示符",
+	description: "Windows Command Prompt",
 	category: "shell",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "run",
-			description: "执行 CMD 命令",
+			description: "Execute CMD command",
 			parameters: [
 				{
 					name: "command",
-					description: "CMD 命令",
+					description: "CMD command",
 					type: "string",
 					required: true,
 				},
 			],
-			commandTemplate: 'cmd /C "{{command}}"',
+			// chcp 65001 sets console to UTF-8 for proper output display
+			commandTemplate: 'chcp 65001 >nul & cmd /C "{{command}}"',
 		},
 		{
 			name: "run_script",
-			description: "运行批处理脚本",
+			description: "Run batch script",
 			parameters: [
 				{
 					name: "file",
-					description: "批处理文件路径 (.bat/.cmd)",
+					description: "Batch file path (.bat/.cmd)",
 					type: "file",
 					required: true,
 				},
 			],
-			commandTemplate: "cmd /C {{file}}",
+			commandTemplate: "chcp 65001 >nul & cmd /C {{file}}",
 		},
 		{
 			name: "version",
-			description: "查看 CMD 版本",
+			description: "Show CMD version",
 			parameters: [],
-			commandTemplate: "cmd /C ver",
+			commandTemplate: "chcp 65001 >nul & cmd /C ver",
 		},
 	],
-	installHint: "Windows 系统自带",
+	installHint: "Included with Windows",
 };
 
 export async function detectCmd(): Promise<DiscoveredTool> {
-	// CMD 仅在 Windows 上可用
+	// CMD is only available on Windows
 	if (platform() !== "win32") {
 		return createNotInstalledTool(cmdDefinition);
 	}
@@ -66,6 +67,6 @@ export async function detectCmd(): Promise<DiscoveredTool> {
 
 	const execPath = await getExecutablePath("cmd");
 
-	// CMD 版本号不易获取，不设置 version
+	// CMD version is not easily retrievable, skip version
 	return createInstalledTool(cmdDefinition, execPath || "cmd", undefined);
 }

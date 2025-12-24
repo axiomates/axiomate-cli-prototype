@@ -1,5 +1,5 @@
 /**
- * VS Code 工具发现器
+ * VS Code tool discoverer
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -14,17 +14,17 @@ import {
 const vscodeDefinition: ToolDefinition = {
 	id: "vscode",
 	name: "Visual Studio Code",
-	description: "轻量级代码编辑器",
+	description: "Lightweight code editor",
 	category: "ide",
 	capabilities: ["edit"],
 	actions: [
 		{
 			name: "open",
-			description: "打开文件或文件夹",
+			description: "Open file or folder",
 			parameters: [
 				{
 					name: "path",
-					description: "文件或文件夹路径",
+					description: "File or folder path",
 					type: "string",
 					required: true,
 				},
@@ -33,11 +33,11 @@ const vscodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "open_new_window",
-			description: "在新窗口打开",
+			description: "Open in new window",
 			parameters: [
 				{
 					name: "path",
-					description: "文件或文件夹路径",
+					description: "File or folder path",
 					type: "string",
 					required: true,
 				},
@@ -46,17 +46,17 @@ const vscodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "diff",
-			description: "比较两个文件",
+			description: "Compare two files",
 			parameters: [
 				{
 					name: "left",
-					description: "左侧文件",
+					description: "Left file",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "right",
-					description: "右侧文件",
+					description: "Right file",
 					type: "file",
 					required: true,
 				},
@@ -65,23 +65,23 @@ const vscodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "goto",
-			description: "打开文件并跳转到指定行列",
+			description: "Open file and go to specific line and column",
 			parameters: [
 				{
 					name: "file",
-					description: "文件路径",
+					description: "File path",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "line",
-					description: "行号",
+					description: "Line number",
 					type: "number",
 					required: true,
 				},
 				{
 					name: "column",
-					description: "列号",
+					description: "Column number",
 					type: "number",
 					required: false,
 					default: 1,
@@ -91,11 +91,11 @@ const vscodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "install_extension",
-			description: "安装扩展",
+			description: "Install extension",
 			parameters: [
 				{
 					name: "extension",
-					description: "扩展 ID",
+					description: "Extension ID",
 					type: "string",
 					required: true,
 				},
@@ -104,12 +104,12 @@ const vscodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "list_extensions",
-			description: "列出已安装的扩展",
+			description: "List installed extensions",
 			parameters: [],
 			commandTemplate: "code --list-extensions",
 		},
 	],
-	installHint: "从 https://code.visualstudio.com/ 下载安装",
+	installHint: "Download from https://code.visualstudio.com/",
 };
 
 export async function detectVscode(): Promise<DiscoveredTool> {
@@ -120,7 +120,7 @@ export async function detectVscode(): Promise<DiscoveredTool> {
 	const execPath = await getExecutablePath("code");
 	const version = await getVersion("code", ["--version"], {
 		parseOutput: (output) => {
-			// 第一行是版本号
+			// First line is the version number
 			return output.split("\n")[0].trim();
 		},
 	});

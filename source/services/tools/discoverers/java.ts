@@ -1,5 +1,5 @@
 /**
- * Java 工具发现器
+ * Java tool discoverer
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -14,17 +14,17 @@ import {
 const javaDefinition: ToolDefinition = {
 	id: "java",
 	name: "Java",
-	description: "Java 运行时环境",
+	description: "Java runtime environment",
 	category: "runtime",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "run",
-			description: "运行 Java 类",
+			description: "Run Java class",
 			parameters: [
 				{
 					name: "class",
-					description: "类名",
+					description: "Class name",
 					type: "string",
 					required: true,
 				},
@@ -33,11 +33,11 @@ const javaDefinition: ToolDefinition = {
 		},
 		{
 			name: "run_jar",
-			description: "运行 JAR 文件",
+			description: "Run JAR file",
 			parameters: [
 				{
 					name: "jar",
-					description: "JAR 文件路径",
+					description: "JAR file path",
 					type: "file",
 					required: true,
 				},
@@ -46,29 +46,29 @@ const javaDefinition: ToolDefinition = {
 		},
 		{
 			name: "version",
-			description: "查看 Java 版本",
+			description: "Show Java version",
 			parameters: [],
 			commandTemplate: "java -version",
 		},
 	],
 	installHint:
-		"从 https://adoptium.net/ 下载 Eclipse Temurin\n或从 https://www.oracle.com/java/technologies/downloads/ 下载 Oracle JDK",
+		"Download Eclipse Temurin from https://adoptium.net/\nor Oracle JDK from https://www.oracle.com/java/technologies/downloads/",
 };
 
 const javacDefinition: ToolDefinition = {
 	id: "javac",
 	name: "Java Compiler",
-	description: "Java 编译器 (JDK)",
+	description: "Java compiler (JDK)",
 	category: "build",
 	capabilities: ["execute", "build"],
 	actions: [
 		{
 			name: "compile",
-			description: "编译 Java 源文件",
+			description: "Compile Java source file",
 			parameters: [
 				{
 					name: "file",
-					description: "Java 源文件",
+					description: "Java source file",
 					type: "file",
 					required: true,
 				},
@@ -77,12 +77,12 @@ const javacDefinition: ToolDefinition = {
 		},
 		{
 			name: "version",
-			description: "查看编译器版本",
+			description: "Show compiler version",
 			parameters: [],
 			commandTemplate: "javac -version",
 		},
 	],
-	installHint: "安装 JDK（而非 JRE）以获得 javac",
+	installHint: "Install JDK (not JRE) to get javac",
 };
 
 export async function detectJava(): Promise<DiscoveredTool> {
@@ -91,11 +91,11 @@ export async function detectJava(): Promise<DiscoveredTool> {
 	}
 
 	const execPath = await getExecutablePath("java");
-	// java -version 输出到 stderr
+	// java -version outputs to stderr
 	const version = await getVersion("java", ["-version"], {
 		useStderr: true,
 		parseOutput: (output) => {
-			// 'openjdk version "21.0.1"' 或 'java version "1.8.0_391"'
+			// 'openjdk version "21.0.1"' or 'java version "1.8.0_391"'
 			const match = output.match(/version "(\d+(?:\.\d+)*)/);
 			return match ? match[1] : output.split("\n")[0];
 		},

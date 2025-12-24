@@ -1,5 +1,5 @@
 /**
- * 数据库工具发现器 (mysql, psql, sqlite3)
+ * Database tool discoverer (mysql, psql, sqlite3)
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -11,34 +11,34 @@ import {
 	createNotInstalledTool,
 } from "./base.js";
 
-// MySQL 客户端定义
+// MySQL client definition
 const mysqlDefinition: ToolDefinition = {
 	id: "mysql",
 	name: "MySQL Client",
-	description: "MySQL 命令行客户端",
+	description: "MySQL command-line client",
 	category: "database",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "connect",
-			description: "连接到 MySQL 服务器",
+			description: "Connect to MySQL server",
 			parameters: [
 				{
 					name: "host",
-					description: "主机地址",
+					description: "Host address",
 					type: "string",
 					required: false,
 					default: "localhost",
 				},
 				{
 					name: "user",
-					description: "用户名",
+					description: "Username",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "database",
-					description: "数据库名",
+					description: "Database name",
 					type: "string",
 					required: false,
 				},
@@ -48,30 +48,30 @@ const mysqlDefinition: ToolDefinition = {
 		},
 		{
 			name: "execute",
-			description: "执行 SQL 语句",
+			description: "Execute SQL statement",
 			parameters: [
 				{
 					name: "host",
-					description: "主机地址",
+					description: "Host address",
 					type: "string",
 					required: false,
 					default: "localhost",
 				},
 				{
 					name: "user",
-					description: "用户名",
+					description: "Username",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "database",
-					description: "数据库名",
+					description: "Database name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "sql",
-					description: "SQL 语句",
+					description: "SQL statement",
 					type: "string",
 					required: true,
 				},
@@ -81,30 +81,30 @@ const mysqlDefinition: ToolDefinition = {
 		},
 		{
 			name: "dump",
-			description: "导出数据库",
+			description: "Export database",
 			parameters: [
 				{
 					name: "host",
-					description: "主机地址",
+					description: "Host address",
 					type: "string",
 					required: false,
 					default: "localhost",
 				},
 				{
 					name: "user",
-					description: "用户名",
+					description: "Username",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "database",
-					description: "数据库名",
+					description: "Database name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "output",
-					description: "输出文件",
+					description: "Output file",
 					type: "file",
 					required: true,
 				},
@@ -113,37 +113,37 @@ const mysqlDefinition: ToolDefinition = {
 				'mysqldump -h {{host}} -u {{user}} {{database}} -p > "{{output}}"',
 		},
 	],
-	installHint: "从 https://dev.mysql.com/downloads/mysql/ 下载安装 MySQL",
+	installHint: "Download MySQL from https://dev.mysql.com/downloads/mysql/",
 };
 
-// PostgreSQL 客户端定义
+// PostgreSQL client definition
 const psqlDefinition: ToolDefinition = {
 	id: "psql",
 	name: "PostgreSQL Client",
-	description: "PostgreSQL 命令行客户端",
+	description: "PostgreSQL command-line client",
 	category: "database",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "connect",
-			description: "连接到 PostgreSQL 服务器",
+			description: "Connect to PostgreSQL server",
 			parameters: [
 				{
 					name: "host",
-					description: "主机地址",
+					description: "Host address",
 					type: "string",
 					required: false,
 					default: "localhost",
 				},
 				{
 					name: "user",
-					description: "用户名",
+					description: "Username",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "database",
-					description: "数据库名",
+					description: "Database name",
 					type: "string",
 					required: false,
 					default: "postgres",
@@ -153,30 +153,30 @@ const psqlDefinition: ToolDefinition = {
 		},
 		{
 			name: "execute",
-			description: "执行 SQL 语句",
+			description: "Execute SQL statement",
 			parameters: [
 				{
 					name: "host",
-					description: "主机地址",
+					description: "Host address",
 					type: "string",
 					required: false,
 					default: "localhost",
 				},
 				{
 					name: "user",
-					description: "用户名",
+					description: "Username",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "database",
-					description: "数据库名",
+					description: "Database name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "sql",
-					description: "SQL 语句",
+					description: "SQL statement",
 					type: "string",
 					required: true,
 				},
@@ -185,30 +185,30 @@ const psqlDefinition: ToolDefinition = {
 		},
 		{
 			name: "dump",
-			description: "导出数据库",
+			description: "Export database",
 			parameters: [
 				{
 					name: "host",
-					description: "主机地址",
+					description: "Host address",
 					type: "string",
 					required: false,
 					default: "localhost",
 				},
 				{
 					name: "user",
-					description: "用户名",
+					description: "Username",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "database",
-					description: "数据库名",
+					description: "Database name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "output",
-					description: "输出文件",
+					description: "Output file",
 					type: "file",
 					required: true,
 				},
@@ -217,24 +217,24 @@ const psqlDefinition: ToolDefinition = {
 				'pg_dump -h {{host}} -U {{user}} {{database}} > "{{output}}"',
 		},
 	],
-	installHint: "从 https://www.postgresql.org/download/ 下载安装 PostgreSQL",
+	installHint: "Download PostgreSQL from https://www.postgresql.org/download/",
 };
 
-// SQLite 定义
+// SQLite definition
 const sqliteDefinition: ToolDefinition = {
 	id: "sqlite3",
 	name: "SQLite",
-	description: "SQLite 命令行工具",
+	description: "SQLite command-line tool",
 	category: "database",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "open",
-			description: "打开或创建数据库",
+			description: "Open or create database",
 			parameters: [
 				{
 					name: "database",
-					description: "数据库文件路径",
+					description: "Database file path",
 					type: "file",
 					required: true,
 				},
@@ -243,17 +243,17 @@ const sqliteDefinition: ToolDefinition = {
 		},
 		{
 			name: "execute",
-			description: "执行 SQL 语句",
+			description: "Execute SQL statement",
 			parameters: [
 				{
 					name: "database",
-					description: "数据库文件路径",
+					description: "Database file path",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "sql",
-					description: "SQL 语句",
+					description: "SQL statement",
 					type: "string",
 					required: true,
 				},
@@ -262,17 +262,17 @@ const sqliteDefinition: ToolDefinition = {
 		},
 		{
 			name: "dump",
-			description: "导出数据库",
+			description: "Export database",
 			parameters: [
 				{
 					name: "database",
-					description: "数据库文件路径",
+					description: "Database file path",
 					type: "file",
 					required: true,
 				},
 				{
 					name: "output",
-					description: "输出文件",
+					description: "Output file",
 					type: "file",
 					required: true,
 				},
@@ -281,11 +281,11 @@ const sqliteDefinition: ToolDefinition = {
 		},
 		{
 			name: "tables",
-			description: "列出所有表",
+			description: "List all tables",
 			parameters: [
 				{
 					name: "database",
-					description: "数据库文件路径",
+					description: "Database file path",
 					type: "file",
 					required: true,
 				},
@@ -293,7 +293,7 @@ const sqliteDefinition: ToolDefinition = {
 			commandTemplate: 'sqlite3 "{{database}}" ".tables"',
 		},
 	],
-	installHint: "从 https://www.sqlite.org/download.html 下载安装",
+	installHint: "Download from https://www.sqlite.org/download.html",
 };
 
 export async function detectMysql(): Promise<DiscoveredTool> {
@@ -304,7 +304,7 @@ export async function detectMysql(): Promise<DiscoveredTool> {
 	const execPath = await getExecutablePath("mysql");
 	const version = await getVersion("mysql", ["--version"], {
 		parseOutput: (output) => {
-			// "mysql Ver 8.0.35" 或 "mysql Ver 5.7.44"
+			// "mysql Ver 8.0.35" or "mysql Ver 5.7.44"
 			const match = output.match(/Ver (\d+\.\d+\.\d+)/);
 			return match ? match[1] : output;
 		},

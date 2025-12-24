@@ -1,5 +1,5 @@
 /**
- * 构建工具发现器 (cmake, gradle, maven)
+ * Build tools discoverer (cmake, gradle, maven)
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -11,33 +11,33 @@ import {
 	createNotInstalledTool,
 } from "./base.js";
 
-// CMake 定义
+// CMake definition
 const cmakeDefinition: ToolDefinition = {
 	id: "cmake",
 	name: "CMake",
-	description: "跨平台构建系统生成器",
+	description: "Cross-platform build system generator for C/C++ projects",
 	category: "build",
 	capabilities: ["build"],
 	actions: [
 		{
 			name: "configure",
-			description: "配置项目",
+			description: "Configure project",
 			parameters: [
 				{
 					name: "source",
-					description: "源码目录",
+					description: "Source directory",
 					type: "directory",
 					required: true,
 				},
 				{
 					name: "build",
-					description: "构建目录",
+					description: "Build directory",
 					type: "directory",
 					required: true,
 				},
 				{
 					name: "generator",
-					description: "生成器（如 Ninja, Visual Studio）",
+					description: "Generator (e.g., Ninja, Visual Studio)",
 					type: "string",
 					required: false,
 				},
@@ -47,17 +47,17 @@ const cmakeDefinition: ToolDefinition = {
 		},
 		{
 			name: "build",
-			description: "构建项目",
+			description: "Build project",
 			parameters: [
 				{
 					name: "build_dir",
-					description: "构建目录",
+					description: "Build directory",
 					type: "directory",
 					required: true,
 				},
 				{
 					name: "config",
-					description: "配置（Debug/Release）",
+					description: "Configuration (Debug/Release)",
 					type: "string",
 					required: false,
 					default: "Release",
@@ -67,17 +67,17 @@ const cmakeDefinition: ToolDefinition = {
 		},
 		{
 			name: "install",
-			description: "安装项目",
+			description: "Install project",
 			parameters: [
 				{
 					name: "build_dir",
-					description: "构建目录",
+					description: "Build directory",
 					type: "directory",
 					required: true,
 				},
 				{
 					name: "prefix",
-					description: "安装前缀",
+					description: "Install prefix",
 					type: "directory",
 					required: false,
 				},
@@ -86,48 +86,48 @@ const cmakeDefinition: ToolDefinition = {
 				"cmake --install \"{{build_dir}}\" {{prefix ? '--prefix \"' + prefix + '\"' : ''}}",
 		},
 	],
-	installHint: "从 https://cmake.org/download/ 下载安装",
+	installHint: "Download from https://cmake.org/download/",
 };
 
-// Gradle 定义
+// Gradle definition
 const gradleDefinition: ToolDefinition = {
 	id: "gradle",
 	name: "Gradle",
-	description: "基于 Groovy/Kotlin 的构建工具",
+	description: "Groovy/Kotlin-based build tool",
 	category: "build",
 	capabilities: ["build"],
 	actions: [
 		{
 			name: "build",
-			description: "构建项目",
+			description: "Build project",
 			parameters: [],
 			commandTemplate: "gradle build",
 		},
 		{
 			name: "clean",
-			description: "清理构建输出",
+			description: "Clean build output",
 			parameters: [],
 			commandTemplate: "gradle clean",
 		},
 		{
 			name: "test",
-			description: "运行测试",
+			description: "Run tests",
 			parameters: [],
 			commandTemplate: "gradle test",
 		},
 		{
 			name: "tasks",
-			description: "列出可用任务",
+			description: "List available tasks",
 			parameters: [],
 			commandTemplate: "gradle tasks",
 		},
 		{
 			name: "run_task",
-			description: "运行指定任务",
+			description: "Run specific task",
 			parameters: [
 				{
 					name: "task",
-					description: "任务名称",
+					description: "Task name",
 					type: "string",
 					required: true,
 				},
@@ -136,55 +136,55 @@ const gradleDefinition: ToolDefinition = {
 		},
 	],
 	installHint:
-		"从 https://gradle.org/install/ 下载安装\n或使用项目自带的 gradlew",
+		"Download from https://gradle.org/install/\nor use project's gradlew wrapper",
 };
 
-// Maven 定义
+// Maven definition
 const mavenDefinition: ToolDefinition = {
 	id: "maven",
 	name: "Maven",
-	description: "Apache Maven 项目管理工具",
+	description: "Apache Maven project management tool",
 	category: "build",
 	capabilities: ["build"],
 	actions: [
 		{
 			name: "compile",
-			description: "编译项目",
+			description: "Compile project",
 			parameters: [],
 			commandTemplate: "mvn compile",
 		},
 		{
 			name: "package",
-			description: "打包项目",
+			description: "Package project",
 			parameters: [],
 			commandTemplate: "mvn package",
 		},
 		{
 			name: "install",
-			description: "安装到本地仓库",
+			description: "Install to local repository",
 			parameters: [],
 			commandTemplate: "mvn install",
 		},
 		{
 			name: "clean",
-			description: "清理构建输出",
+			description: "Clean build output",
 			parameters: [],
 			commandTemplate: "mvn clean",
 		},
 		{
 			name: "test",
-			description: "运行测试",
+			description: "Run tests",
 			parameters: [],
 			commandTemplate: "mvn test",
 		},
 		{
 			name: "dependency_tree",
-			description: "显示依赖树",
+			description: "Show dependency tree",
 			parameters: [],
 			commandTemplate: "mvn dependency:tree",
 		},
 	],
-	installHint: "从 https://maven.apache.org/download.cgi 下载安装",
+	installHint: "Download from https://maven.apache.org/download.cgi",
 };
 
 export async function detectCmake(): Promise<DiscoveredTool> {
@@ -216,7 +216,7 @@ export async function detectGradle(): Promise<DiscoveredTool> {
 	const execPath = await getExecutablePath("gradle");
 	const version = await getVersion("gradle", ["--version"], {
 		parseOutput: (output) => {
-			// 找 "Gradle X.Y.Z" 行
+			// Find "Gradle X.Y.Z" line
 			const match = output.match(/Gradle (\d+\.\d+(?:\.\d+)?)/);
 			return match ? match[1] : output.split("\n")[0];
 		},

@@ -196,12 +196,13 @@ export type MatchContext = {
 };
 
 /**
- * 项目类型
+ * Project types detected from project markers
  */
 export type ProjectType =
 	| "node" // package.json
 	| "python" // requirements.txt, pyproject.toml
 	| "java" // pom.xml, build.gradle
+	| "cpp" // CMakeLists.txt, *.cpp, *.h
 	| "dotnet" // *.csproj, *.sln
 	| "rust" // Cargo.toml
 	| "go" // go.mod

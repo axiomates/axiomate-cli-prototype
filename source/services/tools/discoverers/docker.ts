@@ -1,5 +1,5 @@
 /**
- * Docker 工具发现器
+ * Docker tool discoverer
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -14,47 +14,47 @@ import {
 const dockerDefinition: ToolDefinition = {
 	id: "docker",
 	name: "Docker",
-	description: "容器化平台",
+	description: "Container platform",
 	category: "container",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "ps",
-			description: "列出运行中的容器",
+			description: "List running containers",
 			parameters: [],
 			commandTemplate: "docker ps",
 		},
 		{
 			name: "ps_all",
-			description: "列出所有容器",
+			description: "List all containers",
 			parameters: [],
 			commandTemplate: "docker ps -a",
 		},
 		{
 			name: "images",
-			description: "列出镜像",
+			description: "List images",
 			parameters: [],
 			commandTemplate: "docker images",
 		},
 		{
 			name: "run",
-			description: "运行容器",
+			description: "Run container",
 			parameters: [
 				{
 					name: "image",
-					description: "镜像名称",
+					description: "Image name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "name",
-					description: "容器名称",
+					description: "Container name",
 					type: "string",
 					required: false,
 				},
 				{
 					name: "ports",
-					description: "端口映射（如 8080:80）",
+					description: "Port mapping (e.g., 8080:80)",
 					type: "string",
 					required: false,
 				},
@@ -64,11 +64,11 @@ const dockerDefinition: ToolDefinition = {
 		},
 		{
 			name: "stop",
-			description: "停止容器",
+			description: "Stop container",
 			parameters: [
 				{
 					name: "container",
-					description: "容器 ID 或名称",
+					description: "Container ID or name",
 					type: "string",
 					required: true,
 				},
@@ -77,11 +77,11 @@ const dockerDefinition: ToolDefinition = {
 		},
 		{
 			name: "start",
-			description: "启动容器",
+			description: "Start container",
 			parameters: [
 				{
 					name: "container",
-					description: "容器 ID 或名称",
+					description: "Container ID or name",
 					type: "string",
 					required: true,
 				},
@@ -90,17 +90,17 @@ const dockerDefinition: ToolDefinition = {
 		},
 		{
 			name: "logs",
-			description: "查看容器日志",
+			description: "View container logs",
 			parameters: [
 				{
 					name: "container",
-					description: "容器 ID 或名称",
+					description: "Container ID or name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "tail",
-					description: "显示最后 N 行",
+					description: "Show last N lines",
 					type: "number",
 					required: false,
 					default: 100,
@@ -110,17 +110,17 @@ const dockerDefinition: ToolDefinition = {
 		},
 		{
 			name: "exec",
-			description: "在容器中执行命令",
+			description: "Execute command in container",
 			parameters: [
 				{
 					name: "container",
-					description: "容器 ID 或名称",
+					description: "Container ID or name",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "command",
-					description: "要执行的命令",
+					description: "Command to execute",
 					type: "string",
 					required: true,
 				},
@@ -129,17 +129,17 @@ const dockerDefinition: ToolDefinition = {
 		},
 		{
 			name: "build",
-			description: "构建镜像",
+			description: "Build image",
 			parameters: [
 				{
 					name: "tag",
-					description: "镜像标签",
+					description: "Image tag",
 					type: "string",
 					required: true,
 				},
 				{
 					name: "path",
-					description: "Dockerfile 所在目录",
+					description: "Dockerfile directory",
 					type: "directory",
 					required: false,
 					default: ".",
@@ -148,24 +148,23 @@ const dockerDefinition: ToolDefinition = {
 			commandTemplate: "docker build -t {{tag}} {{path}}",
 		},
 	],
-	installHint:
-		"从 https://www.docker.com/products/docker-desktop/ 下载 Docker Desktop",
+	installHint: "Download Docker Desktop from https://www.docker.com/products/docker-desktop/",
 };
 
 const dockerComposeDefinition: ToolDefinition = {
 	id: "docker-compose",
 	name: "Docker Compose",
-	description: "多容器应用编排工具",
+	description: "Multi-container application orchestration tool",
 	category: "container",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "up",
-			description: "启动服务",
+			description: "Start services",
 			parameters: [
 				{
 					name: "detach",
-					description: "后台运行",
+					description: "Run in background",
 					type: "boolean",
 					required: false,
 					default: true,
@@ -175,23 +174,23 @@ const dockerComposeDefinition: ToolDefinition = {
 		},
 		{
 			name: "down",
-			description: "停止并移除服务",
+			description: "Stop and remove services",
 			parameters: [],
 			commandTemplate: "docker compose down",
 		},
 		{
 			name: "ps",
-			description: "列出服务状态",
+			description: "List service status",
 			parameters: [],
 			commandTemplate: "docker compose ps",
 		},
 		{
 			name: "logs",
-			description: "查看服务日志",
+			description: "View service logs",
 			parameters: [
 				{
 					name: "service",
-					description: "服务名称（可选）",
+					description: "Service name (optional)",
 					type: "string",
 					required: false,
 				},
@@ -200,11 +199,11 @@ const dockerComposeDefinition: ToolDefinition = {
 		},
 		{
 			name: "restart",
-			description: "重启服务",
+			description: "Restart services",
 			parameters: [
 				{
 					name: "service",
-					description: "服务名称（可选）",
+					description: "Service name (optional)",
 					type: "string",
 					required: false,
 				},
@@ -212,7 +211,7 @@ const dockerComposeDefinition: ToolDefinition = {
 			commandTemplate: "docker compose restart {{service}}",
 		},
 	],
-	installHint: "Docker Compose 随 Docker Desktop 一起安装",
+	installHint: "Docker Compose is included with Docker Desktop",
 };
 
 export async function detectDocker(): Promise<DiscoveredTool> {
@@ -237,7 +236,7 @@ export async function detectDocker(): Promise<DiscoveredTool> {
 }
 
 export async function detectDockerCompose(): Promise<DiscoveredTool> {
-	// Docker Compose V2 是 docker 的子命令
+	// Docker Compose V2 is a docker subcommand
 	if (!(await commandExists("docker"))) {
 		return createNotInstalledTool(dockerComposeDefinition);
 	}

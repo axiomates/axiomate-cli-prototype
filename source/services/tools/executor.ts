@@ -1,6 +1,9 @@
 /**
- * 工具命令执行器
- * 负责执行工具动作，处理命令模板
+ * Tool command executor
+ * Handles command template rendering and execution
+ *
+ * NOTE: Shell commands from AI are executed as-is without escaping.
+ * Escaping would break valid shell syntax ($variables, backticks, pipes, etc.)
  */
 
 import { spawn, type SpawnOptions } from "node:child_process";
@@ -15,8 +18,8 @@ export type ExecutionResult = {
 };
 
 /**
- * 渲染命令模板
- * 将 {{param}} 占位符替换为实际值
+ * Render command template
+ * Replaces {{param}} placeholders with actual values
  */
 export function renderCommandTemplate(
 	template: string,
@@ -25,29 +28,28 @@ export function renderCommandTemplate(
 ): string {
 	let result = template;
 
-	// 替换特殊变量
+	// Replace special variable {{execPath}}
 	if (tool) {
 		result = result.replace(/\{\{execPath\}\}/g, tool.executablePath);
 	}
 
-	// 替换普通参数
+	// Replace parameters as-is
 	for (const [key, value] of Object.entries(params)) {
 		const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, "g");
 		result = result.replace(placeholder, String(value ?? ""));
 	}
 
-	// 处理条件表达式 {{condition ? 'true' : 'false'}}
-	// 简化处理：移除未替换的占位符
+	// Remove unreplaced placeholders
 	result = result.replace(/\{\{[^}]+\}\}/g, "");
 
-	// 清理多余空格
+	// Clean up extra spaces
 	result = result.replace(/\s+/g, " ").trim();
 
 	return result;
 }
 
 /**
- * 验证参数
+ * Validate parameters
  */
 export function validateParams(
 	action: ToolAction,
@@ -62,16 +64,15 @@ export function validateParams(
 			param.required &&
 			(value === undefined || value === null || value === "")
 		) {
-			errors.push(`缺少必需参数: ${param.name}`);
+			errors.push(`Missing required parameter: ${param.name}`);
 			continue;
 		}
 
 		if (value !== undefined && value !== null) {
-			// 类型检查
 			switch (param.type) {
 				case "number":
 					if (typeof value !== "number" && isNaN(Number(value))) {
-						errors.push(`参数 ${param.name} 必须是数字`);
+						errors.push(`Parameter ${param.name} must be a number`);
 					}
 					break;
 				case "boolean":
@@ -80,7 +81,7 @@ export function validateParams(
 						value !== "true" &&
 						value !== "false"
 					) {
-						errors.push(`参数 ${param.name} 必须是布尔值`);
+						errors.push(`Parameter ${param.name} must be a boolean`);
 					}
 					break;
 			}
@@ -91,7 +92,7 @@ export function validateParams(
 }
 
 /**
- * 填充默认值
+ * Fill default values
  */
 export function fillDefaults(
 	action: ToolAction,
@@ -109,7 +110,9 @@ export function fillDefaults(
 }
 
 /**
- * 执行命令
+ * Execute command
+ * Note: Encoding handling should be done by each tool's commandTemplate,
+ * not here. This function just executes the command as-is.
  */
 export async function executeCommand(
 	command: string,
@@ -121,29 +124,22 @@ export async function executeCommand(
 	},
 ): Promise<ExecutionResult> {
 	return new Promise((resolve) => {
-		// Windows 下设置代码页为 UTF-8 (65001)
-		const isWindows = process.platform === "win32";
-		const finalCommand = isWindows ? `chcp 65001 >nul && ${command}` : command;
-
 		const spawnOptions: SpawnOptions = {
 			cwd: options?.cwd,
 			env: {
 				...process.env,
 				...options?.env,
-				// 确保 PowerShell 使用 UTF-8
-				...(isWindows && { PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" }),
 			},
 			shell: options?.shell ?? true,
 			windowsHide: true,
 		};
 
-		const proc = spawn(finalCommand, [], spawnOptions);
+		const proc = spawn(command, [], spawnOptions);
 
 		let stdout = "";
 		let stderr = "";
 		let timedOut = false;
 
-		// 超时处理
 		const timeout = options?.timeout ?? 30000;
 		const timer = setTimeout(() => {
 			timedOut = true;
@@ -176,14 +172,14 @@ export async function executeCommand(
 				stdout: stdout.trim(),
 				stderr: stderr.trim(),
 				exitCode: code,
-				error: timedOut ? "命令执行超时" : undefined,
+				error: timedOut ? "Command execution timed out" : undefined,
 			});
 		});
 	});
 }
 
 /**
- * 执行工具动作
+ * Execute tool action
  */
 export async function executeToolAction(
 	tool: DiscoveredTool,
@@ -194,18 +190,16 @@ export async function executeToolAction(
 		timeout?: number;
 	},
 ): Promise<ExecutionResult> {
-	// 检查工具是否已安装
 	if (!tool.installed) {
 		return {
 			success: false,
 			stdout: "",
 			stderr: "",
 			exitCode: null,
-			error: `工具 ${tool.name} 未安装。${tool.installHint || ""}`,
+			error: `Tool ${tool.name} is not installed. ${tool.installHint || ""}`,
 		};
 	}
 
-	// 验证参数
 	const validation = validateParams(action, params);
 	if (!validation.valid) {
 		return {
@@ -213,21 +207,17 @@ export async function executeToolAction(
 			stdout: "",
 			stderr: "",
 			exitCode: null,
-			error: `参数验证失败: ${validation.errors.join(", ")}`,
+			error: `Parameter validation failed: ${validation.errors.join(", ")}`,
 		};
 	}
 
-	// 填充默认值
 	const filledParams = fillDefaults(action, params);
-
-	// 渲染命令
 	const command = renderCommandTemplate(
 		action.commandTemplate,
 		filledParams,
 		tool,
 	);
 
-	// 执行命令
 	return executeCommand(command, {
 		cwd: options?.cwd,
 		env: tool.env,
@@ -236,7 +226,7 @@ export async function executeToolAction(
 }
 
 /**
- * 获取工具的动作
+ * Get tool action by name
  */
 export function getToolAction(
 	tool: DiscoveredTool,
@@ -246,7 +236,7 @@ export function getToolAction(
 }
 
 /**
- * 将参数定义转换为 JSON Schema（用于 MCP/OpenAI）
+ * Convert parameter definitions to JSON Schema (for MCP/OpenAI)
  */
 export function paramsToJsonSchema(params: ToolParameter[]): {
 	type: "object";

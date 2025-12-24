@@ -1,5 +1,10 @@
 /**
- * Python 工具发现器
+ * Python tool discoverer
+ *
+ * Python is the preferred tool for file operations on Windows because:
+ * - Better UTF-8 encoding handling than PowerShell 5.1
+ * - Can detect and preserve file encodings (UTF-8, UTF-8 BOM, GBK, etc.)
+ * - Can detect and preserve line endings (LF/CRLF)
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -14,17 +19,23 @@ import {
 const pythonDefinition: ToolDefinition = {
 	id: "python",
 	name: "Python",
-	description: "Python 编程语言解释器",
+	description:
+		"Python programming language interpreter. Preferred for file operations due to better encoding support.",
 	category: "runtime",
 	capabilities: ["execute"],
+	// Ensure Python uses UTF-8 encoding for I/O
+	env: {
+		PYTHONUTF8: "1",
+		PYTHONIOENCODING: "utf-8",
+	},
 	actions: [
 		{
 			name: "run",
-			description: "运行 Python 脚本",
+			description: "Run Python script",
 			parameters: [
 				{
 					name: "file",
-					description: "Python 文件路径",
+					description: "Python file path",
 					type: "file",
 					required: true,
 				},
@@ -33,11 +44,11 @@ const pythonDefinition: ToolDefinition = {
 		},
 		{
 			name: "eval",
-			description: "执行 Python 代码",
+			description: "Execute Python code",
 			parameters: [
 				{
 					name: "code",
-					description: "Python 代码",
+					description: "Python code",
 					type: "string",
 					required: true,
 				},
@@ -46,17 +57,17 @@ const pythonDefinition: ToolDefinition = {
 		},
 		{
 			name: "version",
-			description: "查看 Python 版本",
+			description: "Show Python version",
 			parameters: [],
 			commandTemplate: "python --version",
 		},
 		{
 			name: "pip_install",
-			description: "使用 pip 安装包",
+			description: "Install package via pip",
 			parameters: [
 				{
 					name: "package",
-					description: "包名",
+					description: "Package name",
 					type: "string",
 					required: true,
 				},
@@ -65,16 +76,16 @@ const pythonDefinition: ToolDefinition = {
 		},
 		{
 			name: "pip_list",
-			description: "列出已安装的包",
+			description: "List installed packages",
 			parameters: [],
 			commandTemplate: "python -m pip list",
 		},
 	],
-	installHint: "从 https://www.python.org/downloads/ 下载安装",
+	installHint: "Download from https://www.python.org/downloads/",
 };
 
 export async function detectPython(): Promise<DiscoveredTool> {
-	// 尝试 python 和 python3
+	// Try both python and python3
 	const cmds = ["python", "python3"];
 	let foundCmd: string | null = null;
 

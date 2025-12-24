@@ -1,5 +1,5 @@
 /**
- * Git 工具发现器
+ * Git tool discoverer
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -14,23 +14,23 @@ import {
 const gitDefinition: ToolDefinition = {
 	id: "git",
 	name: "Git",
-	description: "分布式版本控制系统",
+	description: "Distributed version control system",
 	category: "vcs",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "status",
-			description: "查看仓库状态",
+			description: "Show repository status",
 			parameters: [],
 			commandTemplate: "git status",
 		},
 		{
 			name: "diff",
-			description: "查看文件变更",
+			description: "Show file changes",
 			parameters: [
 				{
 					name: "file",
-					description: "文件路径（可选）",
+					description: "File path (optional)",
 					type: "file",
 					required: false,
 				},
@@ -39,11 +39,11 @@ const gitDefinition: ToolDefinition = {
 		},
 		{
 			name: "log",
-			description: "查看提交历史",
+			description: "Show commit history",
 			parameters: [
 				{
 					name: "count",
-					description: "显示条数",
+					description: "Number of commits to show",
 					type: "number",
 					required: false,
 					default: 10,
@@ -53,11 +53,11 @@ const gitDefinition: ToolDefinition = {
 		},
 		{
 			name: "add",
-			description: "添加文件到暂存区",
+			description: "Add files to staging area",
 			parameters: [
 				{
 					name: "file",
-					description: "文件路径（使用 . 添加所有）",
+					description: "File path (use . to add all)",
 					type: "string",
 					required: true,
 				},
@@ -66,11 +66,11 @@ const gitDefinition: ToolDefinition = {
 		},
 		{
 			name: "commit",
-			description: "提交变更",
+			description: "Commit changes",
 			parameters: [
 				{
 					name: "message",
-					description: "提交信息",
+					description: "Commit message",
 					type: "string",
 					required: true,
 				},
@@ -79,29 +79,29 @@ const gitDefinition: ToolDefinition = {
 		},
 		{
 			name: "push",
-			description: "推送到远程仓库",
+			description: "Push to remote repository",
 			parameters: [],
 			commandTemplate: "git push",
 		},
 		{
 			name: "pull",
-			description: "从远程仓库拉取",
+			description: "Pull from remote repository",
 			parameters: [],
 			commandTemplate: "git pull",
 		},
 		{
 			name: "branch",
-			description: "列出分支",
+			description: "List branches",
 			parameters: [],
 			commandTemplate: "git branch -a",
 		},
 		{
 			name: "checkout",
-			description: "切换分支",
+			description: "Switch branch",
 			parameters: [
 				{
 					name: "branch",
-					description: "分支名",
+					description: "Branch name",
 					type: "string",
 					required: true,
 				},
@@ -109,7 +109,7 @@ const gitDefinition: ToolDefinition = {
 			commandTemplate: "git checkout {{branch}}",
 		},
 	],
-	installHint: "从 https://git-scm.com/downloads 下载安装",
+	installHint: "Download from https://git-scm.com/downloads",
 };
 
 export async function detectGit(): Promise<DiscoveredTool> {

@@ -1,5 +1,5 @@
 /**
- * Node.js 和 NVM 工具发现器
+ * Node.js and NVM tool discoverer
  */
 
 import type { DiscoveredTool, ToolDefinition } from "../types.js";
@@ -11,21 +11,21 @@ import {
 	createNotInstalledTool,
 } from "./base.js";
 
-// Node.js 定义
+// Node.js definition
 const nodeDefinition: ToolDefinition = {
 	id: "node",
 	name: "Node.js",
-	description: "JavaScript 运行时环境",
+	description: "JavaScript runtime environment",
 	category: "runtime",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "run",
-			description: "运行 JavaScript 文件",
+			description: "Run JavaScript file",
 			parameters: [
 				{
 					name: "file",
-					description: "JS 文件路径",
+					description: "JS file path",
 					type: "file",
 					required: true,
 				},
@@ -34,11 +34,11 @@ const nodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "eval",
-			description: "执行 JavaScript 代码",
+			description: "Execute JavaScript code",
 			parameters: [
 				{
 					name: "code",
-					description: "JavaScript 代码",
+					description: "JavaScript code",
 					type: "string",
 					required: true,
 				},
@@ -47,35 +47,35 @@ const nodeDefinition: ToolDefinition = {
 		},
 		{
 			name: "version",
-			description: "查看 Node.js 版本",
+			description: "Show Node.js version",
 			parameters: [],
 			commandTemplate: "node --version",
 		},
 	],
-	installHint: "从 https://nodejs.org 下载安装，或使用 nvm 管理",
+	installHint: "Download from https://nodejs.org or use nvm to manage versions",
 };
 
-// NVM (Node Version Manager) 定义
+// NVM (Node Version Manager) definition
 const nvmDefinition: ToolDefinition = {
 	id: "nvm",
 	name: "NVM",
-	description: "Node.js 版本管理器",
+	description: "Node.js version manager",
 	category: "package",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "list",
-			description: "列出已安装的 Node.js 版本",
+			description: "List installed Node.js versions",
 			parameters: [],
 			commandTemplate: "nvm list",
 		},
 		{
 			name: "use",
-			description: "切换 Node.js 版本",
+			description: "Switch Node.js version",
 			parameters: [
 				{
 					name: "version",
-					description: "版本号（如 18.17.0 或 lts）",
+					description: "Version number (e.g., 18.17.0 or lts)",
 					type: "string",
 					required: true,
 				},
@@ -84,11 +84,11 @@ const nvmDefinition: ToolDefinition = {
 		},
 		{
 			name: "install",
-			description: "安装指定版本的 Node.js",
+			description: "Install specific Node.js version",
 			parameters: [
 				{
 					name: "version",
-					description: "版本号",
+					description: "Version number",
 					type: "string",
 					required: true,
 				},
@@ -97,7 +97,7 @@ const nvmDefinition: ToolDefinition = {
 		},
 		{
 			name: "current",
-			description: "查看当前使用的版本",
+			description: "Show current version",
 			parameters: [],
 			commandTemplate: "nvm current",
 		},
@@ -106,21 +106,21 @@ const nvmDefinition: ToolDefinition = {
 		"Windows: https://github.com/coreybutler/nvm-windows\nUnix: https://github.com/nvm-sh/nvm",
 };
 
-// npm 定义
+// npm definition
 const npmDefinition: ToolDefinition = {
 	id: "npm",
 	name: "npm",
-	description: "Node.js 包管理器",
+	description: "Node.js package manager",
 	category: "package",
 	capabilities: ["execute"],
 	actions: [
 		{
 			name: "install",
-			description: "安装依赖",
+			description: "Install dependencies",
 			parameters: [
 				{
 					name: "package",
-					description: "包名（可选，不填安装所有依赖）",
+					description: "Package name (optional, omit to install all)",
 					type: "string",
 					required: false,
 				},
@@ -129,11 +129,11 @@ const npmDefinition: ToolDefinition = {
 		},
 		{
 			name: "run",
-			description: "运行脚本",
+			description: "Run script",
 			parameters: [
 				{
 					name: "script",
-					description: "脚本名",
+					description: "Script name",
 					type: "string",
 					required: true,
 				},
@@ -142,18 +142,18 @@ const npmDefinition: ToolDefinition = {
 		},
 		{
 			name: "list",
-			description: "列出已安装的包",
+			description: "List installed packages",
 			parameters: [],
 			commandTemplate: "npm list --depth=0",
 		},
 		{
 			name: "outdated",
-			description: "检查过期的包",
+			description: "Check for outdated packages",
 			parameters: [],
 			commandTemplate: "npm outdated",
 		},
 	],
-	installHint: "npm 随 Node.js 一起安装",
+	installHint: "npm is installed with Node.js",
 };
 
 export async function detectNode(): Promise<DiscoveredTool> {
