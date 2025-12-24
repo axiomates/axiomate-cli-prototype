@@ -47,7 +47,7 @@ source/
 │   │   ├── types.ts           # EditorState, UIMode, EditorAction, re-exports
 │   │   ├── reducer.ts         # State machine reducer (editorReducer)
 │   │   ├── hooks/
-│   │   │   ├── useAutocomplete.ts  # Autocomplete suggestions
+│   │   │   ├── useAutocomplete.ts  # Autocomplete logic (AI suggestions, slash/file filtering)
 │   │   │   ├── useInputHandler.ts  # Keyboard event handling
 │   │   │   └── useFileSelect.ts    # File system reading for @ selection
 │   │   ├── utils/
@@ -203,13 +203,13 @@ export function isFirstTimeUser(): boolean {
   // Check currentModel exists AND is in models
   if (!parsed.currentModel || !(parsed.currentModel in models)) return true;
 
-  // Note: autocompleteModel and autocompleteEnabled are optional, not checked here
+  // Note: suggestionModel and suggestionEnabled are optional, not checked here
 
   return false;
 }
 ```
 
-**Key Design**: Missing required fields (`models`, `currentModel`) triggers first-time setup. Optional fields (`autocompleteModel`, `autocompleteEnabled`) are not checked and have sensible defaults.
+**Key Design**: Missing required fields (`models`, `currentModel`) triggers first-time setup. Optional fields (`suggestionModel`, `suggestionEnabled`) are not checked and have sensible defaults.
 
 ### Welcome Component
 
@@ -267,7 +267,7 @@ const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 updateConfig({
   models: generateModelConfigs(),      // Record<string, ModelConfig>
   currentModel: DEFAULT_MODEL_ID,      // "Qwen/Qwen3-8B"
-  autocompleteModel: "THUDM/GLM-Z1-9B-0414",
+  suggestionModel: "THUDM/GLM-Z1-9B-0414",
 });
 ```
 
@@ -479,7 +479,7 @@ editorReducer updates EditorState
     └── uiMode (controls UI behavior)
     ↓
 Hooks compute derived values:
-    ├── useAutocomplete → filteredCommands, suggestions
+    ├── useAutocomplete → filteredCommands, AI suggestions
     └── useFileSelect → filteredFiles
     ↓
 Components render based on state:
@@ -716,7 +716,7 @@ AutocompleteInput
 ├── produces: UserInput on submit
 └── contains:
     ├── useInputHandler → EditorAction dispatch
-    ├── useAutocomplete → suggestions, filteredCommands
+    ├── useAutocomplete → AI suggestions, filteredCommands
     ├── useFileSelect → filteredFiles
     └── Sub-components (InputLine, SlashMenu, FileMenu, HelpPanel)
 ```
@@ -754,7 +754,7 @@ AutocompleteInput
 ### Modifying input handling
 
 - Keyboard logic: `AutocompleteInput/hooks/useInputHandler.ts`
-- Autocomplete logic: `AutocompleteInput/hooks/useAutocomplete.ts`
+- Autocomplete logic (AI suggestions + slash/file filtering): `AutocompleteInput/hooks/useAutocomplete.ts`
 - File selection: `AutocompleteInput/hooks/useFileSelect.ts`
 - State transitions: `AutocompleteInput/reducer.ts`
 - Command execution: `services/commandHandler.ts`
@@ -767,7 +767,7 @@ AutocompleteInput
 |--------|-------------|
 | `SET_TEXT` | Update text and cursor, auto-detect mode, update selectedFiles positions |
 | `SET_CURSOR` | Move cursor position |
-| `SET_SUGGESTION` | Update autocomplete suggestion |
+| `SET_SUGGESTION` | Update suggestion |
 | `ENTER_HISTORY` | Enter history mode, save current entry |
 | `NAVIGATE_HISTORY` | Navigate history, restore entry |
 | `EXIT_HISTORY` | Exit history, restore saved entry |
@@ -807,7 +807,7 @@ npm run test:watch # Watch mode
 - `~/.axiomate.json` - User configuration (via `utils/config.ts`)
   - `models` - Per-model configurations (Record<string, ModelConfig>)
   - `currentModel` - Selected model ID (e.g., `Qwen/Qwen3-8B`)
-  - `autocompleteModel` - Model for AI autocomplete (e.g., `THUDM/GLM-Z1-9B-0414`)
+  - `suggestionModel` - Model for AI suggestion (e.g., `THUDM/GLM-Z1-9B-0414`)
 - `~/.axiomate/` - App data directory
   - `logs/` - Log files with daily rotation
   - `history/` - Command history
@@ -821,8 +821,8 @@ type Config = {
   models: Record<string, ModelConfig>;
   /** Currently selected model ID */
   currentModel: string;
-  /** Model ID for autocomplete */
-  autocompleteModel: string;
+  /** Model ID for suggestion */
+  suggestionModel: string;
 };
 
 type ModelConfig = {
@@ -2714,39 +2714,39 @@ content: delta.content || delta.reasoning_content || ""
 1. **Conversation Persistence**: Save/restore conversation history across sessions
 2. **Multi-model Routing**: Route different queries to different models based on complexity
 
-## AI Autocomplete
+## AI Suggestion
 
-The input field supports AI-powered autocomplete for normal text input.
+The input field supports AI-powered suggestion for normal text input.
 
 ### Configuration
 
-Located in `constants/autocomplete.ts`:
+Located in `constants/suggestion.ts`:
 
 ```typescript
 // Model is read from config (~/.axiomate.json)
-export function getAutocompleteModel(): string {
-  const modelId = getAutocompleteModelId();
+export function getSuggestionModel(): string {
+  const modelId = getSuggestionModelId();
   return modelId || "THUDM/GLM-Z1-9B-0414"; // Default fallback
 }
 
-export const AUTOCOMPLETE_CONFIG = {
+export const SUGGESTION_CONFIG = {
   maxTokens: 30,        // Short completions
   timeout: 3000,        // 3 second timeout
   temperature: 0.3,     // Low for focused completions
 } as const;
 
-export const AUTOCOMPLETE_DEBOUNCE_MS = 500;  // Wait 500ms after typing stops
+export const SUGGESTION_DEBOUNCE_MS = 400;  // Wait 400ms after typing stops
 export const MIN_INPUT_LENGTH = 3;             // Minimum chars to trigger
 ```
 
 ### Trigger Conditions
 
-AI autocomplete triggers when ALL conditions are met:
+AI suggestion triggers when ALL conditions are met:
 1. Input length ≥ 3 characters
 2. Input does NOT start with `/` (slash command mode)
 3. Input does NOT start with `@` (file selection mode)
 4. Not in history browsing mode (↑/↓ navigation)
-5. 500ms debounce after last keystroke
+5. 400ms debounce after last keystroke
 
 ### Architecture
 
@@ -2757,9 +2757,9 @@ Check trigger conditions (length >= 3, not / or @, not history mode)
     ↓
 Clear previous debounce timer
     ↓
-Wait 500ms (debounce)
+Wait 400ms (debounce)
     ↓
-AutocompleteClient.getSuggestion(text, context)
+SuggestionClient.getSuggestion(text, context)
     ↓
 Display gray suggestion text after cursor
     ↓
@@ -2770,11 +2770,11 @@ User presses Tab → accept suggestion
 
 | File | Purpose |
 |------|---------|
-| `constants/autocomplete.ts` | Configuration and `getAutocompleteModel()` |
-| `services/ai/autocompleteClient.ts` | API client with request cancellation and LRU cache |
-| `components/AutocompleteInput/hooks/useAutocomplete.ts` | React hook for autocomplete logic |
+| `constants/suggestion.ts` | Configuration and `getSuggestionModel()` |
+| `services/ai/suggestionClient.ts` | API client with request cancellation and LRU cache |
+| `components/AutocompleteInput/hooks/useAutocomplete.ts` | React hook managing all autocomplete logic (AI suggestions, slash commands, file selection) |
 
-### AutocompleteClient Features
+### SuggestionClient Features
 
 - **Single request management**: New request auto-cancels previous one
 - **LRU Cache**: 50 entries, 1 minute TTL

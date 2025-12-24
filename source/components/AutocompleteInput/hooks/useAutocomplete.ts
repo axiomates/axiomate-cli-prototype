@@ -1,8 +1,10 @@
 /**
  * 自动补全 Hook
  *
- * Uses AI-powered autocomplete for normal text input.
- * Slash commands use local filtering (no AI).
+ * Manages all autocomplete functionality:
+ * - AI-powered suggestions for normal text input
+ * - Slash command filtering (local, no AI)
+ * - File selection filtering (via useFileSelect)
  */
 
 import { useCallback, useRef, useEffect, useMemo } from "react";
@@ -101,7 +103,7 @@ export function useAutocomplete({
 	// Debounce timer ref
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// AI-powered autocomplete function
+	// AI-powered suggestion function
 	const getAISuggestion = useCallback(
 		async (text: string): Promise<string | null> => {
 			// Skip if input is too short
