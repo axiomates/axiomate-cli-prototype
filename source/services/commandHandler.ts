@@ -12,8 +12,8 @@ import { getToolRegistry } from "./tools/registry.js";
 import {
 	getModelById,
 	setCurrentModelId,
-	setAutocompleteModelId,
-	setAutocompleteEnabled,
+	setSuggestionModelId,
+	setSuggestionEnabled,
 } from "../utils/config.js";
 import { t, setLocale } from "../i18n/index.js";
 
@@ -195,26 +195,26 @@ const internalHandlers: Record<string, InternalHandler> = {
 		};
 	},
 
-	// 自动补全开关处理器
-	autocomplete_on: () => {
-		setAutocompleteEnabled(true);
+	// AI 建议开关处理器
+	suggestion_on: () => {
+		setSuggestionEnabled(true);
 		return {
 			type: "message" as const,
-			content: t("commandHandler.autocompleteEnabled"),
+			content: t("commandHandler.suggestionEnabled"),
 		};
 	},
 
-	autocomplete_off: () => {
-		setAutocompleteEnabled(false);
+	suggestion_off: () => {
+		setSuggestionEnabled(false);
 		return {
 			type: "message" as const,
-			content: t("commandHandler.autocompleteDisabled"),
+			content: t("commandHandler.suggestionDisabled"),
 		};
 	},
 
-	// 自动补全模型选择处理器
-	autocomplete_model_select: (path: string[]) => {
-		// path = ["autocomplete", "model", "<model-id>"]
+	// AI 建议模型选择处理器
+	suggestion_model_select: (path: string[]) => {
+		// path = ["suggestion", "model", "<model-id>"]
 		const modelId = path[path.length - 1];
 		if (!modelId) {
 			return { type: "error" as const, message: t("commandHandler.unknownCommand") };
@@ -226,11 +226,11 @@ const internalHandlers: Record<string, InternalHandler> = {
 		}
 
 		// 保存到配置
-		setAutocompleteModelId(modelId);
+		setSuggestionModelId(modelId);
 
 		return {
 			type: "message" as const,
-			content: t("commandHandler.autocompleteModelSwitched", { model: model.name }),
+			content: t("commandHandler.suggestionModelSwitched", { model: model.name }),
 		};
 	},
 };

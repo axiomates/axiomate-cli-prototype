@@ -1,7 +1,7 @@
 /**
- * AI Autocomplete Client
+ * AI Suggestion Client
  *
- * Lightweight, non-blocking autocomplete using AI.
+ * Lightweight, non-blocking suggestion using AI.
  * - Does NOT share queue with normal AI requests
  * - Uses single-variable request management (not a queue)
  * - New request automatically cancels previous one
@@ -9,25 +9,25 @@
  */
 
 import {
-	AUTOCOMPLETE_CONFIG,
-	AUTOCOMPLETE_SYSTEM_PROMPT,
-	AUTOCOMPLETE_CACHE,
-	getAutocompleteModel,
-} from "../../constants/autocomplete.js";
+	SUGGESTION_CONFIG,
+	SUGGESTION_SYSTEM_PROMPT,
+	SUGGESTION_CACHE,
+	getSuggestionModel,
+} from "../../constants/suggestion.js";
 import { getModelApiConfig } from "../../utils/config.js";
 
 /**
- * Context for autocomplete request
+ * Context for suggestion request
  */
-type AutocompleteContext = {
+type SuggestionContext = {
 	cwd?: string;
 	projectType?: string;
 };
 
 /**
- * Autocomplete result
+ * Suggestion result
  */
-type AutocompleteResult = {
+type SuggestionResult = {
 	suggestion: string | null;
 	cached: boolean;
 };
@@ -93,12 +93,12 @@ class LRUCache {
 }
 
 /**
- * Autocomplete Client
+ * Suggestion Client
  *
  * Key design: Uses a single AbortController variable (not a queue).
  * Each new request automatically aborts the previous one.
  */
-export class AutocompleteClient {
+export class SuggestionClient {
 	/**
 	 * Current request controller - only one request can be active at a time.
 	 * New requests automatically cancel previous ones.
@@ -106,19 +106,19 @@ export class AutocompleteClient {
 	private currentRequest: AbortController | null = null;
 
 	/**
-	 * LRU cache for autocomplete results
+	 * LRU cache for suggestion results
 	 */
 	private cache: LRUCache;
 
 	constructor() {
 		this.cache = new LRUCache(
-			AUTOCOMPLETE_CACHE.maxSize,
-			AUTOCOMPLETE_CACHE.ttl,
+			SUGGESTION_CACHE.maxSize,
+			SUGGESTION_CACHE.ttl,
 		);
 	}
 
 	/**
-	 * Get autocomplete suggestion for the given input.
+	 * Get suggestion for the given input.
 	 *
 	 * @param input - User's current input text
 	 * @param context - Optional context (cwd, projectType)
@@ -126,8 +126,8 @@ export class AutocompleteClient {
 	 */
 	async getSuggestion(
 		input: string,
-		context?: AutocompleteContext,
-	): Promise<AutocompleteResult> {
+		context?: SuggestionContext,
+	): Promise<SuggestionResult> {
 		// Generate cache key
 		const cacheKey = this.generateCacheKey(input, context);
 
@@ -192,7 +192,7 @@ export class AutocompleteClient {
 	 */
 	private generateCacheKey(
 		input: string,
-		context?: AutocompleteContext,
+		context?: SuggestionContext,
 	): string {
 		const parts = [input];
 		if (context?.cwd) {
@@ -209,14 +209,14 @@ export class AutocompleteClient {
 	 */
 	private async fetchSuggestion(
 		input: string,
-		context: AutocompleteContext | undefined,
+		context: SuggestionContext | undefined,
 		signal: AbortSignal,
 	): Promise<string | null> {
-		// Get autocomplete model from config
-		const autocompleteModelId = getAutocompleteModel();
+		// Get suggestion model from config
+		const suggestionModelId = getSuggestionModel();
 
-		// Get API config for autocomplete model
-		const apiConfig = getModelApiConfig(autocompleteModelId);
+		// Get API config for suggestion model
+		const apiConfig = getModelApiConfig(suggestionModelId);
 		if (!apiConfig) {
 			// Model not configured, return silently
 			return null;
@@ -232,13 +232,13 @@ export class AutocompleteClient {
 		}
 
 		const body = {
-			model: autocompleteModelId,
+			model: suggestionModelId,
 			messages: [
-				{ role: "system", content: AUTOCOMPLETE_SYSTEM_PROMPT },
+				{ role: "system", content: SUGGESTION_SYSTEM_PROMPT },
 				{ role: "user", content: userContent },
 			],
-			max_tokens: AUTOCOMPLETE_CONFIG.maxTokens,
-			temperature: AUTOCOMPLETE_CONFIG.temperature,
+			max_tokens: SUGGESTION_CONFIG.maxTokens,
+			temperature: SUGGESTION_CONFIG.temperature,
 			stream: false, // Non-streaming for simplicity
 		};
 
@@ -249,7 +249,7 @@ export class AutocompleteClient {
 				// Note: We can't abort from here directly as signal is read-only
 				// The AbortController.abort() should be called from outside
 			}
-		}, AUTOCOMPLETE_CONFIG.timeout);
+		}, SUGGESTION_CONFIG.timeout);
 
 		try {
 			const response = await fetch(url, {
@@ -308,7 +308,7 @@ export class AutocompleteClient {
 		}
 
 		// Replace all newlines (\n, \r, \r\n) with a single space
-		// This ensures autocomplete suggestions are always single-line
+		// This ensures suggestions are always single-line
 		cleaned = cleaned.replace(/\r\n|\r|\n/g, " ");
 
 		// Collapse multiple consecutive spaces into one
@@ -334,14 +334,14 @@ export class AutocompleteClient {
 /**
  * Singleton instance
  */
-let autocompleteClientInstance: AutocompleteClient | null = null;
+let suggestionClientInstance: SuggestionClient | null = null;
 
 /**
- * Get the singleton autocomplete client instance
+ * Get the singleton suggestion client instance
  */
-export function getAutocompleteClient(): AutocompleteClient {
-	if (!autocompleteClientInstance) {
-		autocompleteClientInstance = new AutocompleteClient();
+export function getSuggestionClient(): SuggestionClient {
+	if (!suggestionClientInstance) {
+		suggestionClientInstance = new SuggestionClient();
 	}
-	return autocompleteClientInstance;
+	return suggestionClientInstance;
 }

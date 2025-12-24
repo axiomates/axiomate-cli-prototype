@@ -1,25 +1,25 @@
 /**
- * AI Autocomplete Configuration
+ * AI Suggestion Configuration
  *
  * Internal configuration for AI-powered text completion.
  * Model is read from user config (~/.axiomate.json).
  */
 
-import { getAutocompleteModelId } from "../utils/config.js";
+import { getSuggestionModelId } from "../utils/config.js";
 
 /**
  * 获取自动补全模型 ID
  * 从配置文件读取，如果未配置则使用默认值
  */
-export function getAutocompleteModel(): string {
-	const modelId = getAutocompleteModelId();
+export function getSuggestionModel(): string {
+	const modelId = getSuggestionModelId();
 	return modelId || "THUDM/GLM-Z1-9B-0414"; // 默认使用 GLM-Z1-9B
 }
 
 /**
- * Autocomplete model configuration
+ * Suggestion model configuration
  */
-export const AUTOCOMPLETE_CONFIG = {
+export const SUGGESTION_CONFIG = {
 	/** Maximum tokens for completion response */
 	maxTokens: 30,
 	/** Request timeout in milliseconds */
@@ -29,20 +29,20 @@ export const AUTOCOMPLETE_CONFIG = {
 } as const;
 
 /**
- * Debounce delay before triggering autocomplete (ms)
+ * Debounce delay before triggering suggestion (ms)
  */
-export const AUTOCOMPLETE_DEBOUNCE_MS = 500;
+export const SUGGESTION_DEBOUNCE_MS = 400;
 
 /**
- * Minimum input length to trigger autocomplete
+ * Minimum input length to trigger suggestion
  */
-export const MIN_INPUT_LENGTH = 6;
+export const MIN_INPUT_LENGTH = 5;
 
 /**
- * System prompt for autocomplete
+ * System prompt for suggestion
  * Instructs the model to provide short, contextual completions
  */
-export const AUTOCOMPLETE_SYSTEM_PROMPT = `You are an autocomplete assistant. Complete the user's input with a short continuation.
+export const SUGGESTION_SYSTEM_PROMPT = `You are a suggestion assistant. Complete the user's input with a short continuation.
 
 Rules:
 - Return ONLY the completion text (what comes after the user's input)
@@ -55,7 +55,7 @@ Rules:
 /**
  * LRU Cache settings
  */
-export const AUTOCOMPLETE_CACHE = {
+export const SUGGESTION_CACHE = {
 	/** Maximum number of cached entries */
 	maxSize: 50,
 	/** Time-to-live for cache entries (ms) */

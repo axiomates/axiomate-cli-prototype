@@ -72,7 +72,7 @@ The welcome page:
 Configuration is stored in `~/.axiomate.json`:
 - `models` - Per-model configurations (Record<string, ModelConfig>)
 - `currentModel` - Selected model ID (e.g., `Qwen/Qwen3-8B`)
-- `autocompleteModel` - Model for AI autocomplete (e.g., `THUDM/GLM-Z1-9B-0414`)
+- `suggestionModel` - Model for AI suggestion (e.g., `THUDM/GLM-Z1-9B-0414`)
 
 ### Standalone Executable
 

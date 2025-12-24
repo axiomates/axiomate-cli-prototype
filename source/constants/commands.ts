@@ -14,13 +14,13 @@ function generateModelCommands(): SlashCommand[] {
 }
 
 /**
- * 根据模型配置生成自动补全模型选择命令
+ * 根据模型配置生成建议模型选择命令
  */
-function generateAutocompleteModelCommands(): SlashCommand[] {
+function generateSuggestionModelCommands(): SlashCommand[] {
 	return getAllModels().map((model) => ({
 		name: model.model,
 		description: `${model.name}${model.description ? ` - ${model.description}` : ""}`,
-		action: { type: "internal" as const, handler: "autocomplete_model_select" },
+		action: { type: "internal" as const, handler: "suggestion_model_select" },
 	}));
 }
 
@@ -80,23 +80,23 @@ export function getSlashCommands(): SlashCommand[] {
 			action: { type: "internal", handler: "stop" },
 		},
 		{
-			name: "autocomplete",
-			description: t("commands.autocomplete.description"),
+			name: "suggestion",
+			description: t("commands.suggestion.description"),
 			children: [
 				{
 					name: "on",
-					description: t("commands.autocomplete.onDesc"),
-					action: { type: "internal", handler: "autocomplete_on" },
+					description: t("commands.suggestion.onDesc"),
+					action: { type: "internal", handler: "suggestion_on" },
 				},
 				{
 					name: "off",
-					description: t("commands.autocomplete.offDesc"),
-					action: { type: "internal", handler: "autocomplete_off" },
+					description: t("commands.suggestion.offDesc"),
+					action: { type: "internal", handler: "suggestion_off" },
 				},
 				{
 					name: "model",
-					description: t("commands.autocomplete.modelDesc"),
-					children: generateAutocompleteModelCommands(),
+					description: t("commands.suggestion.modelDesc"),
+					children: generateSuggestionModelCommands(),
 				},
 			],
 		},

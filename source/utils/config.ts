@@ -40,9 +40,9 @@ export type Config = {
 	/** 当前选中的模型 ID（model 字段的值） */
 	currentModel: string;
 	/** 自动补全使用的模型 ID（可选） */
-	autocompleteModel: string;
+	suggestionModel: string;
 	/** 是否启用 AI 自动补全（可选，默认 true，只有用户手动设置时才写入文件） */
-	autocompleteEnabled?: boolean;
+	suggestionEnabled?: boolean;
 };
 
 /**
@@ -50,11 +50,11 @@ export type Config = {
  */
 export type ConfigFile = Partial<Config>;
 
-// 默认配置（不包含 autocompleteEnabled，它是可选的，默认视为 true）
+// 默认配置（不包含 suggestionEnabled，它是可选的，默认视为 true）
 const DEFAULT_CONFIG: Config = {
 	models: {},
 	currentModel: "",
-	autocompleteModel: "",
+	suggestionModel: "",
 };
 
 // 运行时配置（单例）
@@ -160,7 +160,7 @@ export function getConfigPath(): string {
  * 返回 true 如果：
  * - 配置文件不存在
  * - 配置文件不是有效的 JSON 对象
- * - 缺少任意必要字段：currentModel、models、autocompleteModel
+ * - 缺少任意必要字段：currentModel、models、suggestionModel
  * - models 为空对象
  *
  * 缺少任意配置都视为首次启动，会覆盖原有配置
@@ -194,11 +194,11 @@ export function isFirstTimeUser(): boolean {
 			return true;
 		}
 
-		// 检查 autocompleteModel 是否存在且非空，且在 models 中有配置
-		if (!parsed.autocompleteModel || typeof parsed.autocompleteModel !== "string" || parsed.autocompleteModel.trim() === "") {
+		// 检查 suggestionModel 是否存在且非空，且在 models 中有配置
+		if (!parsed.suggestionModel || typeof parsed.suggestionModel !== "string" || parsed.suggestionModel.trim() === "") {
 			return true;
 		}
-		if (!(parsed.autocompleteModel in models)) {
+		if (!(parsed.suggestionModel in models)) {
 			return true;
 		}
 
@@ -271,30 +271,30 @@ export function isApiConfigValid(): boolean {
 /**
  * 获取自动补全模型 ID
  */
-export function getAutocompleteModelId(): string {
+export function getSuggestionModelId(): string {
 	const config = getConfig();
-	return config.autocompleteModel || "";
+	return config.suggestionModel || "";
 }
 
 /**
  * 设置自动补全模型 ID
  */
-export function setAutocompleteModelId(modelId: string): void {
-	updateConfig({ autocompleteModel: modelId });
+export function setSuggestionModelId(modelId: string): void {
+	updateConfig({ suggestionModel: modelId });
 }
 
 /**
  * 检查是否启用 AI 自动补全
  * 默认为 true（如果配置文件中未指定）
  */
-export function isAutocompleteEnabled(): boolean {
+export function isSuggestionEnabled(): boolean {
 	const config = getConfig();
-	return config.autocompleteEnabled !== false;
+	return config.suggestionEnabled !== false;
 }
 
 /**
  * 设置是否启用 AI 自动补全
  */
-export function setAutocompleteEnabled(enabled: boolean): void {
-	updateConfig({ autocompleteEnabled: enabled });
+export function setSuggestionEnabled(enabled: boolean): void {
+	updateConfig({ suggestionEnabled: enabled });
 }

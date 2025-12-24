@@ -152,7 +152,7 @@ export default function Welcome({ onComplete }: Props) {
 			updateConfig({
 				models: generateModelConfigs(),
 				currentModel: DEFAULT_MODEL_ID,
-				autocompleteModel: "THUDM/GLM-Z1-9B-0414",
+				suggestionModel: "THUDM/GLM-Z1-9B-0414",
 			});
 
 			setStatus("done");

@@ -8,12 +8,12 @@
 import { useCallback, useRef, useEffect, useMemo } from "react";
 import type { EditorState, EditorAction, SlashCommand } from "../types.js";
 import { isSlashMode, isHistoryMode, buildCommandText } from "../types.js";
-import { getAutocompleteClient } from "../../../services/ai/autocompleteClient.js";
+import { getSuggestionClient } from "../../../services/ai/suggestionClient.js";
 import {
-	AUTOCOMPLETE_DEBOUNCE_MS,
+	SUGGESTION_DEBOUNCE_MS,
 	MIN_INPUT_LENGTH,
-} from "../../../constants/autocomplete.js";
-import { isAutocompleteEnabled } from "../../../utils/config.js";
+} from "../../../constants/suggestion.js";
+import { isSuggestionEnabled } from "../../../utils/config.js";
 
 type UseAutocompleteOptions = {
 	state: EditorState;
@@ -110,7 +110,7 @@ export function useAutocomplete({
 			}
 
 			// Get suggestion from AI client (handles its own cancellation)
-			const client = getAutocompleteClient();
+			const client = getSuggestionClient();
 			const result = await client.getSuggestion(text, {
 				cwd: process.cwd(),
 			});
@@ -147,7 +147,7 @@ export function useAutocomplete({
 			}
 
 			// 检查是否启用自动补全
-			if (!isAutocompleteEnabled()) {
+			if (!isSuggestionEnabled()) {
 				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				return;
 			}
@@ -156,7 +156,7 @@ export function useAutocomplete({
 			if (!text || text.length < MIN_INPUT_LENGTH) {
 				dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				// Cancel any in-progress AI request
-				getAutocompleteClient().cancel();
+				getSuggestionClient().cancel();
 				return;
 			}
 
@@ -169,7 +169,7 @@ export function useAutocomplete({
 					// Silent error handling
 					dispatch({ type: "SET_SUGGESTION", suggestion: null });
 				}
-			}, AUTOCOMPLETE_DEBOUNCE_MS);
+			}, SUGGESTION_DEBOUNCE_MS);
 		},
 		[dispatch, getAISuggestion],
 	);
@@ -187,7 +187,7 @@ export function useAutocomplete({
 				clearTimeout(debounceTimerRef.current);
 			}
 			// Cancel any in-progress AI request
-			getAutocompleteClient().cancel();
+			getSuggestionClient().cancel();
 		};
 	}, []);
 

@@ -35,7 +35,7 @@
 		"enterSubmit": "Enter - メッセージ送信",
 		"upDownHistory": "↑/↓ - 履歴を移動（入力モード）",
 		"leftRightCursor": "←/→ - カーソル移動",
-		"tabComplete": "Tab - オートコンプリート",
+		"tabComplete": "Tab - 提案を適用",
 		"ctrlCExit": "Ctrl+C - 終了",
 		"slashCommands": "でコマンド",
 		"atFiles": "でファイル選択",
@@ -104,12 +104,12 @@
 			"name": "exit",
 			"description": "アプリケーションを終了"
 		},
-		"autocomplete": {
-			"name": "autocomplete",
-			"description": "AI自動補完を設定",
-			"onDesc": "自動補完を有効にする",
-			"offDesc": "自動補完を無効にする",
-			"modelDesc": "自動補完モデルを選択"
+		"suggestion": {
+			"name": "suggestion",
+			"description": "AI提案を設定",
+			"onDesc": "AI提案を有効にする",
+			"offDesc": "AI提案を無効にする",
+			"modelDesc": "提案モデルを選択"
 		}
 	},
 	"commandHandler": {
@@ -127,7 +127,10 @@
 		"compactSuccess": "✅ 会話の圧縮が完了しました。",
 		"compactFailed": "会話の圧縮に失敗しました: {{error}}",
 		"toolsRefreshing": "🔄 ツールを再検出中...",
-		"toolsRefreshed": "✅ ツールを更新しました。{{count}}個のツールが見つかりました。"
+		"toolsRefreshed": "✅ ツールを更新しました。{{count}}個のツールが見つかりました。",
+		"suggestionEnabled": "AI提案が有効になりました",
+		"suggestionDisabled": "AI提案が無効になりました",
+		"suggestionModelSwitched": "提案モデルを切り替えました: {{model}}"
 	},
 	"ai": {
 		"notConfigured": "AIサービスが設定されていません。API設定を確認してください。",

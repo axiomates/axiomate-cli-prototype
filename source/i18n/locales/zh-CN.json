@@ -35,7 +35,7 @@
 		"enterSubmit": "Enter - 发送消息",
 		"upDownHistory": "↑/↓ - 浏览历史（输入模式）",
 		"leftRightCursor": "←/→ - 移动光标",
-		"tabComplete": "Tab - 自动补全",
+		"tabComplete": "Tab - 接受建议",
 		"ctrlCExit": "Ctrl+C - 退出",
 		"slashCommands": "打开命令",
 		"atFiles": "选择文件",
@@ -104,12 +104,12 @@
 			"name": "exit",
 			"description": "退出应用"
 		},
-		"autocomplete": {
-			"name": "autocomplete",
-			"description": "配置 AI 自动补全",
-			"onDesc": "启用自动补全",
-			"offDesc": "禁用自动补全",
-			"modelDesc": "选择自动补全模型"
+		"suggestion": {
+			"name": "suggestion",
+			"description": "配置 AI 建议",
+			"onDesc": "启用 AI 建议",
+			"offDesc": "禁用 AI 建议",
+			"modelDesc": "选择建议模型"
 		}
 	},
 	"commandHandler": {
@@ -128,9 +128,9 @@
 		"compactFailed": "对话压缩失败：{{error}}",
 		"toolsRefreshing": "🔄 重新发现工具中...",
 		"toolsRefreshed": "✅ 工具已刷新。发现 {{count}} 个工具。",
-		"autocompleteEnabled": "AI 自动补全已启用",
-		"autocompleteDisabled": "AI 自动补全已禁用",
-		"autocompleteModelSwitched": "自动补全模型已切换至：{{model}}"
+		"suggestionEnabled": "AI 建议已启用",
+		"suggestionDisabled": "AI 建议已禁用",
+		"suggestionModelSwitched": "建议模型已切换至：{{model}}"
 	},
 	"ai": {
 		"notConfigured": "AI 服务未配置，请检查 API 设置。",

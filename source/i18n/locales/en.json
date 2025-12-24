@@ -35,7 +35,7 @@
 		"enterSubmit": "Enter - Submit message",
 		"upDownHistory": "↑/↓ - Navigate history (input mode)",
 		"leftRightCursor": "←/→ - Move cursor",
-		"tabComplete": "Tab - Autocomplete",
+		"tabComplete": "Tab - Accept suggestion",
 		"ctrlCExit": "Ctrl+C - Exit",
 		"slashCommands": "for commands",
 		"atFiles": "to select files",
@@ -104,12 +104,12 @@
 			"name": "exit",
 			"description": "Exit the application"
 		},
-		"autocomplete": {
-			"name": "autocomplete",
-			"description": "Configure AI autocomplete",
-			"onDesc": "Enable autocomplete",
-			"offDesc": "Disable autocomplete",
-			"modelDesc": "Select autocomplete model"
+		"suggestion": {
+			"name": "suggestion",
+			"description": "Configure AI suggestion",
+			"onDesc": "Enable AI suggestion",
+			"offDesc": "Disable AI suggestion",
+			"modelDesc": "Select suggestion model"
 		}
 	},
 	"commandHandler": {
@@ -128,9 +128,9 @@
 		"compactFailed": "Failed to compact conversation: {{error}}",
 		"toolsRefreshing": "🔄 Re-discovering tools...",
 		"toolsRefreshed": "✅ Tools refreshed. Found {{count}} tools.",
-		"autocompleteEnabled": "AI autocomplete enabled",
-		"autocompleteDisabled": "AI autocomplete disabled",
-		"autocompleteModelSwitched": "Autocomplete model switched to: {{model}}"
+		"suggestionEnabled": "AI suggestion enabled",
+		"suggestionDisabled": "AI suggestion disabled",
+		"suggestionModelSwitched": "Suggestion model switched to: {{model}}"
 	},
 	"ai": {
 		"notConfigured": "AI service not configured. Please check your API settings.",
