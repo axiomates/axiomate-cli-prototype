@@ -1,4 +1,4 @@
-# CLAUDE.md
+﻿# CLAUDE.md
 
 This file provides guidance for Claude Code when working with this repository.
 
@@ -164,8 +164,7 @@ cli.tsx (entry point)
         │       ├── Display welcome message with test version notice
         │       ├── Wait for any key press
         │       ├── updateConfig() writes preset API URL and key
-        │       └── restartApp() restarts with same cwd and args
-        │           └── On restart: isFirstTimeUser() === false → App
+        │       └── Continues to main application interface without restart
         │
         └── isFirstTimeUser() === false
             └── render(<App initResult={...} />)
@@ -234,7 +233,7 @@ Located in `components/Welcome.tsx`:
 - Full-screen terminal layout (uses `useTerminalHeight`)
 - Centered welcome message with test version notice
 - Pre-configured API credentials for testing (future: user registration/login)
-- Status display: waiting → configuring → restarting
+- Status display: waiting → configuring
 - Updates configuration and continues to main application interface without restart
 
 **Model Presets** (`DEFAULT_MODEL_PRESETS`):
