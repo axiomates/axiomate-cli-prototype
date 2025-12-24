@@ -19,37 +19,25 @@ const cmdDefinition: ToolDefinition = {
 	capabilities: ["execute"],
 	actions: [
 		{
-			name: "run",
-			description: "Execute CMD command",
+			name: "run_script_content",
+			description:
+				"Create and run a batch script from content. The script is saved to .axiomate/scripts/ as UTF-8 and executed with chcp 65001. This is the primary way to execute batch scripts.",
 			parameters: [
 				{
-					name: "command",
-					description: "CMD command",
+					name: "content",
+					description: "Batch script content",
 					type: "string",
 					required: true,
 				},
 			],
-			// chcp 65001 sets console to UTF-8 for proper output display
-			commandTemplate: 'chcp 65001 >nul & cmd /C "{{command}}"',
-		},
-		{
-			name: "run_script",
-			description: "Run batch script",
-			parameters: [
-				{
-					name: "file",
-					description: "Batch file path (.bat/.cmd)",
-					type: "file",
-					required: true,
-				},
-			],
-			commandTemplate: "chcp 65001 >nul & cmd /C {{file}}",
+			// Special action: handled by executeScript() in executor.ts
+			commandTemplate: "__SCRIPT_EXECUTION__",
 		},
 		{
 			name: "version",
 			description: "Show CMD version",
 			parameters: [],
-			commandTemplate: "chcp 65001 >nul & cmd /C ver",
+			commandTemplate: "ver",
 		},
 	],
 	installHint: "Included with Windows",

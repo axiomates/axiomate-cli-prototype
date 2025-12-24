@@ -33,42 +33,26 @@ const powershellDefinition: ToolDefinition = {
 	capabilities: ["execute"],
 	actions: [
 		{
-			name: "run",
+			name: "run_script_content",
 			description:
-				"Execute PowerShell command for Windows system operations",
+				"Create and run a PowerShell script from content. The script is saved to .axiomate/scripts/ as UTF-8 with BOM and executed. This is the primary way to execute PowerShell code.",
 			parameters: [
 				{
-					name: "command",
-					description: "PowerShell command",
+					name: "content",
+					description: "PowerShell script content",
 					type: "string",
 					required: true,
 				},
 			],
-			// Use cmd /C to run chcp (CMD command) before PowerShell
-			// chcp 65001 sets console to UTF-8 for proper output display
-			commandTemplate:
-				'cmd /C "chcp 65001 >nul & powershell -NoProfile -Command {{command}}"',
-		},
-		{
-			name: "run_script",
-			description: "Run PowerShell script file",
-			parameters: [
-				{
-					name: "file",
-					description: "PS1 script file path",
-					type: "file",
-					required: true,
-				},
-			],
-			commandTemplate:
-				'cmd /C "chcp 65001 >nul & powershell -NoProfile -File {{file}}"',
+			// Special action: handled by executeScript() in executor.ts
+			commandTemplate: "__SCRIPT_EXECUTION__",
 		},
 		{
 			name: "version",
 			description: "Show PowerShell version",
 			parameters: [],
 			commandTemplate:
-				'cmd /C "chcp 65001 >nul & powershell -NoProfile -Command $PSVersionTable.PSVersion.ToString()"',
+				'powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"',
 		},
 	],
 	installHint:
@@ -85,37 +69,25 @@ const pwshDefinition: ToolDefinition = {
 	capabilities: ["execute"],
 	actions: [
 		{
-			name: "run",
-			description: "Execute PowerShell command",
+			name: "run_script_content",
+			description:
+				"Create and run a PowerShell script from content. The script is saved to .axiomate/scripts/ as UTF-8 with BOM and executed. This is the primary way to execute PowerShell code.",
 			parameters: [
 				{
-					name: "command",
-					description: "PowerShell command",
+					name: "content",
+					description: "PowerShell script content",
 					type: "string",
 					required: true,
 				},
 			],
-			// chcp 65001 sets console to UTF-8 for proper output display
-			commandTemplate: 'chcp 65001 >nul & pwsh -Command "{{command}}"',
-		},
-		{
-			name: "run_script",
-			description: "Run PowerShell script file",
-			parameters: [
-				{
-					name: "file",
-					description: "PS1 script file path",
-					type: "file",
-					required: true,
-				},
-			],
-			commandTemplate: "chcp 65001 >nul & pwsh -File {{file}}",
+			// Special action: handled by executeScript() in executor.ts
+			commandTemplate: "__SCRIPT_EXECUTION__",
 		},
 		{
 			name: "version",
 			description: "Show version",
 			parameters: [],
-			commandTemplate: "chcp 65001 >nul & pwsh --version",
+			commandTemplate: "pwsh --version",
 		},
 	],
 	installHint: "Download from https://github.com/PowerShell/PowerShell",

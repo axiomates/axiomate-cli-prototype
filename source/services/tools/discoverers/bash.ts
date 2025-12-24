@@ -19,30 +19,19 @@ const bashDefinition: ToolDefinition = {
 	capabilities: ["execute"],
 	actions: [
 		{
-			name: "run",
-			description: "Execute Bash command",
+			name: "run_script_content",
+			description:
+				"Create and run a Bash script from content. The script is saved to .axiomate/scripts/ as UTF-8 and executed. This is the primary way to execute shell scripts.",
 			parameters: [
 				{
-					name: "command",
-					description: "Bash command",
+					name: "content",
+					description: "Bash script content",
 					type: "string",
 					required: true,
 				},
 			],
-			commandTemplate: 'bash -c "{{command}}"',
-		},
-		{
-			name: "run_script",
-			description: "Run shell script",
-			parameters: [
-				{
-					name: "file",
-					description: "Script file path (.sh)",
-					type: "file",
-					required: true,
-				},
-			],
-			commandTemplate: "bash {{file}}",
+			// Special action: handled by executeScript() in executor.ts
+			commandTemplate: "__SCRIPT_EXECUTION__",
 		},
 		{
 			name: "version",

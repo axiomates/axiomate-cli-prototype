@@ -8,6 +8,20 @@
 
 import { spawn, type SpawnOptions } from "node:child_process";
 import type { DiscoveredTool, ToolAction, ToolParameter } from "./types.js";
+import {
+	writeScript,
+	buildScriptCommand,
+	type ScriptType,
+} from "./scriptWriter.js";
+
+// Map tool IDs to script types for run_script_content action
+const TOOL_SCRIPT_TYPE_MAP: Record<string, ScriptType> = {
+	powershell: "powershell",
+	pwsh: "pwsh", // PowerShell Core - uses pwsh command
+	python: "python",
+	cmd: "cmd",
+	bash: "bash",
+};
 
 export type ExecutionResult = {
 	success: boolean;
@@ -212,6 +226,42 @@ export async function executeToolAction(
 	}
 
 	const filledParams = fillDefaults(action, params);
+
+	// Handle special run_script_content action
+	if (
+		action.name === "run_script_content" &&
+		action.commandTemplate === "__SCRIPT_EXECUTION__"
+	) {
+		const scriptType = TOOL_SCRIPT_TYPE_MAP[tool.id];
+		if (!scriptType) {
+			return {
+				success: false,
+				stdout: "",
+				stderr: "",
+				exitCode: null,
+				error: `Tool ${tool.id} does not support script execution`,
+			};
+		}
+
+		const content = filledParams.content as string;
+		if (!content) {
+			return {
+				success: false,
+				stdout: "",
+				stderr: "",
+				exitCode: null,
+				error: "Script content is required",
+			};
+		}
+
+		return executeScript(scriptType, content, {
+			cwd: options?.cwd,
+			env: tool.env,
+			timeout: options?.timeout,
+			prefix: tool.id,
+		});
+	}
+
 	const command = renderCommandTemplate(
 		action.commandTemplate,
 		filledParams,
@@ -233,6 +283,57 @@ export function getToolAction(
 	actionName: string,
 ): ToolAction | undefined {
 	return tool.actions.find((a) => a.name === actionName);
+}
+
+/**
+ * Execute a script by writing it to a temporary file and running it
+ * @param scriptType - The type of script (powershell, python, cmd, bash)
+ * @param content - The script content
+ * @param options - Execution options
+ * @returns Execution result with script file path in stdout prefix
+ */
+export async function executeScript(
+	scriptType: ScriptType,
+	content: string,
+	options?: {
+		cwd?: string;
+		env?: Record<string, string>;
+		timeout?: number;
+		prefix?: string;
+	},
+): Promise<ExecutionResult> {
+	const cwd = options?.cwd || process.cwd();
+
+	try {
+		// Write script to temporary file
+		const scriptPath = writeScript(cwd, scriptType, content, {
+			prefix: options?.prefix,
+		});
+
+		// Build and execute the command
+		const command = buildScriptCommand(scriptType, scriptPath);
+
+		const result = await executeCommand(command, {
+			cwd,
+			env: options?.env,
+			timeout: options?.timeout,
+		});
+
+		// Prepend script path info to stdout for reference
+		const pathInfo = `[Script: ${scriptPath}]\n`;
+		return {
+			...result,
+			stdout: result.stdout ? pathInfo + result.stdout : pathInfo.trim(),
+		};
+	} catch (err) {
+		return {
+			success: false,
+			stdout: "",
+			stderr: "",
+			exitCode: null,
+			error: `Failed to create script file: ${err instanceof Error ? err.message : String(err)}`,
+		};
+	}
 }
 
 /**

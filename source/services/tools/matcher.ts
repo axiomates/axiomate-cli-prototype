@@ -97,15 +97,18 @@ const CAPABILITY_MAP: Record<string, ToolCapability> = {
 
 /**
  * Get default shell tools for the current platform
- * Windows: powershell, pwsh, cmd (for Windows system operations)
+ * Windows priority: pwsh > powershell > cmd
+ *   - pwsh (PowerShell Core): Better UTF-8 support, cross-platform
+ *   - powershell (PowerShell 5.1): Windows built-in, requires encoding setup
+ *   - cmd: Legacy, only for batch scripts
  * Unix/Linux/macOS: bash
  *
  * Note: Python is NOT a shell tool - it's a runtime/programming language.
- * Shell tools are for OS interaction, not file operations.
+ * Python is added separately in autoSelect with highest priority for file operations.
  */
 function getDefaultShellTools(): string[] {
 	if (platform() === "win32") {
-		return ["powershell", "pwsh", "cmd"];
+		return ["pwsh", "powershell", "cmd"];
 	}
 	// Unix/Linux/macOS
 	return ["bash"];

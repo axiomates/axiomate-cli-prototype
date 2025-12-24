@@ -30,8 +30,23 @@ const pythonDefinition: ToolDefinition = {
 	},
 	actions: [
 		{
+			name: "run_script_content",
+			description:
+				"Create and run a Python script from content. The script is saved to .axiomate/scripts/ as UTF-8 and executed. This is the primary way to execute Python code.",
+			parameters: [
+				{
+					name: "content",
+					description: "Python script content",
+					type: "string",
+					required: true,
+				},
+			],
+			// Special action: handled by executeScript() in executor.ts
+			commandTemplate: "__SCRIPT_EXECUTION__",
+		},
+		{
 			name: "run",
-			description: "Run Python script",
+			description: "Run existing Python script file",
 			parameters: [
 				{
 					name: "file",
@@ -41,19 +56,6 @@ const pythonDefinition: ToolDefinition = {
 				},
 			],
 			commandTemplate: "python {{file}}",
-		},
-		{
-			name: "eval",
-			description: "Execute Python code",
-			parameters: [
-				{
-					name: "code",
-					description: "Python code",
-					type: "string",
-					required: true,
-				},
-			],
-			commandTemplate: 'python -c "{{code}}"',
 		},
 		{
 			name: "version",
