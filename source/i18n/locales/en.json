@@ -13,7 +13,7 @@
 		"testVersionDesc": "A pre-configured AI API key is included for testing.",
 		"pressAnyKey": "Press any key to continue...",
 		"configuring": "Creating config...",
-		"restarting": "Restarting..."
+		"starting": "Starting..."
 	},
 	"splash": {
 		"loading": "Loading...",

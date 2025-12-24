@@ -85,13 +85,32 @@ async function main() {
 	// 阶段 3: 根据配置状态决定渲染 Welcome 或 App
 	if (isFirstTimeUser()) {
 		// 首次使用 → 欢迎页面
-		const { waitUntilExit } = render(<Welcome />);
-		await waitUntilExit();
-	} else {
-		// 已配置 → 正常启动
-		const { waitUntilExit } = render(<App initResult={initResult} />);
-		await waitUntilExit();
+		// 等待 Welcome 完成配置后卸载
+		await new Promise<void>((resolve) => {
+			const welcomeInstance = render(
+				<Welcome
+					onComplete={() => {
+						// 短暂延迟让用户看到 "完成" 状态
+						setTimeout(() => {
+							welcomeInstance.unmount();
+							resolve();
+						}, 500);
+					}}
+				/>,
+			);
+		});
+
+		// Welcome 完成后，重新初始化 AI 服务（因为配置已更新）
+		try {
+			initResult = await initApp();
+		} catch {
+			// 忽略错误，继续启动（可能 AI 服务不可用）
+		}
 	}
+
+	// 正常启动 App
+	const { waitUntilExit } = render(<App initResult={initResult} />);
+	await waitUntilExit();
 	process.stdout.write("\x1b[2J\x1b[H");
 }
 

@@ -17,7 +17,6 @@ import { APP_NAME, VERSION } from "../constants/meta.js";
 import { DEFAULT_MODEL_ID } from "../constants/models.js";
 import useTerminalHeight from "../hooks/useTerminalHeight.js";
 import { updateConfig, type ModelConfig } from "../utils/config.js";
-import { restartApp } from "../utils/platform.js";
 import { resumeInput } from "../utils/stdin.js";
 import { useTranslation } from "../hooks/useTranslation.js";
 import Divider from "./Divider.js";
@@ -157,12 +156,8 @@ export default function Welcome({ onComplete }: Props) {
 
 			setStatus("done");
 
-			// 重启应用（或调用回调用于测试）
-			if (onComplete) {
-				onComplete();
-			} else {
-				await restartApp(); // 等待子进程启动后 process.exit(0)
-			}
+			// 通知完成（回调总是存在，由 cli.tsx 传入）
+			onComplete?.();
 		},
 		// isActive: 未处理时才接受输入
 		{ isActive: status === "welcome" },
@@ -172,7 +167,7 @@ export default function Welcome({ onComplete }: Props) {
 	const statusText = {
 		welcome: "",
 		configuring: t("welcome.configuring"),
-		done: t("welcome.restarting"),
+		done: t("welcome.starting"),
 	}[status];
 
 	return (

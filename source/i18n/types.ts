@@ -17,7 +17,7 @@ export type Translations = {
 		testVersionDesc: string;
 		pressAnyKey: string;
 		configuring: string;
-		restarting: string;
+		starting: string;
 	};
 
 	// Splash screen

@@ -13,7 +13,7 @@
 		"testVersionDesc": "已预配置测试用 AI API 密钥。",
 		"pressAnyKey": "按任意键继续...",
 		"configuring": "正在创建配置...",
-		"restarting": "重启中..."
+		"starting": "启动中..."
 	},
 	"splash": {
 		"loading": "加载中...",

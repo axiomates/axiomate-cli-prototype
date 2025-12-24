@@ -13,7 +13,7 @@
 		"testVersionDesc": "テスト用のAI APIキーが設定済みです。",
 		"pressAnyKey": "任意のキーを押して続行...",
 		"configuring": "設定ファイルを作成中...",
-		"restarting": "再起動中..."
+		"starting": "起動中..."
 	},
 	"splash": {
 		"loading": "読み込み中...",
