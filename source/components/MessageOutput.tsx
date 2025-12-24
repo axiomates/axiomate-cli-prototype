@@ -140,14 +140,16 @@ export default function MessageOutput({
 		(msg: Message, isLastMessage: boolean): string => {
 			let content = renderMarkdownSync(msg.content, width - 2);
 
-			// 如果是最后一条消息且正在流式生成，添加动画 spinner
+			// 如果是最后一条消息且正在流式生成，添加动画 spinner（带明黄色）
 			if (msg.streaming && isLastMessage) {
 				// 确保 spinner 在内容后面（同一行或新行）
 				const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
+				// 使用 ANSI 转义码添加明黄色
+				const coloredSpinner = `\x1b[93m${spinnerChar}\x1b[0m`; // 93 = bright yellow
 				if (content.endsWith("\n")) {
-					content = content.slice(0, -1) + " " + spinnerChar;
+					content = content.slice(0, -1) + " " + coloredSpinner;
 				} else {
-					content += " " + spinnerChar;
+					content += " " + coloredSpinner;
 				}
 			}
 
