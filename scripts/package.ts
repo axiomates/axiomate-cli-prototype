@@ -27,7 +27,7 @@ function checkBunInstalled(): boolean {
 // 获取输出文件名
 function getOutputFilename(): string {
 	const os = platform();
-	const baseName = "axiomate-cli";
+	const baseName = "axiomate";
 
 	if (os === "win32") {
 		return `${baseName}.exe`;
@@ -38,7 +38,7 @@ function getOutputFilename(): string {
 
 // 主流程
 async function main() {
-	console.log("📦 开始打包 axiomate-cli...\n");
+	console.log("📦 开始打包 axiomate...\n");
 
 	// 1. 检查 Bun
 	if (!checkBunInstalled()) {
@@ -61,8 +61,8 @@ async function main() {
 	execSync("npm run bundle", { stdio: "inherit" });
 
 	// 4. 为 Bun 创建入口文件 (Bun 需要不同的 shebang 处理)
-	const bundlePath = join("bundle", "axiomate-cli.mjs");
-	const bunEntryPath = join("bundle", "axiomate-cli-bun.mjs");
+	const bundlePath = join("bundle", "axiomate.mjs");
+	const bunEntryPath = join("bundle", "axiomate-bun.mjs");
 
 	let bundleContent = readFileSync(bundlePath, "utf-8");
 	// 移除 shebang (Bun 编译后不需要)

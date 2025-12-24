@@ -24,18 +24,18 @@ await esbuild.build({
 	platform: "node",
 	target: "node20",
 	format: "esm",
-	outfile: "bundle/axiomate-cli.mjs",
+	outfile: "bundle/axiomate.mjs",
 	plugins: [ignoreDevtoolsPlugin],
 	minify: true,
 	sourcemap: false,
 });
 
 // 移除原有 shebang，添加新的 shebang 和 require polyfill
-let bundleContent = readFileSync("bundle/axiomate-cli.mjs", "utf-8");
+let bundleContent = readFileSync("bundle/axiomate.mjs", "utf-8");
 // 移除已有的 shebang
 bundleContent = bundleContent.replace(/^#!.*\n?/, "");
 const finalContent = `#!/usr/bin/env node
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 ${bundleContent}`;
-writeFileSync("bundle/axiomate-cli.mjs", finalContent);
+writeFileSync("bundle/axiomate.mjs", finalContent);

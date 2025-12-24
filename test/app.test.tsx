@@ -14,7 +14,7 @@ describe("App", () => {
 	it("renders the header with app title", () => {
 		const { lastFrame } = render(<App initResult={mockInitResult} />);
 		// Header shows app name
-		expect(lastFrame()).toContain("axiomate-cli");
+		expect(lastFrame()).toContain("axiomate");
 	});
 
 	it("shows input mode indicator by default", () => {

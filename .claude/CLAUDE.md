@@ -4,7 +4,7 @@ This file provides guidance for Claude Code when working with this repository.
 
 ## Project Overview
 
-axiomate-cli is a terminal-based AI agent application built with React 19 + Ink 6. It provides an interactive CLI interface with autocomplete, hierarchical slash commands, multi-file selection, and structured input handling using a data-driven architecture.
+axiomate is a terminal-based AI agent application built with React 19 + Ink 6. It provides an interactive CLI interface with autocomplete, hierarchical slash commands, multi-file selection, and structured input handling using a data-driven architecture.
 
 ## Tech Stack
 
@@ -217,7 +217,7 @@ Located in `components/Welcome.tsx`:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ axiomate-cli v0.1.0                                         │
+│ axiomate v0.1.0                                         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │                    Welcome to axiomate!                     │
@@ -273,7 +273,7 @@ updateConfig({
 
 **Splash Component** (`components/Splash.tsx`):
 ```typescript
-// Simple one-line display: "axiomate-cli v0.1.0 Loading..."
+// Simple one-line display: "axiomate v0.1.0 Loading..."
 export default function Splash({ message = "Loading..." }: Props) {
   return (
     <Text bold>
@@ -851,7 +851,7 @@ Each model has its own `baseUrl` and `apiKey`, allowing different API endpoints 
 
 On Windows, the packaged exe automatically configures Windows Terminal:
 
-1. **Profile Registration**: Adds/updates `axiomate-cli` profile in Windows Terminal's `settings.json`
+1. **Profile Registration**: Adds/updates `axiomate` profile in Windows Terminal's `settings.json`
 2. **Icon Integration**: Uses the exe itself as icon source (no separate .ico needed)
 3. **Auto-Restart**: If profile is added/updated, restarts to apply changes
 4. **Legacy Migration**: Detects and migrates profiles with old invalid GUIDs
@@ -883,7 +883,7 @@ await restartApp(); // Waits for child process to start, then exits
 **Bun Packaged Exe Detection**:
 
 Bun-compiled executables have special argv format:
-- `process.execPath` = actual exe path (e.g., `C:\...\axiomate-cli.exe`)
+- `process.execPath` = actual exe path (e.g., `C:\...\axiomate.exe`)
 - `process.argv` = `["bun", "B:/~BUN/root/xxx.exe", ...userArgs]`
 
 The `isBunPackagedExe()` function detects this and `getRestartArgs()` returns correct args:
@@ -910,7 +910,7 @@ The `initPlatform()` function handles all platform-specific initialization and i
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  axiomate-cli (主进程)                               │
+│  axiomate     (主进程)                               │
 │  ┌─────────────────────────────────────────────────┐│
 │  │  ToolRegistry (Singleton)                       ││
 │  │    ↓ discover()                                 ││

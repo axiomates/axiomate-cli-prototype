@@ -44,7 +44,7 @@ const TERMINAL_SETTINGS_PATHS = [
 ];
 
 const PROFILE_GUID = "{a010a7e0-c110-4a99-b07b-9f0f11e00000}";
-const PROFILE_NAME = "axiomate-cli";
+const PROFILE_NAME = "axiomate";
 
 // 旧版本使用的无效 GUID，用于迁移
 const LEGACY_GUIDS = [
@@ -126,7 +126,7 @@ function escapeCmdArg(arg: string): string {
  * 检测是否是 Bun 打包的 exe 运行环境
  *
  * Bun 打包的 exe 运行时：
- *   - process.execPath = 实际 exe 路径 (如 C:\...\axiomate-cli.exe)
+ *   - process.execPath = 实际 exe 路径 (如 C:\...\axiomate.exe)
  *   - process.argv = ["bun", "B:/~BUN/root/xxx.exe", ...userArgs]
  */
 function isBunPackagedExe(): boolean {

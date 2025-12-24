@@ -45,7 +45,7 @@ setFlags(cli.flags);
 // 如果用户请求帮助，输出帮助信息后退出
 if (cli.flags.help) {
 	console.log(`
-axiomate-cli - A terminal-based CLI application
+axiomate - A terminal-based CLI application
 
 Usage:
   axiomate [options]

@@ -6,7 +6,7 @@
 /**
  * Base system prompt (without context)
  */
-const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate-cli, a terminal-based development tool.
+const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate, a terminal-based development tool.
 
 ## Response Format
 

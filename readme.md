@@ -1,4 +1,4 @@
-# axiomate-cli
+# axiomate
 
 A terminal-based AI agent CLI application built with [React](https://react.dev/) + [Ink](https://github.com/vadimdemedes/ink), featuring a data-driven input system with hierarchical slash commands, multi-file selection, and intelligent history support.
 
@@ -46,11 +46,11 @@ node dist/cli.js
 
 ### First Run
 
-On first launch, axiomate-cli displays a welcome page if no configuration is found:
+On first launch, axiomate displays a welcome page if no configuration is found:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ axiomate-cli v0.1.0                                         │
+│ axiomate v0.1.0                                         │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │                    Welcome to axiomate!                     │
@@ -82,7 +82,7 @@ Build a standalone executable (requires [Bun](https://bun.sh)):
 npm run package
 ```
 
-Creates `bundle/axiomate-cli.exe` (Windows) or `bundle/axiomate-cli` (macOS/Linux).
+Creates `bundle/axiomate.exe` (Windows) or `bundle/axiomate` (macOS/Linux).
 
 #### Windows Terminal Integration
 
@@ -94,9 +94,9 @@ On Windows, the packaged exe automatically:
 
 To see the custom icon in Windows Terminal:
 
-- Run `axiomate-cli.exe` once to register the profile
+- Run `axiomate.exe` once to register the profile
 - The app will automatically restart in a new terminal window with the icon
-- Or manually select "axiomate-cli" from Windows Terminal's dropdown menu
+- Or manually select "axiomate" from Windows Terminal's dropdown menu
 
 #### Cross-Platform Restart
 
@@ -180,7 +180,7 @@ File paths are **atomic blocks**:
 
 ## Local Development Tools
 
-axiomate-cli automatically discovers installed development tools on your system and exposes them for AI-assisted workflows.
+axiomate automatically discovers installed development tools on your system and exposes them for AI-assisted workflows.
 
 ### Supported Tools
 
@@ -237,7 +237,7 @@ Configure in Claude Desktop's `claude_desktop_config.json`:
 	"mcpServers": {
 		"axiomate-tools": {
 			"command": "node",
-			"args": ["path/to/axiomate-cli/dist/mcp-server.js"]
+			"args": ["path/to/axiomate/dist/mcp-server.js"]
 		}
 	}
 }

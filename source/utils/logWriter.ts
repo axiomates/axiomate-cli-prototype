@@ -27,7 +27,7 @@ type LogWriterConfig = {
 };
 
 const DEFAULT_CONFIG: Omit<LogWriterConfig, "basePath"> = {
-	baseName: "axiomate-cli",
+	baseName: "axiomate",
 	maxFileSize: 10 * 1024 * 1024, // 10MB
 	maxDays: 1,
 };

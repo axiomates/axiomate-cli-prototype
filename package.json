@@ -1,9 +1,9 @@
 {
-	"name": "axiomate-cli",
+	"name": "axiomate",
 	"version": "0.1.0",
 	"private": true,
 	"bin": {
-		"axiomate-cli": "dist/cli.js",
+		"axiomate": "dist/cli.js",
 		"axiomate-mcp": "dist/mcp-server.js"
 	},
 	"type": "module",
