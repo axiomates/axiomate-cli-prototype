@@ -85,6 +85,16 @@ const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
 	},
 	{
+		model: "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+		name: "Qwen3 Coder 480B",
+		protocol: "openai",
+		description: "Instruct model",
+		supportsTools: true,
+		contextWindow: 262144,
+		baseUrl: "https://api.siliconflow.cn/v1",
+		apiKey: "sk-rksqraohycnhvaeosxokhrfpbzhevnykpykulhndkgbxhrqk",
+	},
+	{
 		model: "qwen3-coder-plus",
 		name: "Qwen3 Coder Plus",
 		protocol: "openai",

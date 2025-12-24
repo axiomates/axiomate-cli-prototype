@@ -275,8 +275,16 @@ export default function AutocompleteInput({
 		<Box flexDirection="column">
 			{/* 输入行 */}
 			{lines.map((line, lineIndex) => {
-				const isInputEndLine = lineIndex === inputEndInfo.endLine;
-				const suggestionStart = isInputEndLine ? inputEndInfo.endCol : -1;
+				// 计算该行的 suggestionStart
+				// - 用户输入结束行：设置为输入结束的列位置
+				// - 输入结束行之后的行：整行都是建议文本，设置为 0
+				// - 输入结束行之前的行：整行都是用户输入，设置为 -1
+				let suggestionStart = -1;
+				if (lineIndex === inputEndInfo.endLine) {
+					suggestionStart = inputEndInfo.endCol;
+				} else if (lineIndex > inputEndInfo.endLine) {
+					suggestionStart = 0; // 整行都是建议文本
+				}
 
 				return (
 					<InputLine
