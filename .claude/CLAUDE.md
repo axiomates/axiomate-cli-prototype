@@ -186,7 +186,6 @@ Defined in `utils/config.ts`. Returns `true` if any of these conditions are met:
 2. Config file is not valid JSON or not an object
 3. `models` is missing, not an object, or empty
 4. `currentModel` is missing, empty, or **not found in models**
-5. `autocompleteModel` is missing, empty, or **not found in models**
 
 ```typescript
 export function isFirstTimeUser(): boolean {
@@ -204,14 +203,13 @@ export function isFirstTimeUser(): boolean {
   // Check currentModel exists AND is in models
   if (!parsed.currentModel || !(parsed.currentModel in models)) return true;
 
-  // Check autocompleteModel exists AND is in models
-  if (!parsed.autocompleteModel || !(parsed.autocompleteModel in models)) return true;
+  // Note: autocompleteModel and autocompleteEnabled are optional, not checked here
 
   return false;
 }
 ```
 
-**Key Design**: Missing ANY required field triggers first-time setup, which overwrites the config with fresh presets. This ensures config consistency.
+**Key Design**: Missing required fields (`models`, `currentModel`) triggers first-time setup. Optional fields (`autocompleteModel`, `autocompleteEnabled`) are not checked and have sensible defaults.
 
 ### Welcome Component
 

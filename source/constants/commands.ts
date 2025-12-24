@@ -80,27 +80,6 @@ export function getSlashCommands(): SlashCommand[] {
 			action: { type: "internal", handler: "stop" },
 		},
 		{
-			name: "language",
-			description: t("commands.language.description"),
-			children: [
-				{
-					name: "en",
-					description: t("commands.language.enDesc"),
-					action: { type: "internal", handler: "language_en" },
-				},
-				{
-					name: "zh-CN",
-					description: t("commands.language.zhCNDesc"),
-					action: { type: "internal", handler: "language_zh-CN" },
-				},
-				{
-					name: "ja",
-					description: t("commands.language.jaDesc"),
-					action: { type: "internal", handler: "language_ja" },
-				},
-			],
-		},
-		{
 			name: "autocomplete",
 			description: t("commands.autocomplete.description"),
 			children: [
@@ -118,6 +97,27 @@ export function getSlashCommands(): SlashCommand[] {
 					name: "model",
 					description: t("commands.autocomplete.modelDesc"),
 					children: generateAutocompleteModelCommands(),
+				},
+			],
+		},
+		{
+			name: "language",
+			description: t("commands.language.description"),
+			children: [
+				{
+					name: "en",
+					description: t("commands.language.enDesc"),
+					action: { type: "internal", handler: "language_en" },
+				},
+				{
+					name: "zh-CN",
+					description: t("commands.language.zhCNDesc"),
+					action: { type: "internal", handler: "language_zh-CN" },
+				},
+				{
+					name: "ja",
+					description: t("commands.language.jaDesc"),
+					action: { type: "internal", handler: "language_ja" },
 				},
 			],
 		},

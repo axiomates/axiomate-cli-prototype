@@ -39,10 +39,10 @@ export type Config = {
 	models: Record<string, ModelConfig>;
 	/** 当前选中的模型 ID（model 字段的值） */
 	currentModel: string;
-	/** 自动补全使用的模型 ID */
+	/** 自动补全使用的模型 ID（可选） */
 	autocompleteModel: string;
-	/** 是否启用 AI 自动补全（默认 true） */
-	autocompleteEnabled: boolean;
+	/** 是否启用 AI 自动补全（可选，默认 true，只有用户手动设置时才写入文件） */
+	autocompleteEnabled?: boolean;
 };
 
 /**
@@ -50,12 +50,11 @@ export type Config = {
  */
 export type ConfigFile = Partial<Config>;
 
-// 默认配置
+// 默认配置（不包含 autocompleteEnabled，它是可选的，默认视为 true）
 const DEFAULT_CONFIG: Config = {
 	models: {},
 	currentModel: "",
 	autocompleteModel: "",
-	autocompleteEnabled: true,
 };
 
 // 运行时配置（单例）
