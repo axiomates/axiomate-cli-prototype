@@ -18,12 +18,6 @@ const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiom
 - Match existing code style when editing files
 - Reference line numbers when discussing file contents
 
-## File Operations
-
-- When reading files, detect encoding (UTF-8, UTF-8 with BOM, GBK, etc.) and line endings (LF/CRLF)
-- When writing files, preserve the original encoding and line ending format
-- Do not change CRLF to LF or vice versa unless explicitly requested
-
 ## Tool Usage
 
 - Tools are named \`toolId_actionName\` (e.g., \`git_status\`)

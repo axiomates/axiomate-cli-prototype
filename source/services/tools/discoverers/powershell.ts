@@ -29,7 +29,9 @@ const powershellDefinition: ToolDefinition = {
 					required: true,
 				},
 			],
-			commandTemplate: 'powershell -Command "{{command}}"',
+			// 强制 UTF-8 编码：设置控制台输出编码 + 使用 -Encoding UTF8 读写文件
+			commandTemplate:
+				'powershell -NoProfile -Command "[Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; {{command}}"',
 		},
 		{
 			name: "run_script",
@@ -42,14 +44,16 @@ const powershellDefinition: ToolDefinition = {
 					required: true,
 				},
 			],
-			commandTemplate: "powershell -File {{file}}",
+			// -File 模式无法设置编码，改用 -Command 执行脚本
+			commandTemplate:
+				'powershell -NoProfile -Command "[Console]::InputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; & \'{{file}}\'"',
 		},
 		{
 			name: "version",
 			description: "查看 PowerShell 版本",
 			parameters: [],
 			commandTemplate:
-				"powershell -Command $PSVersionTable.PSVersion.ToString()",
+				"powershell -NoProfile -Command $PSVersionTable.PSVersion.ToString()",
 		},
 	],
 	installHint:

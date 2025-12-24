@@ -121,14 +121,23 @@ export async function executeCommand(
 	},
 ): Promise<ExecutionResult> {
 	return new Promise((resolve) => {
+		// Windows 下设置代码页为 UTF-8 (65001)
+		const isWindows = process.platform === "win32";
+		const finalCommand = isWindows ? `chcp 65001 >nul && ${command}` : command;
+
 		const spawnOptions: SpawnOptions = {
 			cwd: options?.cwd,
-			env: { ...process.env, ...options?.env },
+			env: {
+				...process.env,
+				...options?.env,
+				// 确保 PowerShell 使用 UTF-8
+				...(isWindows && { PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" }),
+			},
 			shell: options?.shell ?? true,
 			windowsHide: true,
 		};
 
-		const proc = spawn(command, [], spawnOptions);
+		const proc = spawn(finalCommand, [], spawnOptions);
 
 		let stdout = "";
 		let stderr = "";
@@ -141,12 +150,12 @@ export async function executeCommand(
 			proc.kill("SIGTERM");
 		}, timeout);
 
-		proc.stdout?.on("data", (data) => {
-			stdout += data.toString();
+		proc.stdout?.on("data", (data: Buffer) => {
+			stdout += data.toString("utf8");
 		});
 
-		proc.stderr?.on("data", (data) => {
-			stderr += data.toString();
+		proc.stderr?.on("data", (data: Buffer) => {
+			stderr += data.toString("utf8");
 		});
 
 		proc.on("error", (err) => {
