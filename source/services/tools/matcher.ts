@@ -93,19 +93,24 @@ const CAPABILITY_MAP: Record<string, ToolCapability> = {
 
 /**
  * Get default shell tools for the current platform
- * Windows: powershell, pwsh, cmd (in priority order)
+ * Windows: python (if available), powershell, pwsh, cmd
+ *   - Python is preferred because it has better UTF-8 encoding handling
+ *   - PowerShell 5.1 has encoding issues with Unicode characters
  * Unix/Linux/macOS: bash
  */
 function getDefaultShellTools(): string[] {
 	if (platform() === "win32") {
-		return ["powershell", "pwsh", "cmd"];
+		// Python 优先，因为它的 UTF-8 编码处理更可靠
+		// PowerShell 5.1 对 Unicode 字符处理不可靠
+		return ["python", "powershell", "pwsh", "cmd"];
 	}
 	// Unix/Linux/macOS
 	return ["bash"];
 }
 
 /**
- * Get shell tools for current platform
+ * Default shell tools (without Python check, used for static initialization)
+ * Will be overridden by dynamic detection in autoSelect
  */
 const SHELL_TOOLS = getDefaultShellTools();
 
@@ -379,6 +384,9 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		};
 
+		// 0. 在 Windows 上动态获取 shell 工具列表（Python 优先如果可用）
+		const dynamicShellTools = getDefaultShellTools();
+
 		// 1. 根据项目类型选择
 		let projectType = context.projectType;
 		if (!projectType && context.cwd) {
@@ -386,7 +394,13 @@ export class ToolMatcher implements IToolMatcher {
 		}
 
 		if (projectType) {
-			const toolIds = PROJECT_TYPE_TOOLS[projectType] || [];
+			// 使用动态 shell 工具列表替代静态列表
+			const baseTools = PROJECT_TYPE_TOOLS[projectType] || [];
+			// 替换 shell 工具为动态检测的列表
+			const nonShellTools = baseTools.filter(
+				(t) => !SHELL_TOOLS.includes(t) && !["python"].includes(t),
+			);
+			const toolIds = [...dynamicShellTools, ...nonShellTools];
 			for (const toolId of toolIds) {
 				addTool(toolId);
 			}

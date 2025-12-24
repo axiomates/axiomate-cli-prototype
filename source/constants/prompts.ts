@@ -24,6 +24,12 @@ const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiom
 - Prefer read/check before modify
 - For destructive operations, confirm with user first
 
+## File Operations
+
+- When reading files, detect encoding (UTF-8, UTF-8 with BOM, GBK, etc.) and line endings (LF/CRLF)
+- When writing files, preserve the original encoding and line ending format
+- Do not change CRLF to LF or vice versa unless explicitly requested
+
 ## File Context
 
 - Files in \`<file path="...">\` tags contain actual content
