@@ -306,10 +306,17 @@ export class OpenAIClient implements IAIClient {
 									if (tc.function?.arguments) {
 										existing.function.arguments += tc.function.arguments;
 									}
+									// 补充可能后来才收到的 id
+									if (tc.id && !existing.id) {
+										existing.id = tc.id;
+									}
 								} else {
 									// 新的 tool_call
+									// 某些 API 可能不返回 id，需要生成一个
+									const callId =
+										tc.id || `call_${Date.now()}_${tc.index}`;
 									accumulatedToolCalls.set(tc.index, {
-										id: tc.id || "",
+										id: callId,
 										type: tc.type || "function",
 										function: {
 											name: tc.function?.name || "",
@@ -330,25 +337,39 @@ export class OpenAIClient implements IAIClient {
 
 						// 如果是结束帧，设置 finish_reason
 						if (choice.finish_reason) {
-							streamChunk.finish_reason = this.parseFinishReason(
-								choice.finish_reason,
-							);
 							hasYieldedFinish = true;
 
-							// 如果是 tool_calls 结束，附加完整的 tool_calls
-							if (choice.finish_reason === "tool_calls") {
+							// 如果有累积的 tool_calls，不管 finish_reason 是什么，都要附加
+							// 某些 API（如 SiliconFlow）可能返回 finish_reason="stop" 但仍有 tool_calls
+							if (accumulatedToolCalls.size > 0) {
 								const toolCalls: ToolCall[] = [];
 								for (const [, tc] of accumulatedToolCalls) {
-									toolCalls.push({
-										id: tc.id,
-										type: "function",
-										function: {
-											name: tc.function.name,
-											arguments: tc.function.arguments,
-										},
-									});
+									// 只添加有效的 tool call（name 不为空）
+									if (tc.function.name) {
+										toolCalls.push({
+											id: tc.id,
+											type: "function",
+											function: {
+												name: tc.function.name,
+												arguments: tc.function.arguments,
+											},
+										});
+									}
 								}
-								streamChunk.delta.tool_calls = toolCalls;
+								// 只有当有有效的 tool calls 时才设置
+								if (toolCalls.length > 0) {
+									streamChunk.delta.tool_calls = toolCalls;
+									// 强制设置为 tool_calls，确保 service 层能正确处理
+									streamChunk.finish_reason = "tool_calls";
+								} else {
+									streamChunk.finish_reason = this.parseFinishReason(
+										choice.finish_reason,
+									);
+								}
+							} else {
+								streamChunk.finish_reason = this.parseFinishReason(
+									choice.finish_reason,
+								);
 							}
 						}
 
