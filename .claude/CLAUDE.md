@@ -1534,42 +1534,51 @@ class AIService implements IAIService {
 
 ### Tool Call Loop
 
-When AI requests tool execution, a loop handles multiple rounds:
+When AI requests tool execution, `streamChatWithTools()` handles multiple rounds:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Tool Call Loop                                                 │
+│  Tool Call Loop (streamChatWithTools in service.ts)             │
 │                                                                 │
 │  while (rounds < maxToolCallRounds) {                          │
-│    ┌─────────────────────────────────────────────────────────┐  │
-│    │  1. AI Response                                         │  │
-│    │     finish_reason: "tool_calls"                         │  │
-│    │     tool_calls: [{ id, function: { name, arguments }}]  │  │
-│    └─────────────────────────────────────────────────────────┘  │
-│                              ↓                                  │
-│    ┌─────────────────────────────────────────────────────────┐  │
-│    │  2. ToolCallHandler.handleToolCalls(toolCalls)          │  │
-│    │     - Parse tool name: "git_status" → toolId="git",     │  │
-│    │       actionName="status"                               │  │
-│    │     - Execute tool action via executor                  │  │
-│    │     - Format result as ChatMessage[]                    │  │
-│    └─────────────────────────────────────────────────────────┘  │
-│                              ↓                                  │
-│    ┌─────────────────────────────────────────────────────────┐  │
-│    │  3. Add Results to Messages                             │  │
-│    │     messages.push(...toolResults)                       │  │
-│    │     // Each result: { role: "tool", tool_call_id, ... } │  │
-│    └─────────────────────────────────────────────────────────┘  │
-│                              ↓                                  │
-│    ┌─────────────────────────────────────────────────────────┐  │
-│    │  4. Send Back to AI                                     │  │
-│    │     response = await client.chat(messages, tools)       │  │
-│    └─────────────────────────────────────────────────────────┘  │
-│                              ↓                                  │
-│    if (finish_reason !== "tool_calls") break;                  │
+│    brokeForToolCall = false                                     │
+│                                                                 │
+│    for await (chunk of client.streamChat(messages, tools)) {   │
+│      ┌───────────────────────────────────────────────────────┐  │
+│      │  Case 1: finish_reason === "tool_calls"               │  │
+│      │    → Execute tools via ToolCallHandler                │  │
+│      │    → Add tool results to messages                     │  │
+│      │    → rounds++, brokeForToolCall = true                │  │
+│      │    → break (exit for loop)                            │  │
+│      ├───────────────────────────────────────────────────────┤  │
+│      │  Case 2: finish_reason === "stop" | "eos" | "length"  │  │
+│      │    → Save assistant message to session                │  │
+│      │    → return fullContent (exit function)               │  │
+│      └───────────────────────────────────────────────────────┘  │
+│    }                                                            │
+│                                                                 │
+│    // After for loop ends:                                      │
+│    if (brokeForToolCall) continue;  // → next round            │
+│    return fullContent;              // → stream ended normally  │
 │  }                                                              │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Implementation Details**:
+
+1. **`brokeForToolCall` flag**: Distinguishes between "broke for tool call" vs "stream ended normally"
+   - If `true`: Continue to next round so AI can see tool results
+   - If `false`: Stream ended, return content (even if empty)
+
+2. **`hasYieldedFinish` in openai.ts**: Ensures stream always ends with a `finish_reason`
+   - Some APIs send `data: [DONE]` without explicit `finish_reason`
+   - If no `finish_reason` was yielded, automatically yield `{ finish_reason: "stop" }`
+
+3. **Loop exit conditions**:
+   - `finish_reason` is `stop`/`eos`/`length` → return immediately
+   - Tool call executed → continue to next round
+   - Stream ended without tool call → return content
+   - Max rounds reached → return with limit message
 
 ### Tool Result Message Format
 
