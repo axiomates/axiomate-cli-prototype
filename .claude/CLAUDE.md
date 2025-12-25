@@ -2119,6 +2119,71 @@ type MessageQueueCallbacks = {
 - `stop()` sets `stopped` flag, clears queue, and prevents callbacks for in-flight request
 - `enqueue()` resets `stopped` flag to allow new messages after stop
 
+**Multi-Request Support**:
+
+Users can send multiple messages while AI is still responding:
+
+```
+User sends "message 1" → Queue: [msg1], processing msg1
+User sends "message 2" → Queue: [msg2], processing msg1
+User sends "message 3" → Queue: [msg2, msg3], processing msg1
+AI finishes msg1       → Queue: [msg3], processing msg2
+...
+```
+
+Each message gets its own streaming response and is displayed sequentially.
+
+### Stop Command (`/stop`)
+
+The `/stop` command provides immediate control over AI processing:
+
+**Implementation** (`services/commandHandler.ts`):
+```typescript
+stop: () => {
+  return {
+    type: "callback" as const,
+    callback: "stop",
+  };
+},
+```
+
+**App.tsx callback**:
+```typescript
+const stop = useCallback(() => {
+  const queue = messageQueueRef.current;
+  if (!queue) return;
+
+  const clearedCount = queue.stop();  // Returns count of cleared messages
+
+  if (clearedCount > 0 || queue.isProcessing()) {
+    setMessages((prev) => [...prev, {
+      content: t("commandHandler.stopSuccess", { count: clearedCount.toString() }),
+      type: "system",
+    }]);
+  } else {
+    setMessages((prev) => [...prev, {
+      content: t("commandHandler.stopNone"),
+      type: "system",
+    }]);
+  }
+}, [t]);
+```
+
+**Behavior**:
+1. Calls `MessageQueue.stop()` which:
+   - Sets `stopped = true` flag
+   - Clears the queue array
+   - Returns count of messages that were cleared
+2. The `stopped` flag prevents callbacks for any in-flight request
+3. Shows system message with count of cleared messages
+4. Next `enqueue()` resets the `stopped` flag automatically
+
+**Key Design Decisions**:
+- Stop is immediate - doesn't wait for current request to complete
+- In-flight request continues on server but response is ignored
+- Queue is cleared atomically
+- Safe to call anytime - no side effects if nothing is processing
+
 ### File Reading and XML Formatting
 
 Located in `services/ai/fileReader.ts`:

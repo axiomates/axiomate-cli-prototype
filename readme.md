@@ -4,6 +4,7 @@ A terminal-based AI agent CLI application built with [React](https://react.dev/)
 
 ## Features
 
+### Core UI
 - Interactive terminal UI with responsive layout
 - **Data-driven input system** with `InputInstance` as single source of truth
 - Auto-completion with async provider support
@@ -14,11 +15,22 @@ A terminal-based AI agent CLI application built with [React](https://react.dev/)
 - **Markdown rendering** in message output (via `marked` + `marked-terminal`)
 - **Focus mode switching** - toggle between Input and Browse mode (`Shift+↑/↓`)
 - **Scrollable message output** - scroll with `↑/↓` in Browse mode or `PageUp/PageDown`
+
+### AI Integration
+- **Streaming responses** - Real-time AI output with animated spinner
+- **Multi-request queue** - Sequential message processing, send multiple messages while AI is responding
+- **Reasoning/Thinking mode** - Support for DeepSeek-R1, QwQ models with collapsible thinking sections
+- **Context management** - Auto-compact when context usage exceeds 85%
+- **Tool calling** - AI can use local development tools (Git, Node.js, etc.)
+- **Stop command** - `/stop` to interrupt AI processing and clear message queue
+
+### Tools & Integration
 - **Local development tools discovery** - auto-detects installed CLI tools
 - **MCP Server** - exposes local tools via Model Context Protocol (in-process or standalone)
 - Comprehensive keyboard shortcuts
 - Cross-platform support (Windows, macOS, Linux)
 - Structured logging with daily rotation
+- **i18n support** - English and Simplified Chinese
 
 ## Requirements
 
@@ -121,19 +133,20 @@ On macOS/Linux, a new process is spawned directly.
 
 Type `/` to open the slash command menu. Use arrow keys to navigate and Enter to select.
 
-| Command          | Description                    |
-| ---------------- | ------------------------------ |
-| `/model`         | Select AI model                |
-| `/model list`    | List available models          |
-| `/tools`         | Manage local development tools |
-| `/tools list`    | List all available tools       |
-| `/tools refresh` | Rescan installed tools         |
-| `/tools stats`   | Show tools statistics          |
-| `/compact`       | Summarize conversation         |
-| `/help`          | Show available commands        |
-| `/clear`         | Clear the screen               |
-| `/version`       | Show version information       |
-| `/exit`          | Exit the application           |
+| Command          | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `/model`         | Select AI model                                  |
+| `/model list`    | List available models                            |
+| `/tools`         | Manage local development tools                   |
+| `/tools list`    | List all available tools                         |
+| `/tools refresh` | Rescan installed tools                           |
+| `/tools stats`   | Show tools statistics                            |
+| `/compact`       | Summarize and compress conversation context      |
+| `/new`           | Start a new session (discard current context)    |
+| `/stop`          | Stop AI processing and clear message queue       |
+| `/clear`         | Clear the screen (keeps session context)         |
+| `/language`      | Switch interface language (en / zh-CN)           |
+| `/exit`          | Exit the application                             |
 
 ### Model Selection
 
@@ -259,6 +272,45 @@ const tools = provider.listTools();
 const result = await provider.callTool("git_status", {});
 ```
 
+## AI Service
+
+### Streaming Responses
+
+AI responses are streamed in real-time with a visual spinner (`⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏`) during generation. Content appears word-by-word as it's received from the API.
+
+### Message Queue
+
+Messages are processed sequentially through a queue system:
+
+- **Send multiple messages**: You can send new messages while AI is still responding
+- **Sequential processing**: Messages are queued and processed one at a time
+- **Stop anytime**: Use `/stop` to interrupt current processing and clear the queue
+
+### Reasoning/Thinking Mode
+
+Models like DeepSeek-R1 and QwQ support a "thinking mode" that shows the AI's reasoning process:
+
+- **Visual distinction**: Thinking content displayed in dim color
+- **Collapsible**: Automatically collapses after streaming ends
+- **Toggle**: Press `Enter` on thinking header in Browse mode to expand/collapse
+- **Header format**: `▼ Thinking` (expanded) or `▶ Thinking (N lines)` (collapsed)
+
+### Context Management
+
+- **Auto-compact**: When context usage exceeds 85%, automatically summarizes conversation
+- **Manual compact**: Use `/compact` to manually trigger summarization
+- **New session**: Use `/new` to start fresh (clears AI context but preserves input history)
+- **Clear screen**: Use `/clear` to clear display only (keeps session context)
+
+### Stop Command
+
+The `/stop` command provides immediate control over AI processing:
+
+- Stops the currently processing request
+- Clears all queued messages
+- Shows count of cleared messages: "Stopped AI processing. Cleared N queued message(s)."
+- Safe to use anytime - won't affect input history or configuration
+
 ## Focus Modes
 
 The app supports two focus modes for navigating between input and message viewing:
@@ -307,10 +359,13 @@ In Browse mode, the input area is hidden to maximize message viewing space.
 
 ### Browse Mode
 
-| Shortcut | Action               |
-| -------- | -------------------- |
-| `↑`      | Scroll messages up   |
-| `↓`      | Scroll messages down |
+| Shortcut | Action                                     |
+| -------- | ------------------------------------------ |
+| `↑`      | Scroll messages up                         |
+| `↓`      | Scroll messages down                       |
+| `Enter`  | Expand/collapse message group or thinking  |
+| `e`      | Expand all collapsed groups                |
+| `c`      | Collapse all groups (except last)          |
 
 ## Development
 
