@@ -14,7 +14,6 @@ import type {
 	ToolCall,
 } from "../types.js";
 import { toOpenAIMessages, parseOpenAIToolCalls } from "../adapters/openai.js";
-import { logger } from "../../../utils/logger.js";
 
 /**
  * OpenAI API 响应类型
@@ -276,13 +275,6 @@ export class OpenAIClient implements IAIClient {
 
 						const choice = chunk.choices[0];
 						const delta = choice.delta || {};
-
-						// 记录每个 chunk 的 finish_reason
-						if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
-							logger.warn(
-								`[OpenAIClient.streamChat] chunk finish_reason: ${JSON.stringify(choice.finish_reason)}`,
-							);
-						}
 
 						// 处理 tool_calls 增量更新
 						if (delta.tool_calls) {

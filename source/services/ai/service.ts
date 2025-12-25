@@ -26,7 +26,6 @@ import {
 	type CompactCheckResult,
 } from "./session.js";
 import { buildSystemPrompt, SYSTEM_PROMPT } from "../../constants/prompts.js";
-import { logger } from "../../utils/logger.js";
 
 /**
  * 默认上下文窗口大小
@@ -300,16 +299,9 @@ export class AIService implements IAIService {
 		let rounds = 0;
 		let fullContent = "";
 
-		logger.warn(
-			`[streamChatWithTools] START - tools: ${tools.map((t) => t.function.name).join(", ")}`,
-		);
-
 		while (rounds < this.maxToolCallRounds) {
 			fullContent = "";
-
-			logger.warn(
-				`[streamChatWithTools] Round ${rounds + 1}/${this.maxToolCallRounds} - messages count: ${messages.length}`,
-			);
+			let brokeForToolCall = false;
 
 			// 流式请求
 			for await (const chunk of this.client.streamChat(
@@ -328,10 +320,6 @@ export class AIService implements IAIService {
 					chunk.delta.tool_calls &&
 					chunk.delta.tool_calls.length > 0
 				) {
-					logger.warn(
-						`[streamChatWithTools] TOOL_CALLS - finish_reason: ${chunk.finish_reason}, tool_calls: ${JSON.stringify(chunk.delta.tool_calls.map((tc) => tc.function.name))}`,
-					);
-
 					// 添加 assistant 消息到 Session
 					const assistantMessage: ChatMessage = {
 						role: "assistant",
@@ -346,21 +334,14 @@ export class AIService implements IAIService {
 						chunk.delta.tool_calls,
 					);
 
-					logger.warn(
-						`[streamChatWithTools] TOOL_RESULTS - ${toolResults.length} results`,
-					);
-
 					// 添加工具结果到 Session 和消息
 					for (const result of toolResults) {
 						this.session.addToolMessage(result);
 						messages.push(result);
-						logger.warn(
-							`[streamChatWithTools] TOOL_RESULT content (first 200 chars): ${result.content.substring(0, 200)}`,
-						);
 					}
 
 					rounds++;
-					// 继续下一轮对话
+					brokeForToolCall = true;
 					break;
 				}
 
@@ -370,10 +351,6 @@ export class AIService implements IAIService {
 					chunk.finish_reason === "eos" ||
 					chunk.finish_reason === "length"
 				) {
-					logger.warn(
-						`[streamChatWithTools] STOP - finish_reason: ${chunk.finish_reason}, content length: ${fullContent.length}`,
-					);
-					// 添加到 Session
 					this.session.addAssistantMessage({
 						role: "assistant",
 						content: fullContent,
@@ -382,16 +359,13 @@ export class AIService implements IAIService {
 				}
 			}
 
-			logger.warn(
-				`[streamChatWithTools] FOR_LOOP_END - rounds: ${rounds}, fullContent length: ${fullContent.length}`,
-			);
+			// 如果是因为工具调用而 break，继续下一轮循环让 AI 看到工具结果
+			if (brokeForToolCall) {
+				continue;
+			}
 
-			// 如果 for 循环正常结束（没有 break 到 tool_calls），说明流已经结束
-			// 无论是否有之前的 tool_calls，都应该返回最终内容
+			// 如果 for 循环正常结束（不是因为工具调用），说明流已经结束
 			if (fullContent) {
-				logger.warn(
-					`[streamChatWithTools] STREAM_END_EXIT - returning content`,
-				);
 				this.session.addAssistantMessage({
 					role: "assistant",
 					content: fullContent,
@@ -399,23 +373,11 @@ export class AIService implements IAIService {
 				return fullContent;
 			}
 
-			// 如果没有内容且 rounds > 0，说明 AI 返回了空响应，也应该结束
-			if (rounds > 0) {
-				logger.warn(
-					`[streamChatWithTools] EMPTY_RESPONSE_EXIT - rounds: ${rounds}`,
-				);
-				return "";
-			}
-
-			logger.warn(
-				`[streamChatWithTools] CONTINUING_LOOP - will start round ${rounds + 1}`,
-			);
+			// 流正常结束但没有内容，返回空
+			return "";
 		}
 
 		// 达到最大轮数
-		logger.warn(
-			`[streamChatWithTools] MAX_ROUNDS_REACHED - rounds: ${rounds}`,
-		);
 		return fullContent || "已达到最大工具调用轮数限制。";
 	}
 
