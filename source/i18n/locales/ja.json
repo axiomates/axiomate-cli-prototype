@@ -138,7 +138,8 @@
 		"suggestionDisabled": "AI提案が無効になりました",
 		"suggestionModelSwitched": "提案モデルを切り替えました: {{model}}",
 		"thinkingEnabled": "AI思考モードが有効になりました",
-		"thinkingDisabled": "AI思考モードが無効になりました"
+		"thinkingDisabled": "AI思考モードが無効になりました",
+		"thinkingAutoDisabled": "⚠️ このモデルは思考モードをサポートしていないため、思考モードが自動的に無効になりました。"
 	},
 	"ai": {
 		"notConfigured": "AIサービスが設定されていません。API設定を確認してください。",

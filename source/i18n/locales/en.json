@@ -138,7 +138,8 @@
 		"suggestionDisabled": "AI suggestion disabled",
 		"suggestionModelSwitched": "Suggestion model switched to: {{model}}",
 		"thinkingEnabled": "AI thinking mode enabled",
-		"thinkingDisabled": "AI thinking mode disabled"
+		"thinkingDisabled": "AI thinking mode disabled",
+		"thinkingAutoDisabled": "⚠️ Thinking mode has been automatically disabled as this model does not support it."
 	},
 	"ai": {
 		"notConfigured": "AI service not configured. Please check your API settings.",

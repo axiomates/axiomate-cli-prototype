@@ -23,6 +23,8 @@ export type ModelConfig = {
 	description?: string;
 	/** 是否支持 function calling / tools */
 	supportsTools: boolean;
+	/** 是否支持思考模式（reasoning_content） */
+	supportsThinking: boolean;
 	/** 上下文窗口大小（token 数） */
 	contextWindow: number;
 	/** API Base URL */
@@ -308,6 +310,16 @@ export function setSuggestionEnabled(enabled: boolean): void {
 export function isThinkingEnabled(): boolean {
 	const config = getConfig();
 	return config.thinkingEnabled === true;
+}
+
+/**
+ * 检查当前模型是否支持思考模式
+ */
+export function currentModelSupportsThinking(): boolean {
+	const modelId = getCurrentModelId();
+	if (!modelId) return false;
+	const model = getModelById(modelId);
+	return model?.supportsThinking === true;
 }
 
 /**

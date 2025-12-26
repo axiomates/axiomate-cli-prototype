@@ -35,6 +35,7 @@ import {
 import type { InitResult } from "./utils/init.js";
 import { resumeInput } from "./utils/stdin.js";
 import { t } from "./i18n/index.js";
+import { isThinkingEnabled, currentModelSupportsThinking } from "./utils/config.js";
 
 /**
  * 应用焦点模式
@@ -430,6 +431,9 @@ export default function App({ initResult }: Props) {
 				return;
 			}
 
+			// 检查思考模式与模型支持
+			const showThinkingWarning = isThinkingEnabled() && !currentModelSupportsThinking();
+
 			// 显示用户消息
 			// 如果队列正在处理其他消息，标记为 queued 以显示等待指示器
 			// 注意：需要在 enqueue 之前检查 isProcessing，因为 enqueue 会立即开始处理
@@ -439,13 +443,35 @@ export default function App({ initResult }: Props) {
 			const messageId = messageQueueRef.current.enqueue(content, files);
 
 			if (isUserMessage) {
+				setMessages((prev) => {
+					const newMessages = [
+						...prev,
+						{
+							content,
+							type: "user" as const,
+							queued: isQueueProcessing,
+							queuedMessageId: isQueueProcessing ? messageId : undefined,
+						},
+					];
+					// 如果用户开启了 thinking 但当前模型不支持，在用户消息后显示提示
+					// 这样提示会和 AI 回复在同一组，不会被折叠
+					if (showThinkingWarning) {
+						newMessages.push({
+							content: t("commandHandler.thinkingAutoDisabled"),
+							type: "system" as const,
+							markdown: false,
+						});
+					}
+					return newMessages;
+				});
+			} else if (showThinkingWarning) {
+				// 非用户消息时也显示提示
 				setMessages((prev) => [
 					...prev,
 					{
-						content,
-						type: "user",
-						queued: isQueueProcessing,
-						queuedMessageId: isQueueProcessing ? messageId : undefined,
+						content: t("commandHandler.thinkingAutoDisabled"),
+						type: "system",
+						markdown: false,
 					},
 				]);
 			}

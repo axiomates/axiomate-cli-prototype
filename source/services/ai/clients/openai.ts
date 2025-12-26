@@ -15,7 +15,7 @@ import type {
 	StreamOptions,
 } from "../types.js";
 import { toOpenAIMessages, parseOpenAIToolCalls } from "../adapters/openai.js";
-import { isThinkingEnabled } from "../../../utils/config.js";
+import { isThinkingEnabled, currentModelSupportsThinking } from "../../../utils/config.js";
 
 /**
  * OpenAI API 响应类型
@@ -86,8 +86,8 @@ export class OpenAIClient implements IAIClient {
 			body.tool_choice = "auto";
 		}
 
-		// 如果启用思考模式，添加 enable_thinking 参数
-		if (isThinkingEnabled()) {
+		// 如果启用思考模式且当前模型支持，添加 enable_thinking 参数
+		if (isThinkingEnabled() && currentModelSupportsThinking()) {
 			body.enable_thinking = true;
 		}
 
@@ -212,8 +212,8 @@ export class OpenAIClient implements IAIClient {
 			body.tool_choice = "auto";
 		}
 
-		// 如果启用思考模式，添加 enable_thinking 参数
-		if (isThinkingEnabled()) {
+		// 如果启用思考模式且当前模型支持，添加 enable_thinking 参数
+		if (isThinkingEnabled() && currentModelSupportsThinking()) {
 			body.enable_thinking = true;
 		}
 

@@ -138,7 +138,8 @@
 		"suggestionDisabled": "AI 建议已禁用",
 		"suggestionModelSwitched": "建议模型已切换至：{{model}}",
 		"thinkingEnabled": "AI 思考模式已启用",
-		"thinkingDisabled": "AI 思考模式已禁用"
+		"thinkingDisabled": "AI 思考模式已禁用",
+		"thinkingAutoDisabled": "⚠️ 由于该模型不支持思考模式，已自动关闭思考模式。"
 	},
 	"ai": {
 		"notConfigured": "AI 服务未配置，请检查 API 设置。",
