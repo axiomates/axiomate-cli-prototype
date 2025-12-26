@@ -39,23 +39,18 @@ export function getSlashCommands(): SlashCommand[] {
 			],
 		},
 		{
-			name: "tools",
-			description: t("commands.tools.description"),
+			name: "thinking",
+			description: t("commands.thinking.description"),
 			children: [
 				{
-					name: "list",
-					description: t("commands.tools.listDesc"),
-					action: { type: "internal", handler: "tools_list" },
+					name: "on",
+					description: t("commands.thinking.onDesc"),
+					action: { type: "internal", handler: "thinking_on" },
 				},
 				{
-					name: "refresh",
-					description: t("commands.tools.refreshDesc"),
-					action: { type: "internal", handler: "tools_refresh" },
-				},
-				{
-					name: "stats",
-					description: t("commands.tools.statsDesc"),
-					action: { type: "internal", handler: "tools_stats" },
+					name: "off",
+					description: t("commands.thinking.offDesc"),
+					action: { type: "internal", handler: "thinking_off" },
 				},
 			],
 		},
@@ -78,6 +73,27 @@ export function getSlashCommands(): SlashCommand[] {
 			name: "stop",
 			description: t("commands.stop.description"),
 			action: { type: "internal", handler: "stop" },
+		},
+		{
+			name: "tools",
+			description: t("commands.tools.description"),
+			children: [
+				{
+					name: "list",
+					description: t("commands.tools.listDesc"),
+					action: { type: "internal", handler: "tools_list" },
+				},
+				{
+					name: "refresh",
+					description: t("commands.tools.refreshDesc"),
+					action: { type: "internal", handler: "tools_refresh" },
+				},
+				{
+					name: "stats",
+					description: t("commands.tools.statsDesc"),
+					action: { type: "internal", handler: "tools_stats" },
+				},
+			],
 		},
 		{
 			name: "suggestion",
@@ -118,22 +134,6 @@ export function getSlashCommands(): SlashCommand[] {
 					name: "ja",
 					description: t("commands.language.jaDesc"),
 					action: { type: "internal", handler: "language_ja" },
-				},
-			],
-		},
-		{
-			name: "thinking",
-			description: t("commands.thinking.description"),
-			children: [
-				{
-					name: "on",
-					description: t("commands.thinking.onDesc"),
-					action: { type: "internal", handler: "thinking_on" },
-				},
-				{
-					name: "off",
-					description: t("commands.thinking.offDesc"),
-					action: { type: "internal", handler: "thinking_off" },
 				},
 			],
 		},
