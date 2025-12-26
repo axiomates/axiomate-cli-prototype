@@ -52,6 +52,8 @@ export type CommandCallbacks = {
 	compact: () => Promise<void>;
 	/** 停止当前处理并清空消息队列 */
 	stop: () => void;
+	/** 重建 AI 服务（模型切换后需要） */
+	recreateAIService: () => void;
 	/** 退出 */
 	exit: () => void;
 };
@@ -65,7 +67,8 @@ type CommandResult =
 	| { type: "config"; key: string; value: string }
 	| { type: "action"; action: "clear" | "exit" }
 	| { type: "async"; handler: () => Promise<string> }
-	| { type: "callback"; callback: "new_session" | "compact" | "stop" }
+	| { type: "callback"; callback: "new_session" | "compact" | "stop" | "recreate_ai_service" }
+	| { type: "callback_with_message"; callback: "recreate_ai_service"; content: string }
 	| { type: "error"; message: string };
 
 /**
@@ -160,17 +163,21 @@ const internalHandlers: Record<string, InternalHandler> = {
 		// 清除命令缓存，更新显示
 		clearCommandCache();
 
-		// 返回成功消息，包含模型信息
+		// 构建成功消息
 		const capabilities: string[] = [];
 		if (model.supportsTools) capabilities.push("tools");
 
+		const content =
+			t("commandHandler.modelSwitched", {
+				model: `**${model.name}** (${model.model})`,
+			}) +
+			`\n\n${t("commandHandler.modelCapabilities")}: ${capabilities.join(", ") || "none"}\n${t("commandHandler.modelProtocol")}: ${model.protocol}`;
+
+		// 返回 callback_with_message，触发 AI 服务重建并显示消息
 		return {
-			type: "message" as const,
-			content:
-				t("commandHandler.modelSwitched", {
-					model: `**${model.name}** (${model.model})`,
-				}) +
-				`\n\n${t("commandHandler.modelCapabilities")}: ${capabilities.join(", ") || "none"}\n${t("commandHandler.modelProtocol")}: ${model.protocol}`,
+			type: "callback_with_message" as const,
+			callback: "recreate_ai_service" as const,
+			content,
 		};
 	},
 
@@ -398,7 +405,16 @@ export async function handleCommand(
 				await callbacks.compact();
 			} else if (result.callback === "stop") {
 				callbacks.stop();
+			} else if (result.callback === "recreate_ai_service") {
+				callbacks.recreateAIService();
 			}
+			break;
+
+		case "callback_with_message":
+			if (result.callback === "recreate_ai_service") {
+				callbacks.recreateAIService();
+			}
+			callbacks.showMessage(result.content);
 			break;
 
 		case "error":

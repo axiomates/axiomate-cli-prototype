@@ -484,14 +484,15 @@ export default function App({ initResult }: Props) {
 		setMessages((prev) => [...prev, { content }]);
 	}, []);
 
-	// 更新配置（模型切换现在由 model_select 处理器直接处理）
+	// 更新配置（遗留接口，保留用于其他配置项）
 	const setConfig = useCallback((key: string, value: string) => {
-		// 模型切换后需要重新创建 AI 服务
-		if (key === "model") {
-			const registry = getToolRegistry();
-			aiServiceRef.current = createAIServiceFromConfig(registry);
-		}
 		setMessages((prev) => [...prev, { content: `${key} set to: ${value}` }]);
+	}, []);
+
+	// 重建 AI 服务（模型切换后需要）
+	const recreateAIService = useCallback(() => {
+		const registry = getToolRegistry();
+		aiServiceRef.current = createAIServiceFromConfig(registry);
 	}, []);
 
 	// 清屏（仅清空 UI，保留会话上下文）
@@ -603,6 +604,7 @@ export default function App({ initResult }: Props) {
 			newSession,
 			compact,
 			stop: stopProcessing,
+			recreateAIService,
 			exit,
 		}),
 		[
@@ -613,6 +615,7 @@ export default function App({ initResult }: Props) {
 			newSession,
 			compact,
 			stopProcessing,
+			recreateAIService,
 			exit,
 		],
 	);
