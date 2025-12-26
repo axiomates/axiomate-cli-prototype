@@ -123,7 +123,8 @@
 			"listDesc": "列出所有会话",
 			"newDesc": "创建新会话",
 			"switchDesc": "切换到其他会话",
-			"deleteDesc": "删除会话"
+			"deleteDesc": "删除会话",
+			"clearDesc": "删除所有会话并重新开始"
 		}
 	},
 	"commandHandler": {
@@ -172,7 +173,8 @@
 		"active": "活跃",
 		"compactedNewSession": "✅ 对话已压缩。已创建新会话：{{newName}}（上一个：{{oldName}}）",
 		"noOtherSessions": "没有其他会话可切换。使用 /session new 创建新会话。",
-		"noSessionsToDelete": "没有可删除的会话。活跃会话无法删除。"
+		"noSessionsToDelete": "没有可删除的会话。活跃会话无法删除。",
+		"allCleared": "已清除所有会话。已创建新会话：{{name}}"
 	},
 	"messageOutput": {
 		"scrollUp": "↑ 上方有更多内容",

@@ -123,7 +123,8 @@
 			"listDesc": "List all sessions",
 			"newDesc": "Create a new session",
 			"switchDesc": "Switch to another session",
-			"deleteDesc": "Delete a session"
+			"deleteDesc": "Delete a session",
+			"clearDesc": "Delete all sessions and start fresh"
 		}
 	},
 	"commandHandler": {
@@ -172,7 +173,8 @@
 		"active": "active",
 		"compactedNewSession": "✅ Conversation compacted. Created new session: {{newName}} (previous: {{oldName}})",
 		"noOtherSessions": "No other sessions to switch to. Use /session new to create one.",
-		"noSessionsToDelete": "No sessions available to delete. The active session cannot be deleted."
+		"noSessionsToDelete": "No sessions available to delete. The active session cannot be deleted.",
+		"allCleared": "All sessions cleared. Started fresh with a new session: {{name}}"
 	},
 	"messageOutput": {
 		"scrollUp": "↑ More above",

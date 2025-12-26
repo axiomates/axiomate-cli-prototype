@@ -59,6 +59,8 @@ export type CommandCallbacks = {
 	sessionSwitch: (id: string) => Promise<void>;
 	/** 删除 session */
 	sessionDelete: (id: string) => void;
+	/** 清除所有 session 并创建新的 */
+	sessionClear: () => Promise<void>;
 };
 
 /**
@@ -70,7 +72,7 @@ type CommandResult =
 	| { type: "config"; key: string; value: string }
 	| { type: "action"; action: "exit" }
 	| { type: "async"; handler: () => Promise<string> }
-	| { type: "callback"; callback: "compact" | "stop" | "recreate_ai_service" | "session_new" }
+	| { type: "callback"; callback: "compact" | "stop" | "recreate_ai_service" | "session_new" | "sessionClear" }
 	| { type: "callback_with_message"; callback: "recreate_ai_service"; content: string }
 	| { type: "callback_with_param"; callback: "session_switch" | "session_delete"; param: string }
 	| { type: "error"; message: string };
@@ -199,6 +201,12 @@ const internalHandlers: Record<string, InternalHandler> = {
 	session_delete_empty: () => ({
 		type: "message" as const,
 		content: t("session.noSessionsToDelete"),
+	}),
+
+	// 清除所有 session 并创建新的
+	session_clear: () => ({
+		type: "callback" as const,
+		callback: "sessionClear" as const,
 	}),
 
 	// 工具命令处理器
@@ -506,6 +514,10 @@ export async function handleCommand(
 				// 先停止当前处理，再创建新 session
 				callbacks.stop();
 				await callbacks.sessionNew();
+			} else if (result.callback === "sessionClear") {
+				// 先停止当前处理，再清除所有 session 并创建新的
+				callbacks.stop();
+				await callbacks.sessionClear();
 			}
 			break;
 

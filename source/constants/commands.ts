@@ -157,6 +157,11 @@ export function getSlashCommands(): SlashCommand[] {
 					// 当没有可删除的 session 时，使用 action 显示提示信息
 					action: { type: "internal", handler: "session_delete_empty" },
 				},
+				{
+					name: "clear",
+					description: t("commands.session.clearDesc"),
+					action: { type: "internal", handler: "session_clear" },
+				},
 			],
 		},
 		{

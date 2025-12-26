@@ -463,6 +463,40 @@ export class SessionStore {
 	getContextWindow(): number {
 		return this.contextWindow;
 	}
+
+	/**
+	 * 清除所有 session 并创建新的
+	 * @returns 新创建的 session 信息
+	 */
+	clearAllSessions(): SessionInfo {
+		// 删除所有 session 文件
+		for (const id of this.sessions.keys()) {
+			const filePath = path.join(this.sessionsDir, `${id}.json`);
+			try {
+				if (fs.existsSync(filePath)) {
+					fs.unlinkSync(filePath);
+				}
+			} catch (error) {
+				logger.error("Failed to delete session file during clear", {
+					id,
+					error,
+				});
+			}
+		}
+
+		// 清空内存中的 sessions
+		this.sessions.clear();
+		this.activeSessionId = null;
+
+		// 创建新的 session
+		const newSession = this.createSession();
+		this.activeSessionId = newSession.id;
+		newSession.isActive = true;
+		this.sessions.set(newSession.id, newSession);
+		this.saveIndex();
+
+		return newSession;
+	}
 }
 
 /**

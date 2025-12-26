@@ -123,7 +123,8 @@
 			"listDesc": "すべてのセッションを表示",
 			"newDesc": "新しいセッションを作成",
 			"switchDesc": "別のセッションに切り替え",
-			"deleteDesc": "セッションを削除"
+			"deleteDesc": "セッションを削除",
+			"clearDesc": "すべてのセッションを削除して最初から開始"
 		}
 	},
 	"commandHandler": {
@@ -172,7 +173,8 @@
 		"active": "アクティブ",
 		"compactedNewSession": "✅ 会話を圧縮しました。新しいセッションを作成しました: {{newName}}（前: {{oldName}}）",
 		"noOtherSessions": "切り替え可能な他のセッションがありません。/session new で新しいセッションを作成してください。",
-		"noSessionsToDelete": "削除可能なセッションがありません。アクティブなセッションは削除できません。"
+		"noSessionsToDelete": "削除可能なセッションがありません。アクティブなセッションは削除できません。",
+		"allCleared": "すべてのセッションをクリアしました。新しいセッションを作成しました: {{name}}"
 	},
 	"messageOutput": {
 		"scrollUp": "↑ 上にもっとあります",

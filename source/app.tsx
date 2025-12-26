@@ -844,6 +844,35 @@ export default function App({ initResult }: Props) {
 		clearCommandCache();
 	}, []);
 
+	// Session 命令回调：清除所有 session 并创建新的
+	const sessionClear = useCallback(async () => {
+		const store = sessionStoreRef.current;
+		if (!store) return;
+
+		// 清除所有 session 并创建新的
+		const newInfo = store.clearAllSessions();
+
+		// 重建 AI 服务（使用新的空 session）
+		const registry = getToolRegistry();
+		aiServiceRef.current = createAIServiceFromConfig(registry);
+
+		// 清空 UI
+		setMessages([]);
+		setCollapsedGroups(new Set());
+		prevGroupCountRef.current = 0;
+
+		// 显示成功消息
+		setMessages([
+			{
+				content: t("session.allCleared", { name: newInfo.name }),
+				type: "system",
+			},
+		]);
+
+		// 清除命令缓存以更新 session 列表
+		clearCommandCache();
+	}, []);
+
 	// 命令回调集合
 	const commandCallbacks: CommandCallbacks = useMemo(
 		() => ({
@@ -857,6 +886,7 @@ export default function App({ initResult }: Props) {
 			sessionNew,
 			sessionSwitch,
 			sessionDelete,
+			sessionClear,
 		}),
 		[
 			showMessage,
@@ -869,6 +899,7 @@ export default function App({ initResult }: Props) {
 			sessionNew,
 			sessionSwitch,
 			sessionDelete,
+			sessionClear,
 		],
 	);
 
