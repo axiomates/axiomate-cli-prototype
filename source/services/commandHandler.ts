@@ -7,7 +7,7 @@ import type {
 	SlashCommand,
 	CommandAction,
 } from "../components/AutocompleteInput/index.js";
-import { SLASH_COMMANDS } from "../constants/commands.js";
+import { SLASH_COMMANDS, clearCommandCache } from "../constants/commands.js";
 import { getToolRegistry } from "./tools/registry.js";
 import {
 	getModelById,
@@ -157,6 +157,9 @@ const internalHandlers: Record<string, InternalHandler> = {
 		// 保存到配置
 		setCurrentModelId(modelId);
 
+		// 清除命令缓存，更新显示
+		clearCommandCache();
+
 		// 返回成功消息，包含模型信息
 		const capabilities: string[] = [];
 		if (model.supportsTools) capabilities.push("tools");
@@ -199,6 +202,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 	// AI 建议开关处理器
 	suggestion_on: () => {
 		setSuggestionEnabled(true);
+		clearCommandCache();
 		return {
 			type: "message" as const,
 			content: t("commandHandler.suggestionEnabled"),
@@ -207,6 +211,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 
 	suggestion_off: () => {
 		setSuggestionEnabled(false);
+		clearCommandCache();
 		return {
 			type: "message" as const,
 			content: t("commandHandler.suggestionDisabled"),
@@ -238,6 +243,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 	// AI 思考模式开关处理器
 	thinking_on: () => {
 		setThinkingEnabled(true);
+		clearCommandCache();
 		return {
 			type: "message" as const,
 			content: t("commandHandler.thinkingEnabled"),
@@ -246,6 +252,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 
 	thinking_off: () => {
 		setThinkingEnabled(false);
+		clearCommandCache();
 		return {
 			type: "message" as const,
 			content: t("commandHandler.thinkingDisabled"),

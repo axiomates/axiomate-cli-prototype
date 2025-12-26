@@ -187,6 +187,8 @@
 	"common": {
 		"yes": "Yes",
 		"no": "No",
+		"on": "ON",
+		"off": "OFF",
 		"ok": "OK",
 		"cancel": "Cancel",
 		"retry": "Retry",
