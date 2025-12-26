@@ -36,6 +36,13 @@ import type { InitResult } from "./utils/init.js";
 import { resumeInput } from "./utils/stdin.js";
 import { t } from "./i18n/index.js";
 import { isThinkingEnabled, currentModelSupportsThinking } from "./utils/config.js";
+import {
+	getSessionStore,
+	initSessionStore,
+	SessionStore,
+} from "./services/ai/sessionStore.js";
+import { Session, createSession } from "./services/ai/session.js";
+import { clearCommandCache } from "./constants/commands.js";
 
 /**
  * 应用焦点模式
@@ -144,8 +151,35 @@ export default function App({ initResult }: Props) {
 	// AI 服务实例（从初始化结果获取）
 	const aiServiceRef = useRef<IAIService | null>(initResult.aiService);
 
+	// SessionStore 引用
+	const sessionStoreRef = useRef<SessionStore | null>(null);
+
 	// Auto-compact 引用（需要在 compact 定义后设置）
 	const compactRef = useRef<(() => Promise<void>) | null>(null);
+
+	// Auto-save 引用（需要在 saveCurrentSession 定义后设置）
+	const saveSessionRef = useRef<(() => void) | null>(null);
+
+	// 初始化 SessionStore
+	useEffect(() => {
+		const initStore = async () => {
+			const contextWindow =
+				aiServiceRef.current?.getContextWindow() ?? 32768;
+			const store = await initSessionStore(contextWindow);
+			sessionStoreRef.current = store;
+
+			// 加载活跃 session
+			const activeId = store.getActiveSessionId();
+			if (activeId && aiServiceRef.current) {
+				const session = await store.loadSession(activeId);
+				if (session) {
+					// 恢复 session 状态到 AI 服务
+					aiServiceRef.current.restoreSession(session);
+				}
+			}
+		};
+		initStore();
+	}, []);
 
 	// 消息处理函数（用于消息队列）
 	const processMessage = useCallback(
@@ -245,6 +279,9 @@ export default function App({ initResult }: Props) {
 					currentStreamingIdRef.current = null;
 				}
 				setIsLoading(false);
+
+				// 自动保存 session
+				saveSessionRef.current?.();
 			},
 			onMessageError: (id, error) => {
 				// 只处理当前消息的错误
@@ -431,6 +468,19 @@ export default function App({ initResult }: Props) {
 				return;
 			}
 
+			// 如果是用户消息且 session 名称还是默认的，根据消息内容更新名称
+			if (isUserMessage) {
+				const store = sessionStoreRef.current;
+				if (store) {
+					const activeSession = store.getActiveSession();
+					if (activeSession && activeSession.name === "New Session") {
+						const newName = SessionStore.generateTitleFromMessage(content);
+						store.updateSessionName(activeSession.id, newName);
+						clearCommandCache(); // 更新命令缓存以显示新名称
+					}
+				}
+			}
+
 			// 检查思考模式与模型支持
 			const showThinkingWarning = isThinkingEnabled() && !currentModelSupportsThinking();
 
@@ -495,27 +545,10 @@ export default function App({ initResult }: Props) {
 		aiServiceRef.current = createAIServiceFromConfig(registry);
 	}, []);
 
-	// 清屏（仅清空 UI，保留会话上下文）
-	const clearScreen = useCallback(() => {
-		setMessages([]);
-		setCollapsedGroups(new Set());
-		prevGroupCountRef.current = 0;
-	}, []);
-
-	// 开始新会话（清空会话上下文，但保留 inputHistory）
-	const newSession = useCallback(() => {
-		setMessages([]);
-		setCollapsedGroups(new Set());
-		prevGroupCountRef.current = 0;
-		if (aiServiceRef.current) {
-			aiServiceRef.current.clearHistory();
-		}
-		setMessages([{ content: t("commandHandler.newSession"), type: "system" }]);
-	}, []);
-
-	// 执行 compact（总结并压缩会话）
+	// 执行 compact（总结并压缩会话，创建新 session）
 	const compact = useCallback(async () => {
 		const aiService = aiServiceRef.current;
+		const store = sessionStoreRef.current;
 		if (!aiService) {
 			setMessages((prev) => [
 				...prev,
@@ -559,17 +592,61 @@ export default function App({ initResult }: Props) {
 			const context: MatchContext = { cwd };
 			const summary = await aiService.sendMessage(COMPACT_PROMPT, context);
 
-			// 使用总结重置会话（使用新的 compactWith 方法）
-			aiService.compactWith(summary);
+			// 获取旧 session 信息
+			const oldInfo = store?.getActiveSession();
+			const oldName = oldInfo?.name ?? "previous session";
 
-			// 清空 UI 并显示总结
-			setMessages([
-				{
-					content:
-						t("commandHandler.compactSuccess") + "\n\n---\n\n" + summary,
-					type: "system",
-				},
-			]);
+			// 保存旧 session
+			if (store && oldInfo) {
+				const oldSession = aiService.getSession();
+				store.saveSession(oldSession, oldInfo.id);
+			}
+
+			// 创建新 session
+			if (store) {
+				const newInfo = store.createSession();
+				store.setActiveSessionId(newInfo.id);
+
+				// 重建 AI 服务
+				const registry = getToolRegistry();
+				aiServiceRef.current = createAIServiceFromConfig(registry);
+
+				// 使用总结初始化新 session
+				aiServiceRef.current?.compactWith(summary);
+
+				// 保存新 session
+				if (aiServiceRef.current) {
+					store.saveSession(aiServiceRef.current.getSession(), newInfo.id);
+				}
+
+				// 清空 UI 并显示成功消息
+				setMessages([
+					{
+						content: t("session.compactedNewSession", {
+							oldName,
+							newName: newInfo.name,
+						}) + "\n\n---\n\n" + summary,
+						type: "system",
+					},
+				]);
+				setCollapsedGroups(new Set());
+				prevGroupCountRef.current = 0;
+
+				// 清除命令缓存以更新 session 列表
+				clearCommandCache();
+			} else {
+				// 没有 SessionStore 时的降级行为：仅 compact 当前 session
+				aiService.compactWith(summary);
+
+				// 清空 UI 并显示总结
+				setMessages([
+					{
+						content:
+							t("commandHandler.compactSuccess") + "\n\n---\n\n" + summary,
+						type: "system",
+					},
+				]);
+			}
 		} catch (error) {
 			setMessages((prev) => [
 				...prev,
@@ -594,29 +671,193 @@ export default function App({ initResult }: Props) {
 		messageQueueRef.current?.stop();
 	}, []);
 
+	// 保存当前 session
+	const saveCurrentSession = useCallback(() => {
+		const store = sessionStoreRef.current;
+		const aiService = aiServiceRef.current;
+		if (!store || !aiService) return;
+
+		const activeId = store.getActiveSessionId();
+		if (!activeId) return;
+
+		const session = aiService.getSession();
+		store.saveSession(session, activeId);
+	}, []);
+
+	// 设置 saveSessionRef 以便 MessageQueue 可以调用
+	useEffect(() => {
+		saveSessionRef.current = saveCurrentSession;
+	}, [saveCurrentSession]);
+
+	// Session 命令回调：创建新 session
+	const sessionNew = useCallback(async () => {
+		const store = sessionStoreRef.current;
+		if (!store) return;
+
+		// 保存当前 session
+		saveCurrentSession();
+
+		// 创建新 session
+		const newInfo = store.createSession();
+		store.setActiveSessionId(newInfo.id);
+
+		// 重建 AI 服务（使用新的空 session）
+		const registry = getToolRegistry();
+		aiServiceRef.current = createAIServiceFromConfig(registry);
+
+		// 清空 UI
+		setMessages([]);
+		setCollapsedGroups(new Set());
+		prevGroupCountRef.current = 0;
+
+		// 显示成功消息
+		setMessages([
+			{
+				content: t("session.created", { name: newInfo.name }),
+				type: "system",
+			},
+		]);
+
+		// 清除命令缓存以更新 session 列表
+		clearCommandCache();
+	}, [saveCurrentSession]);
+
+	// Session 命令回调：切换 session
+	const sessionSwitch = useCallback(
+		async (id: string) => {
+			const store = sessionStoreRef.current;
+			if (!store) return;
+
+			// 保存当前 session
+			saveCurrentSession();
+
+			// 加载目标 session
+			const session = await store.loadSession(id);
+			if (!session) {
+				setMessages((prev) => [
+					...prev,
+					{
+						content: t("session.notFound"),
+						type: "system",
+						markdown: false,
+					},
+				]);
+				return;
+			}
+
+			// 切换活跃 session
+			store.setActiveSessionId(id);
+			const info = store.getSessionById(id);
+
+			// 恢复 session 到 AI 服务
+			if (aiServiceRef.current) {
+				aiServiceRef.current.restoreSession(session);
+			}
+
+			// 清空 UI 并加载历史
+			setMessages([]);
+			setCollapsedGroups(new Set());
+			prevGroupCountRef.current = 0;
+
+			// 将 session 历史转换为 UI 消息
+			const history = session.getHistory();
+			const uiMessages: Message[] = [];
+			for (const msg of history) {
+				if (msg.role === "user") {
+					uiMessages.push({ content: msg.content, type: "user" });
+				} else if (msg.role === "assistant" && msg.content) {
+					uiMessages.push({ content: msg.content });
+				}
+			}
+			setMessages(uiMessages);
+
+			// 显示切换成功消息
+			setMessages((prev) => [
+				...prev,
+				{
+					content: t("session.switched", { name: info?.name ?? id }),
+					type: "system",
+				},
+			]);
+
+			// 清除命令缓存以更新 session 列表
+			clearCommandCache();
+		},
+		[saveCurrentSession],
+	);
+
+	// Session 命令回调：删除 session
+	const sessionDelete = useCallback((id: string) => {
+		const store = sessionStoreRef.current;
+		if (!store) return;
+
+		const info = store.getSessionById(id);
+		if (!info) {
+			setMessages((prev) => [
+				...prev,
+				{
+					content: t("session.notFound"),
+					type: "system",
+					markdown: false,
+				},
+			]);
+			return;
+		}
+
+		// 不能删除活跃 session
+		if (info.id === store.getActiveSessionId()) {
+			setMessages((prev) => [
+				...prev,
+				{
+					content: t("session.cannotDeleteActive"),
+					type: "system",
+					markdown: false,
+				},
+			]);
+			return;
+		}
+
+		// 删除 session
+		store.deleteSession(id);
+
+		// 显示成功消息
+		setMessages((prev) => [
+			...prev,
+			{
+				content: t("session.deleted", { name: info.name }),
+				type: "system",
+			},
+		]);
+
+		// 清除命令缓存以更新 session 列表
+		clearCommandCache();
+	}, []);
+
 	// 命令回调集合
 	const commandCallbacks: CommandCallbacks = useMemo(
 		() => ({
 			showMessage,
 			sendToAI,
 			setConfig,
-			clear: clearScreen,
-			newSession,
 			compact,
 			stop: stopProcessing,
 			recreateAIService,
 			exit,
+			sessionNew,
+			sessionSwitch,
+			sessionDelete,
 		}),
 		[
 			showMessage,
 			sendToAI,
 			setConfig,
-			clearScreen,
-			newSession,
 			compact,
 			stopProcessing,
 			recreateAIService,
 			exit,
+			sessionNew,
+			sessionSwitch,
+			sessionDelete,
 		],
 	);
 

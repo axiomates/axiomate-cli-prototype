@@ -17,6 +17,7 @@ import {
 	setThinkingEnabled,
 } from "../utils/config.js";
 import { t, setLocale } from "../i18n/index.js";
+import { getSessionStore } from "./ai/sessionStore.js";
 
 /**
  * 内部命令处理器映射
@@ -44,10 +45,6 @@ export type CommandCallbacks = {
 	sendToAI: (content: string) => void;
 	/** 更新配置 */
 	setConfig: (key: string, value: string) => void;
-	/** 清屏（仅清空 UI，保留会话上下文） */
-	clear: () => void;
-	/** 开始新会话（清空会话上下文） */
-	newSession: () => void;
 	/** 执行 compact（总结并压缩会话） */
 	compact: () => Promise<void>;
 	/** 停止当前处理并清空消息队列 */
@@ -56,6 +53,12 @@ export type CommandCallbacks = {
 	recreateAIService: () => void;
 	/** 退出 */
 	exit: () => void;
+	/** 创建新 session */
+	sessionNew: () => Promise<void>;
+	/** 切换 session */
+	sessionSwitch: (id: string) => Promise<void>;
+	/** 删除 session */
+	sessionDelete: (id: string) => void;
 };
 
 /**
@@ -65,29 +68,20 @@ type CommandResult =
 	| { type: "message"; content: string }
 	| { type: "prompt"; content: string }
 	| { type: "config"; key: string; value: string }
-	| { type: "action"; action: "clear" | "exit" }
+	| { type: "action"; action: "exit" }
 	| { type: "async"; handler: () => Promise<string> }
-	| { type: "callback"; callback: "new_session" | "compact" | "stop" | "recreate_ai_service" }
+	| { type: "callback"; callback: "compact" | "stop" | "recreate_ai_service" | "session_new" }
 	| { type: "callback_with_message"; callback: "recreate_ai_service"; content: string }
+	| { type: "callback_with_param"; callback: "session_switch" | "session_delete"; param: string }
 	| { type: "error"; message: string };
 
 /**
  * 内部命令处理器注册表
  */
 const internalHandlers: Record<string, InternalHandler> = {
-	clear: () => ({
-		type: "action",
-		action: "clear",
-	}),
-
 	exit: () => ({
 		type: "action",
 		action: "exit",
-	}),
-
-	new_session: () => ({
-		type: "callback",
-		callback: "new_session",
 	}),
 
 	compact: () => ({
@@ -98,6 +92,113 @@ const internalHandlers: Record<string, InternalHandler> = {
 	stop: () => ({
 		type: "callback",
 		callback: "stop",
+	}),
+
+	// Session 命令处理器
+	session_list: () => ({
+		type: "async",
+		handler: async () => {
+			const store = getSessionStore();
+			if (!store) {
+				return t("session.storeNotInitialized");
+			}
+
+			const sessions = store.listSessions();
+			if (sessions.length === 0) {
+				return t("session.listEmpty");
+			}
+
+			const activeId = store.getActiveSessionId();
+			const lines: string[] = [`## ${t("session.listTitle")}\n`];
+
+			for (const session of sessions) {
+				const isActive = session.id === activeId;
+				const marker = isActive ? "▶ " : "  ";
+				const activeLabel = isActive ? ` (${t("session.active")})` : "";
+				const date = new Date(session.updatedAt).toLocaleString();
+				lines.push(
+					`${marker}**${session.name}**${activeLabel}`,
+					`  ID: \`${session.id.substring(0, 8)}\` | ${session.messageCount} msgs | ${date}`,
+					"",
+				);
+			}
+
+			return lines.join("\n");
+		},
+	}),
+
+	session_new: () => ({
+		type: "callback",
+		callback: "session_new",
+	}),
+
+	session_switch: (path: string[]) => {
+		// path = ["session", "switch", "<id-prefix>"]
+		const idPrefix = path[path.length - 1];
+		if (!idPrefix) {
+			return { type: "error" as const, message: t("session.invalidId") };
+		}
+
+		// 根据 ID 前缀查找完整 ID
+		const store = getSessionStore();
+		if (!store) {
+			return { type: "error" as const, message: t("session.storeNotInitialized") };
+		}
+
+		const sessions = store.listSessions();
+		const session = sessions.find((s) => s.id.startsWith(idPrefix));
+		if (!session) {
+			return { type: "error" as const, message: t("session.notFound") };
+		}
+
+		return {
+			type: "callback_with_param" as const,
+			callback: "session_switch" as const,
+			param: session.id,
+		};
+	},
+
+	session_delete: (path: string[]) => {
+		// path = ["session", "delete", "<id-prefix>"]
+		const idPrefix = path[path.length - 1];
+		if (!idPrefix) {
+			return { type: "error" as const, message: t("session.invalidId") };
+		}
+
+		// 根据 ID 前缀查找完整 ID
+		const store = getSessionStore();
+		if (!store) {
+			return { type: "error" as const, message: t("session.storeNotInitialized") };
+		}
+
+		const sessions = store.listSessions();
+		const session = sessions.find((s) => s.id.startsWith(idPrefix));
+		if (!session) {
+			return { type: "error" as const, message: t("session.notFound") };
+		}
+
+		// 检查是否是活跃 session
+		if (session.id === store.getActiveSessionId()) {
+			return { type: "error" as const, message: t("session.cannotDeleteActive") };
+		}
+
+		return {
+			type: "callback_with_param" as const,
+			callback: "session_delete" as const,
+			param: session.id,
+		};
+	},
+
+	// 当没有其他 session 可切换时的处理器
+	session_switch_empty: () => ({
+		type: "message" as const,
+		content: t("session.noOtherSessions"),
+	}),
+
+	// 当没有可删除的 session 时的处理器
+	session_delete_empty: () => ({
+		type: "message" as const,
+		content: t("session.noSessionsToDelete"),
 	}),
 
 	// 工具命令处理器
@@ -378,9 +479,7 @@ export async function handleCommand(
 			break;
 
 		case "action":
-			if (result.action === "clear") {
-				callbacks.clear();
-			} else if (result.action === "exit") {
+			if (result.action === "exit") {
 				callbacks.exit();
 			}
 			break;
@@ -397,16 +496,16 @@ export async function handleCommand(
 			break;
 
 		case "callback":
-			if (result.callback === "new_session") {
-				// 先停止当前处理，再开始新会话
-				callbacks.stop();
-				callbacks.newSession();
-			} else if (result.callback === "compact") {
+			if (result.callback === "compact") {
 				await callbacks.compact();
 			} else if (result.callback === "stop") {
 				callbacks.stop();
 			} else if (result.callback === "recreate_ai_service") {
 				callbacks.recreateAIService();
+			} else if (result.callback === "session_new") {
+				// 先停止当前处理，再创建新 session
+				callbacks.stop();
+				await callbacks.sessionNew();
 			}
 			break;
 
@@ -415,6 +514,15 @@ export async function handleCommand(
 				callbacks.recreateAIService();
 			}
 			callbacks.showMessage(result.content);
+			break;
+
+		case "callback_with_param":
+			if (result.callback === "session_switch") {
+				callbacks.stop();
+				await callbacks.sessionSwitch(result.param);
+			} else if (result.callback === "session_delete") {
+				callbacks.sessionDelete(result.param);
+			}
 			break;
 
 		case "error":

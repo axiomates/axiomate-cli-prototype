@@ -451,4 +451,15 @@ export type IAIService = {
 	 * @param summary AI 生成的对话总结
 	 */
 	compactWith(summary: string): void;
+
+	/**
+	 * 获取当前 Session 实例（用于保存）
+	 */
+	getSession(): import("./session.js").Session;
+
+	/**
+	 * 从已加载的 Session 恢复状态
+	 * @param session 已加载的 Session 实例
+	 */
+	restoreSession(session: import("./session.js").Session): void;
 };

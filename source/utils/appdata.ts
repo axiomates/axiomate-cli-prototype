@@ -8,6 +8,7 @@ const APPDATA_DIRNAME = ".axiomate";
 const SUBDIRS = {
 	logs: "logs",
 	history: "history",
+	sessions: "sessions",
 } as const;
 
 /**
@@ -31,6 +32,13 @@ export function getLogsPath(): string {
  */
 export function getHistoryPath(): string {
 	return path.join(getAppDataPath(), SUBDIRS.history);
+}
+
+/**
+ * 获取 session 存储目录路径
+ */
+export function getSessionsPath(): string {
+	return path.join(getAppDataPath(), SUBDIRS.sessions);
 }
 
 /**

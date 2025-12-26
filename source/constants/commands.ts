@@ -7,6 +7,7 @@ import {
 	isSuggestionEnabled,
 } from "../utils/config.js";
 import { t, addLocaleChangeListener } from "../i18n/index.js";
+import { getSessionStore } from "../services/ai/sessionStore.js";
 
 /**
  * 根据模型配置生成模型选择命令
@@ -41,12 +42,61 @@ function getCurrentModelDisplay(): string {
 }
 
 /**
+ * 获取当前 session 的显示名称
+ */
+function getCurrentSessionDisplay(): string {
+	const store = getSessionStore();
+	if (!store) return "";
+	const activeSession = store.getActiveSession();
+	return activeSession?.name ?? "";
+}
+
+/**
+ * 生成 session 切换子命令
+ */
+function generateSessionSwitchCommands(): SlashCommand[] {
+	const store = getSessionStore();
+	if (!store) return [];
+
+	const sessions = store.listSessions();
+	const activeId = store.getActiveSessionId();
+
+	return sessions
+		.filter((s) => s.id !== activeId) // 排除当前活跃 session
+		.map((session) => ({
+			name: session.id.substring(0, 8), // 使用 ID 前 8 位作为命令名
+			description: `${session.name} (${session.messageCount} msgs)`,
+			action: { type: "internal" as const, handler: "session_switch" },
+		}));
+}
+
+/**
+ * 生成 session 删除子命令
+ */
+function generateSessionDeleteCommands(): SlashCommand[] {
+	const store = getSessionStore();
+	if (!store) return [];
+
+	const sessions = store.listSessions();
+	const activeId = store.getActiveSessionId();
+
+	return sessions
+		.filter((s) => s.id !== activeId) // 排除当前活跃 session
+		.map((session) => ({
+			name: session.id.substring(0, 8), // 使用 ID 前 8 位作为命令名
+			description: `${session.name} (${session.messageCount} msgs)`,
+			action: { type: "internal" as const, handler: "session_delete" },
+		}));
+}
+
+/**
  * 获取斜杠命令列表（使用当前语言）
  * 这个函数在运行时调用，使用当前激活的语言
  */
 export function getSlashCommands(): SlashCommand[] {
 	// 获取当前状态用于显示
 	const currentModelName = getCurrentModelDisplay();
+	const currentSessionName = getCurrentSessionDisplay();
 	const thinkingStatus = isThinkingEnabled() ? t("common.on") : t("common.off");
 	const suggestionStatus = isSuggestionEnabled() ? t("common.on") : t("common.off");
 
@@ -78,19 +128,41 @@ export function getSlashCommands(): SlashCommand[] {
 			],
 		},
 		{
+			name: "session",
+			description: currentSessionName
+				? `${t("commands.session.description")} [${currentSessionName}]`
+				: t("commands.session.description"),
+			children: [
+				{
+					name: "list",
+					description: t("commands.session.listDesc"),
+					action: { type: "internal", handler: "session_list" },
+				},
+				{
+					name: "new",
+					description: t("commands.session.newDesc"),
+					action: { type: "internal", handler: "session_new" },
+				},
+				{
+					name: "switch",
+					description: t("commands.session.switchDesc"),
+					children: generateSessionSwitchCommands(),
+					// 当没有其他 session 可切换时，使用 action 显示提示信息
+					action: { type: "internal", handler: "session_switch_empty" },
+				},
+				{
+					name: "delete",
+					description: t("commands.session.deleteDesc"),
+					children: generateSessionDeleteCommands(),
+					// 当没有可删除的 session 时，使用 action 显示提示信息
+					action: { type: "internal", handler: "session_delete_empty" },
+				},
+			],
+		},
+		{
 			name: "compact",
 			description: t("commands.compact.description"),
 			action: { type: "internal", handler: "compact" },
-		},
-		{
-			name: "new",
-			description: t("commands.new.description"),
-			action: { type: "internal", handler: "new_session" },
-		},
-		{
-			name: "clear",
-			description: t("commands.clear.description"),
-			action: { type: "internal", handler: "clear" },
 		},
 		{
 			name: "stop",

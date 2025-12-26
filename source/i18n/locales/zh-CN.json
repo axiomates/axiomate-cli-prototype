@@ -116,6 +116,14 @@
 			"description": "切换 AI 思考模式",
 			"onDesc": "启用思考模式",
 			"offDesc": "禁用思考模式"
+		},
+		"session": {
+			"name": "session",
+			"description": "管理会话",
+			"listDesc": "列出所有会话",
+			"newDesc": "创建新会话",
+			"switchDesc": "切换到其他会话",
+			"deleteDesc": "删除会话"
 		}
 	},
 	"commandHandler": {
@@ -150,6 +158,21 @@
 		"toolExecuting": "执行工具：{{tool}}",
 		"toolSuccess": "工具执行成功",
 		"toolError": "工具执行失败：{{error}}"
+	},
+	"session": {
+		"created": "已创建新会话：{{name}}",
+		"switched": "已切换到会话：{{name}}",
+		"deleted": "已删除会话：{{name}}",
+		"notFound": "未找到会话",
+		"cannotDeleteActive": "无法删除活跃会话",
+		"storeNotInitialized": "会话存储未初始化",
+		"invalidId": "无效的会话 ID",
+		"listTitle": "会话列表",
+		"listEmpty": "没有会话",
+		"active": "活跃",
+		"compactedNewSession": "✅ 对话已压缩。已创建新会话：{{newName}}（上一个：{{oldName}}）",
+		"noOtherSessions": "没有其他会话可切换。使用 /session new 创建新会话。",
+		"noSessionsToDelete": "没有可删除的会话。活跃会话无法删除。"
 	},
 	"messageOutput": {
 		"scrollUp": "↑ 上方有更多内容",

@@ -79,6 +79,16 @@ export type SessionCheckpoint = {
 };
 
 /**
+ * Session 内部状态（用于序列化）
+ */
+export type SessionInternalState = {
+	messages: SessionMessage[];
+	systemPrompt: SessionMessage | null;
+	actualPromptTokens: number;
+	actualCompletionTokens: number;
+};
+
+/**
  * Session 类
  * 管理单个对话会话的 token 追踪和历史管理
  */
@@ -493,6 +503,28 @@ export class Session {
 			valid: errors.length === 0,
 			errors,
 		};
+	}
+
+	/**
+	 * 获取内部状态（用于序列化）
+	 */
+	getInternalState(): SessionInternalState {
+		return {
+			messages: [...this.messages],
+			systemPrompt: this.systemPrompt,
+			actualPromptTokens: this.actualPromptTokens,
+			actualCompletionTokens: this.actualCompletionTokens,
+		};
+	}
+
+	/**
+	 * 从序列化状态恢复
+	 */
+	restoreFromState(state: SessionInternalState): void {
+		this.messages = [...state.messages];
+		this.systemPrompt = state.systemPrompt;
+		this.actualPromptTokens = state.actualPromptTokens;
+		this.actualCompletionTokens = state.actualCompletionTokens;
 	}
 
 	/**

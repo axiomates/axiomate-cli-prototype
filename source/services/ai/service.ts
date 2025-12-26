@@ -140,6 +140,23 @@ export class AIService implements IAIService {
 	}
 
 	/**
+	 * 获取当前 Session 实例（用于保存）
+	 */
+	getSession(): Session {
+		return this.session;
+	}
+
+	/**
+	 * 从已加载的 Session 恢复状态
+	 * @param session 已加载的 Session 实例
+	 */
+	restoreSession(session: Session): void {
+		this.session = session;
+		// 重置上下文注入标志，因为加载的 session 可能有不同的 system prompt
+		this.contextInjected = false;
+	}
+
+	/**
 	 * 发送消息并获取响应
 	 * 注意：不再自动裁剪历史，改为在 app.tsx 中检查 shouldCompact 并触发 compact
 	 */

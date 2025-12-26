@@ -116,6 +116,14 @@
 			"description": "AI思考モードを切り替え",
 			"onDesc": "思考モードを有効にする",
 			"offDesc": "思考モードを無効にする"
+		},
+		"session": {
+			"name": "session",
+			"description": "セッションを管理",
+			"listDesc": "すべてのセッションを表示",
+			"newDesc": "新しいセッションを作成",
+			"switchDesc": "別のセッションに切り替え",
+			"deleteDesc": "セッションを削除"
 		}
 	},
 	"commandHandler": {
@@ -151,6 +159,21 @@
 		"toolSuccess": "ツールの実行が成功しました",
 		"toolError": "ツールの実行に失敗しました: {{error}}"
 	},
+	"session": {
+		"created": "新しいセッションを作成しました: {{name}}",
+		"switched": "セッションを切り替えました: {{name}}",
+		"deleted": "セッションを削除しました: {{name}}",
+		"notFound": "セッションが見つかりません",
+		"cannotDeleteActive": "アクティブなセッションは削除できません",
+		"storeNotInitialized": "セッションストアが初期化されていません",
+		"invalidId": "無効なセッションID",
+		"listTitle": "セッション一覧",
+		"listEmpty": "セッションがありません",
+		"active": "アクティブ",
+		"compactedNewSession": "✅ 会話を圧縮しました。新しいセッションを作成しました: {{newName}}（前: {{oldName}}）",
+		"noOtherSessions": "切り替え可能な他のセッションがありません。/session new で新しいセッションを作成してください。",
+		"noSessionsToDelete": "削除可能なセッションがありません。アクティブなセッションは削除できません。"
+	},
 	"messageOutput": {
 		"scrollUp": "↑ 上にもっとあります",
 		"scrollDown": "↓ 下にもっとあります",
@@ -179,6 +202,10 @@
 		"build": "ビルドツール",
 		"database": "データベース",
 		"other": "その他"
+	},
+	"message": {
+		"thinkingProcess": "思考中",
+		"lines": "行"
 	},
 	"common": {
 		"yes": "はい",

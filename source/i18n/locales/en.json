@@ -116,6 +116,14 @@
 			"description": "Toggle AI thinking mode",
 			"onDesc": "Enable thinking mode",
 			"offDesc": "Disable thinking mode"
+		},
+		"session": {
+			"name": "session",
+			"description": "Manage sessions",
+			"listDesc": "List all sessions",
+			"newDesc": "Create a new session",
+			"switchDesc": "Switch to another session",
+			"deleteDesc": "Delete a session"
 		}
 	},
 	"commandHandler": {
@@ -150,6 +158,21 @@
 		"toolExecuting": "Executing tool: {{tool}}",
 		"toolSuccess": "Tool executed successfully",
 		"toolError": "Tool execution failed: {{error}}"
+	},
+	"session": {
+		"created": "Created new session: {{name}}",
+		"switched": "Switched to session: {{name}}",
+		"deleted": "Deleted session: {{name}}",
+		"notFound": "Session not found",
+		"cannotDeleteActive": "Cannot delete the active session",
+		"storeNotInitialized": "Session store not initialized",
+		"invalidId": "Invalid session ID",
+		"listTitle": "Sessions",
+		"listEmpty": "No sessions found",
+		"active": "active",
+		"compactedNewSession": "✅ Conversation compacted. Created new session: {{newName}} (previous: {{oldName}})",
+		"noOtherSessions": "No other sessions to switch to. Use /session new to create one.",
+		"noSessionsToDelete": "No sessions available to delete. The active session cannot be deleted."
 	},
 	"messageOutput": {
 		"scrollUp": "↑ More above",
