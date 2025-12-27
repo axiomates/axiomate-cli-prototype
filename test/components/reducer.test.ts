@@ -703,6 +703,73 @@ describe("editorReducer", () => {
 			expect(state.instance.text).toBe("@a.ts @b.ts");
 		});
 
+		it("CONFIRM_FILE adjusts suffix files positions", () => {
+			// First file in suffix
+			const instance = createMessageInstance("text @suffix.ts");
+			instance.selectedFiles = [
+				{
+					path: "suffix.ts",
+					isDirectory: false,
+					atPosition: 5,
+					endPosition: 15,
+				},
+			];
+			const stateWithSuffix: EditorState = {
+				...initialState,
+				instance,
+			};
+
+			// Enter file mode at position 5, with suffix file at position 5
+			let state = editorReducer(stateWithSuffix, {
+				type: "ENTER_FILE",
+				atPosition: 5,
+				prefix: "text ",
+				suffix: "@suffix.ts",
+			});
+
+			// Confirm a new file
+			state = editorReducer(state, { type: "CONFIRM_FILE", fileName: "new.ts" });
+
+			// New file should be added, and suffix file position should be adjusted
+			expect(state.instance.selectedFiles).toHaveLength(2);
+			expect(state.instance.text).toBe("text @new.ts@suffix.ts");
+		});
+
+		it("CONFIRM_FOLDER adjusts suffix files positions", () => {
+			// First file in suffix
+			const instance = createMessageInstance("text @suffix.ts");
+			instance.selectedFiles = [
+				{
+					path: "suffix.ts",
+					isDirectory: false,
+					atPosition: 5,
+					endPosition: 15,
+				},
+			];
+			const stateWithSuffix: EditorState = {
+				...initialState,
+				instance,
+			};
+
+			// Enter file mode and navigate to a directory
+			let state = editorReducer(stateWithSuffix, {
+				type: "ENTER_FILE",
+				atPosition: 5,
+				prefix: "text ",
+				suffix: "@suffix.ts",
+			});
+			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "src" });
+
+			// Confirm the folder (select "." to choose current dir)
+			state = editorReducer(state, { type: "CONFIRM_FOLDER" });
+
+			// New folder should be added, and suffix file position should be adjusted
+			expect(state.instance.selectedFiles).toHaveLength(2);
+			expect(
+				state.instance.selectedFiles.some((f) => f.path === "src"),
+			).toBe(true);
+		});
+
 		it("REMOVE_SELECTED_FILE removes file from text and list", () => {
 			// Setup state with selected file
 			const instance = createMessageInstance("hello @file.ts world");
