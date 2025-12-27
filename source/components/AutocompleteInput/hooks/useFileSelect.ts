@@ -38,9 +38,7 @@ function readDirectory(basePath: string): FileItem[] {
 		const normalizedPath = normalize(basePath || ".");
 		const entries = readdirSync(normalizedPath);
 
-		const items: FileItem[] = entries
-			.filter((name) => !name.startsWith(".")) // 过滤隐藏文件
-			.map((name) => {
+		const items: FileItem[] = entries.map((name) => {
 				const fullPath = join(normalizedPath, name);
 				let isDirectory = false;
 				try {
