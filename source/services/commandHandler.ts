@@ -136,20 +136,20 @@ const internalHandlers: Record<string, InternalHandler> = {
 	}),
 
 	session_switch: (path: string[]) => {
-		// path = ["session", "switch", "<id-prefix>"]
-		const idPrefix = path[path.length - 1];
-		if (!idPrefix) {
+		// path = ["session", "switch", "<session-name>"]
+		const sessionName = path[path.length - 1];
+		if (!sessionName) {
 			return { type: "error" as const, message: t("session.invalidId") };
 		}
 
-		// 根据 ID 前缀查找完整 ID
+		// 根据名称查找 session
 		const store = getSessionStore();
 		if (!store) {
 			return { type: "error" as const, message: t("session.storeNotInitialized") };
 		}
 
 		const sessions = store.listSessions();
-		const session = sessions.find((s) => s.id.startsWith(idPrefix));
+		const session = sessions.find((s) => s.name === sessionName);
 		if (!session) {
 			return { type: "error" as const, message: t("session.notFound") };
 		}
@@ -162,20 +162,20 @@ const internalHandlers: Record<string, InternalHandler> = {
 	},
 
 	session_delete: (path: string[]) => {
-		// path = ["session", "delete", "<id-prefix>"]
-		const idPrefix = path[path.length - 1];
-		if (!idPrefix) {
+		// path = ["session", "delete", "<session-name>"]
+		const sessionName = path[path.length - 1];
+		if (!sessionName) {
 			return { type: "error" as const, message: t("session.invalidId") };
 		}
 
-		// 根据 ID 前缀查找完整 ID
+		// 根据名称查找 session
 		const store = getSessionStore();
 		if (!store) {
 			return { type: "error" as const, message: t("session.storeNotInitialized") };
 		}
 
 		const sessions = store.listSessions();
-		const session = sessions.find((s) => s.id.startsWith(idPrefix));
+		const session = sessions.find((s) => s.name === sessionName);
 		if (!session) {
 			return { type: "error" as const, message: t("session.notFound") };
 		}

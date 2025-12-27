@@ -85,8 +85,8 @@ function generateSessionSwitchCommands(): SlashCommand[] {
 	return sessions
 		.filter((s) => s.id !== activeId) // 排除当前活跃 session
 		.map((session) => ({
-			name: session.id.substring(0, 8), // 使用 ID 前 8 位作为命令名
-			description: `${session.name} (${session.messageCount} msgs)`,
+			name: session.name, // 使用 session 名称作为命令名
+			description: `${session.id.substring(0, 8)} (${session.messageCount} msgs)`,
 			action: { type: "internal" as const, handler: "session_switch" },
 		}));
 }
@@ -104,8 +104,8 @@ function generateSessionDeleteCommands(): SlashCommand[] {
 	return sessions
 		.filter((s) => s.id !== activeId) // 排除当前活跃 session
 		.map((session) => ({
-			name: session.id.substring(0, 8), // 使用 ID 前 8 位作为命令名
-			description: `${session.name} (${session.messageCount} msgs)`,
+			name: session.name, // 使用 session 名称作为命令名
+			description: `${session.id.substring(0, 8)} (${session.messageCount} msgs)`,
 			action: { type: "internal" as const, handler: "session_delete" },
 		}));
 }
