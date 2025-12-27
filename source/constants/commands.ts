@@ -53,6 +53,16 @@ function getCurrentModelDisplay(): string {
 }
 
 /**
+ * 获取当前建议模型的显示名称
+ */
+function getCurrentSuggestionModelDisplay(): string {
+	const modelId = getSuggestionModelId();
+	if (!modelId) return "";
+	const model = getModelById(modelId);
+	return model?.name || modelId;
+}
+
+/**
  * 获取当前 session 的显示名称
  */
 function getCurrentSessionDisplay(): string {
@@ -108,6 +118,7 @@ export function getSlashCommands(): SlashCommand[] {
 	// 获取当前状态用于显示
 	const currentModelName = getCurrentModelDisplay();
 	const currentSessionName = getCurrentSessionDisplay();
+	const currentSuggestionModelName = getCurrentSuggestionModelDisplay();
 	const thinkingStatus = isThinkingEnabled() ? t("common.on") : t("common.off");
 	const suggestionStatus = isSuggestionEnabled() ? t("common.on") : t("common.off");
 
@@ -226,7 +237,9 @@ export function getSlashCommands(): SlashCommand[] {
 				},
 				{
 					name: "model",
-					description: t("commands.suggestion.modelDesc"),
+					description: currentSuggestionModelName
+						? `${t("commands.suggestion.modelDesc")} [${currentSuggestionModelName}]`
+						: t("commands.suggestion.modelDesc"),
 					children: generateSuggestionModelCommands(),
 				},
 			],
