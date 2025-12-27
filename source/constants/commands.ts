@@ -210,11 +210,13 @@ export function getSlashCommands(): SlashCommand[] {
 					name: "on",
 					description: t("commands.suggestion.onDesc"),
 					action: { type: "internal", handler: "suggestion_on" },
+					prefix: isSuggestionEnabled() ? "▶ " : "  ",
 				},
 				{
 					name: "off",
 					description: t("commands.suggestion.offDesc"),
 					action: { type: "internal", handler: "suggestion_off" },
+					prefix: isSuggestionEnabled() ? "  " : "▶ ",
 				},
 				{
 					name: "model",
