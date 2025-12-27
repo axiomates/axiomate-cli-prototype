@@ -124,11 +124,13 @@ export function getSlashCommands(): SlashCommand[] {
 					name: "on",
 					description: t("commands.thinking.onDesc"),
 					action: { type: "internal", handler: "thinking_on" },
+					prefix: isThinkingEnabled() ? "▶ " : "  ",
 				},
 				{
 					name: "off",
 					description: t("commands.thinking.offDesc"),
 					action: { type: "internal", handler: "thinking_off" },
+					prefix: isThinkingEnabled() ? "  " : "▶ ",
 				},
 			],
 		},
