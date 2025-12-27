@@ -349,6 +349,7 @@ const internalHandlers: Record<string, InternalHandler> = {
 
 		// 保存到配置
 		setSuggestionModelId(modelId);
+		clearCommandCache();
 
 		return {
 			type: "message" as const,

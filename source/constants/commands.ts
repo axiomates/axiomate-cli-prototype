@@ -5,6 +5,7 @@ import {
 	getModelById,
 	isThinkingEnabled,
 	isSuggestionEnabled,
+	getSuggestionModelId,
 } from "../utils/config.js";
 import { t, addLocaleChangeListener } from "../i18n/index.js";
 import { getSessionStore } from "../services/ai/sessionStore.js";
@@ -29,11 +30,16 @@ function generateModelCommands(): SlashCommand[] {
  * 根据模型配置生成建议模型选择命令
  */
 function generateSuggestionModelCommands(): SlashCommand[] {
-	return getAllModels().map((model) => ({
-		name: model.model,
-		description: `${model.name}${model.description ? ` - ${model.description}` : ""}`,
-		action: { type: "internal" as const, handler: "suggestion_model_select" },
-	}));
+	const currentSuggestionModelId = getSuggestionModelId();
+	return getAllModels().map((model) => {
+		const isCurrentModel = model.model === currentSuggestionModelId;
+		return {
+			name: model.model,
+			description: `${model.name}${model.description ? ` - ${model.description}` : ""}`,
+			action: { type: "internal" as const, handler: "suggestion_model_select" },
+			prefix: isCurrentModel ? "▶ " : "  ",
+		};
+	});
 }
 
 /**
