@@ -14,7 +14,7 @@ import { Box, Text, useInput } from "ink";
 import { useEffect, useRef, useState } from "react";
 import { THEME_LIGHT_YELLOW, THEME_PINK } from "../constants/colors.js";
 import { APP_NAME, VERSION } from "../constants/meta.js";
-import { DEFAULT_MODEL_ID } from "../constants/models.js";
+import { DEFAULT_MODEL_ID, DEFAULT_SUGGESTION_MODEL_ID } from "../constants/models.js";
 import useTerminalHeight from "../hooks/useTerminalHeight.js";
 import { updateConfig, type ModelConfig } from "../utils/config.js";
 import { resumeInput } from "../utils/stdin.js";
@@ -180,7 +180,7 @@ export default function Welcome({ onComplete }: Props) {
 			updateConfig({
 				models: generateModelConfigs(),
 				currentModel: DEFAULT_MODEL_ID,
-				suggestionModel: "THUDM/glm-4-9b-chat",
+				suggestionModel: DEFAULT_SUGGESTION_MODEL_ID,
 			});
 
 			setStatus("done");
