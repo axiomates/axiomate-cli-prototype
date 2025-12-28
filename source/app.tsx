@@ -954,24 +954,14 @@ export default function App({ initResult }: Props) {
 	const isOutputMode = focusMode === "output";
 
 	// 计算 MessageOutput 的可用高度
-	// 输入模式: Header(1) + Divider(1) + MessageOutput + Divider(1) + InputArea(动态)
-	// 浏览模式: Header(1) + Divider(1) + MessageOutput = 2 行固定
-	const fixedHeight = isOutputMode ? 2 : 2 + 1 + inputAreaHeight;
+	// 输入模式: MessageOutput + Divider(1) + InputArea(动态) + Divider(1) + Header(1)
+	// 浏览模式: MessageOutput + Divider(1) + Header(1) = 2 行固定
+	const fixedHeight = isOutputMode ? 2 : 3 + inputAreaHeight;
 	const messageOutputHeight = Math.max(1, terminalHeight - fixedHeight);
 
 	return (
 		<Box flexDirection="column" height={terminalHeight}>
-			{/* 标题区域 - 固定高度 */}
-			<Box flexShrink={0}>
-				<Header focusMode={focusMode} />
-			</Box>
-
-			{/* 标题与输出区域分隔线 */}
-			<Box flexShrink={0}>
-				<Divider />
-			</Box>
-
-			{/* 输出区域 - 使用计算的固定高度 */}
+			{/* 输出区域 - 使用计算的固定高度，位于最顶部 */}
 			<MessageOutput
 				messages={messages}
 				height={messageOutputHeight}
@@ -1008,6 +998,16 @@ export default function App({ initResult }: Props) {
 					/>
 				</Box>
 			)}
+
+			{/* Header 上方分隔线 */}
+			<Box flexShrink={0}>
+				<Divider />
+			</Box>
+
+			{/* 标题区域 - 固定在底部 */}
+			<Box flexShrink={0}>
+				<Header focusMode={focusMode} />
+			</Box>
 		</Box>
 	);
 }
