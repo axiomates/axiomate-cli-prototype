@@ -265,5 +265,8 @@
 		"fetchWebDesc": "获取网页内容",
 		"fetchWebActionDesc": "获取网页内容并转换为文本",
 		"urlParamDesc": "要获取的网页 URL"
+	},
+	"statusBar": {
+		"notConfigured": "N/A"
 	}
 }

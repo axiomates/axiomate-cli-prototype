@@ -265,5 +265,8 @@
 		"fetchWebDesc": "Fetch webpage content",
 		"fetchWebActionDesc": "Fetch webpage content and convert to text",
 		"urlParamDesc": "The URL of the webpage to fetch"
+	},
+	"statusBar": {
+		"notConfigured": "N/A"
 	}
 }

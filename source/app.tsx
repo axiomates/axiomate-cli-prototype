@@ -76,6 +76,15 @@ export default function App({ initResult }: Props) {
 	// AI 加载状态（将来用于显示加载指示器）
 	const [, setIsLoading] = useState(false);
 
+	// Usage 状态 - 用于 StatusBar 显示
+	const [usageStatus, setUsageStatus] = useState<{
+		usedTokens: number;
+		contextWindow: number;
+		usagePercent: number;
+		isNearLimit: boolean;
+		isFull: boolean;
+	} | null>(null);
+
 	// 当前正在流式输出的消息 ID（用于正确更新 UI）
 	const currentStreamingIdRef = useRef<string | null>(null);
 
@@ -161,6 +170,23 @@ export default function App({ initResult }: Props) {
 	// Auto-save 引用（需要在 saveCurrentSession 定义后设置）
 	const saveSessionRef = useRef<(() => void) | null>(null);
 
+	// 更新 usage 状态的辅助函数
+	const updateUsageStatus = useCallback(() => {
+		if (aiServiceRef.current) {
+			const status = aiServiceRef.current.getSessionStatus();
+			const contextWindow = aiServiceRef.current.getContextWindow();
+			setUsageStatus({
+				usedTokens: status.usedTokens,
+				contextWindow,
+				usagePercent: status.usagePercent,
+				isNearLimit: status.isNearLimit,
+				isFull: status.isFull,
+			});
+		} else {
+			setUsageStatus(null);
+		}
+	}, []);
+
 	// 初始化 SessionStore
 	useEffect(() => {
 		const initStore = async () => {
@@ -208,9 +234,12 @@ export default function App({ initResult }: Props) {
 					},
 				]);
 			}
+
+			// 初始化完成后更新 usage 状态
+			updateUsageStatus();
 		};
 		initStore();
-	}, []);
+	}, [updateUsageStatus]);
 
 	// 消息处理函数（用于消息队列）
 	const processMessage = useCallback(
@@ -450,13 +479,15 @@ export default function App({ initResult }: Props) {
 					};
 					return newMessages;
 				});
+				// 流式结束后更新 usage 状态
+				updateUsageStatus();
 			},
 		});
 
 		return () => {
 			messageQueueRef.current?.clear();
 		};
-	}, [processMessage]);
+	}, [processMessage, updateUsageStatus]);
 
 	// 组件挂载后恢复 stdin 输入（之前在 cli.tsx 中被暂停）
 	useEffect(() => {
@@ -601,7 +632,9 @@ export default function App({ initResult }: Props) {
 	const recreateAIService = useCallback(() => {
 		const registry = getToolRegistry();
 		aiServiceRef.current = createAIServiceFromConfig(registry);
-	}, []);
+		// 模型切换后更新 usage 状态
+		updateUsageStatus();
+	}, [updateUsageStatus]);
 
 	// 执行 compact（总结并压缩会话，创建新 session）
 	const compact = useCallback(async () => {
@@ -840,8 +873,11 @@ export default function App({ initResult }: Props) {
 
 			// 清除命令缓存以更新 session 列表
 			clearCommandCache();
+
+			// Session 切换后更新 usage 状态
+			updateUsageStatus();
 		},
-		[saveCurrentSession],
+		[saveCurrentSession, updateUsageStatus],
 	);
 
 	// Session 命令回调：删除 session
@@ -1039,7 +1075,14 @@ export default function App({ initResult }: Props) {
 
 			{/* 状态栏 - 固定在底部 */}
 			<Box flexShrink={0}>
-				<StatusBar focusMode={focusMode} />
+				<StatusBar
+					focusMode={focusMode}
+					usedTokens={usageStatus?.usedTokens}
+					contextWindow={usageStatus?.contextWindow}
+					usagePercent={usageStatus?.usagePercent}
+					isNearLimit={usageStatus?.isNearLimit}
+					isFull={usageStatus?.isFull}
+				/>
 			</Box>
 		</Box>
 	);

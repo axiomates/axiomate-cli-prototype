@@ -265,5 +265,8 @@
 		"fetchWebDesc": "ウェブページの内容を取得",
 		"fetchWebActionDesc": "ウェブページの内容を取得してテキストに変換",
 		"urlParamDesc": "取得するウェブページのURL"
+	},
+	"statusBar": {
+		"notConfigured": "N/A"
 	}
 }
