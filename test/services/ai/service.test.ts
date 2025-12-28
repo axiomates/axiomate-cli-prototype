@@ -664,6 +664,103 @@ describe("AIService", () => {
 			expect(result).toContain("已达到最大工具调用轮数限制");
 			expect(mockClient.chat).toHaveBeenCalledTimes(3);
 		});
+
+		it("should respect maxToolCallRounds limit in streaming mode", async () => {
+			const tools: ToolDefinition[] = [
+				{
+					id: "test-tool",
+					name: "Test Tool",
+					description: "A test tool",
+					type: "node",
+					installed: true,
+					parameters: {},
+				},
+			];
+			const registry = createMockRegistry(tools);
+
+			// Mock matcher
+			const mockMatcherInstance = {
+				autoSelect: vi.fn(() => [tools[0]]),
+				match: vi.fn(() => []),
+			};
+			vi.mocked(ToolMatcher).mockImplementation(() => mockMatcherInstance as any);
+
+			// Mock tool handler
+			const mockToolHandlerInstance = {
+				handleToolCalls: vi.fn(async () => [
+					{ role: "tool" as const, content: "Tool result", tool_call_id: "call_1" },
+				]),
+			};
+			vi.mocked(ToolCallHandler).mockImplementation(() => mockToolHandlerInstance as any);
+
+			// Always return tool_calls in stream to hit the limit
+			mockClient.streamChat = vi.fn(() => {
+				async function* toolStream(): AsyncGenerator<StreamChunk> {
+					yield {
+						delta: {
+							content: "",
+							tool_calls: [
+								{
+									id: "call_1",
+									type: "function",
+									function: { name: "test-tool", arguments: "{}" },
+								},
+							],
+						},
+						finish_reason: "tool_calls",
+					};
+				}
+				return toolStream();
+			});
+
+			const service = new AIService(
+				{ client: mockClient, maxToolCallRounds: 3 },
+				registry,
+			);
+
+			const onEnd = vi.fn();
+			const result = await service.streamMessage(
+				"Use tool repeatedly",
+				{ cwd: "/project" },
+				{ onEnd },
+			);
+
+			expect(result).toContain("已达到最大工具调用轮数限制");
+			expect(mockClient.streamChat).toHaveBeenCalledTimes(3);
+			expect(onEnd).toHaveBeenCalledWith(
+				expect.objectContaining({
+					content: expect.stringContaining("已达到最大工具调用轮数限制"),
+				}),
+			);
+		});
+
+		it("should select tools from query matches", async () => {
+			const tools: ToolDefinition[] = [
+				{
+					id: "matched-tool",
+					name: "Matched Tool",
+					description: "Tool matched by query",
+					type: "node",
+					installed: true,
+					parameters: {},
+				},
+			];
+			const registry = createMockRegistry(tools);
+
+			// Mock matcher to return tools from query match (not autoSelect)
+			const mockMatcherInstance = {
+				autoSelect: vi.fn(() => []), // No auto-selected tools
+				match: vi.fn(() => [{ tool: tools[0], score: 0.9 }]), // Match by query
+			};
+			vi.mocked(ToolMatcher).mockImplementation(() => mockMatcherInstance as any);
+
+			const service = new AIService({ client: mockClient }, registry);
+
+			await service.sendMessage("Use matched tool", { cwd: "/project" });
+
+			// Verify match was called with the query
+			expect(mockMatcherInstance.match).toHaveBeenCalled();
+		});
 	});
 
 	describe("context aware disabled", () => {

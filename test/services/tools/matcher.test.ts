@@ -196,6 +196,16 @@ describe("matcher", () => {
 				expect(results.length).toBe(0);
 			});
 
+			it("should match by tool name or description", () => {
+				// Match by tool description - "git tool" contains "tool"
+				const results = matcher.match("tool");
+
+				// Should find tools where name or description contains "tool"
+				expect(results.length).toBeGreaterThan(0);
+				const hasNameDescMatch = results.some(r => r.reason === "Name/description match");
+				expect(hasNameDescMatch).toBe(true);
+			});
+
 			it("should include context-aware matches", () => {
 				vi.mocked(os.platform).mockReturnValue("win32");
 
@@ -307,6 +317,36 @@ describe("matcher", () => {
 
 				const toolIds = results.map(t => t.id);
 				expect(toolIds).toContain("docker");
+			});
+
+			it("should infer tools from docker-compose file names", () => {
+				const results = matcher.autoSelect({
+					cwd: "/project",
+					selectedFiles: ["/project/docker-compose.yml"],
+				});
+
+				const toolIds = results.map(t => t.id);
+				expect(toolIds).toContain("docker");
+			});
+
+			it("should infer tools from CMakeLists.txt file names", () => {
+				const results = matcher.autoSelect({
+					cwd: "/project",
+					selectedFiles: ["/project/CMakeLists.txt"],
+				});
+
+				const toolIds = results.map(t => t.id);
+				expect(toolIds).toContain("cmake");
+			});
+
+			it("should infer tools from Makefile", () => {
+				const results = matcher.autoSelect({
+					cwd: "/project",
+					selectedFiles: ["/project/Makefile"],
+				});
+
+				// Makefile should infer some build tools
+				expect(results.length).toBeGreaterThan(0);
 			});
 
 			it("should detect project type from cwd", () => {

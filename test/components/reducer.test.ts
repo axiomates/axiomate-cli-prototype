@@ -1077,4 +1077,131 @@ describe("editorReducer", () => {
 			expect(state).toBe(initialState);
 		});
 	});
+
+	// ============================================================================
+	// SET_TEXT in File Mode
+	// ============================================================================
+
+	describe("SET_TEXT in file mode", () => {
+		it("SET_TEXT in file mode updates text while preserving file path segments", () => {
+			// Enter file mode first
+			let state = editorReducer(initialState, {
+				type: "ENTER_FILE",
+				atPosition: 0,
+				prefix: "",
+				suffix: "",
+			});
+
+			// Navigate to a directory
+			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "src" });
+
+			// Update input with filter text
+			state = editorReducer(state, {
+				type: "SET_TEXT",
+				text: "@src" + PATH_SEPARATOR + "test",
+				cursor: 9,
+			});
+
+			// Should be in file mode still and have the filter text
+			expect(isFileMode(state.uiMode)).toBe(true);
+			expect(state.instance.text).toBe("@src" + PATH_SEPARATOR + "test");
+		});
+
+		it("SET_TEXT in file mode preserves prefix selected files", () => {
+			// Setup state with selected file in prefix
+			const instance = createMessageInstance("@file.ts ");
+			instance.selectedFiles = [
+				{
+					path: "file.ts",
+					isDirectory: false,
+					atPosition: 0,
+					endPosition: 8,
+				},
+			];
+			const stateWithFile: EditorState = {
+				...initialState,
+				instance,
+			};
+
+			// Enter file mode after the existing file
+			let state = editorReducer(stateWithFile, {
+				type: "ENTER_FILE",
+				atPosition: 9,
+				prefix: "@file.ts ",
+				suffix: "",
+			});
+
+			// Update input
+			state = editorReducer(state, {
+				type: "SET_TEXT",
+				text: "@file.ts @src" + PATH_SEPARATOR,
+				cursor: 14,
+			});
+
+			// Should preserve the prefix file
+			expect(isFileMode(state.uiMode)).toBe(true);
+			// The prefix file should still be there but files in suffix should be filtered
+		});
+
+		it("SET_TEXT preserves file mode with filter text longer than prefix", () => {
+			let state = editorReducer(initialState, {
+				type: "ENTER_FILE",
+				atPosition: 0,
+				prefix: "",
+				suffix: "",
+			});
+
+			state = editorReducer(state, { type: "ENTER_FILE_DIR", dirName: "components" });
+
+			// Update with filter text
+			state = editorReducer(state, {
+				type: "SET_TEXT",
+				text: "@components" + PATH_SEPARATOR + "Button",
+				cursor: 19,
+			});
+
+			expect(isFileMode(state.uiMode)).toBe(true);
+			expect(state.instance.filePath).toEqual(["components"]);
+		});
+	});
+
+	// ============================================================================
+	// CONFIRM_FILE with files in prefix (not suffix)
+	// ============================================================================
+
+	describe("CONFIRM_FILE with files in prefix", () => {
+		it("CONFIRM_FILE does not adjust prefix files positions", () => {
+			// First file is in prefix (before the @ position)
+			const instance = createMessageInstance("@prefix.ts text");
+			instance.selectedFiles = [
+				{
+					path: "prefix.ts",
+					isDirectory: false,
+					atPosition: 0,
+					endPosition: 10,
+				},
+			];
+			const stateWithPrefix: EditorState = {
+				...initialState,
+				instance,
+			};
+
+			// Enter file mode after "text " (position 11)
+			let state = editorReducer(stateWithPrefix, {
+				type: "ENTER_FILE",
+				atPosition: 15,
+				prefix: "@prefix.ts text",
+				suffix: "",
+			});
+
+			// Confirm a new file
+			state = editorReducer(state, { type: "CONFIRM_FILE", fileName: "new.ts" });
+
+			// Prefix file position should NOT be adjusted (it's before the new file position)
+			const prefixFile = state.instance.selectedFiles.find(f => f.path === "prefix.ts");
+			expect(prefixFile).toBeDefined();
+			expect(prefixFile!.atPosition).toBe(0); // unchanged
+			expect(prefixFile!.endPosition).toBe(10); // unchanged
+		});
+	});
 });

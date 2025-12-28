@@ -74,11 +74,52 @@ describe("python discoverer", () => {
 		it("should handle null executable path", async () => {
 			vi.mocked(commandExists).mockResolvedValue(true);
 			vi.mocked(getExecutablePath).mockResolvedValue(null);
-			vi.mocked(getVersion).mockResolvedValue("Python 3.11.0");
+			vi.mocked(getVersion).mockResolvedValue("3.11.0");
 
 			const result = await detectPython();
 
 			expect(result.installed).toBe(true);
+			expect(result.executablePath).toBe("python");
+		});
+
+		it("should parse version from python output", async () => {
+			vi.mocked(commandExists).mockResolvedValue(true);
+			vi.mocked(getExecutablePath).mockResolvedValue("/usr/bin/python3");
+			vi.mocked(getVersion).mockImplementation(async (cmd, args, options) => {
+				if (options?.parseOutput) {
+					return options.parseOutput("Python 3.11.5");
+				}
+				return "3.11.5";
+			});
+
+			const result = await detectPython();
+
+			expect(result.version).toBe("3.11.5");
+		});
+
+		it("should return raw output when version pattern not matched", async () => {
+			vi.mocked(commandExists).mockResolvedValue(true);
+			vi.mocked(getExecutablePath).mockResolvedValue("/usr/bin/python3");
+			vi.mocked(getVersion).mockImplementation(async (cmd, args, options) => {
+				if (options?.parseOutput) {
+					return options.parseOutput("Unknown format");
+				}
+				return "Unknown";
+			});
+
+			const result = await detectPython();
+
+			expect(result.version).toBe("Unknown format");
+		});
+
+		it("should handle null version", async () => {
+			vi.mocked(commandExists).mockResolvedValue(true);
+			vi.mocked(getExecutablePath).mockResolvedValue("/usr/bin/python3");
+			vi.mocked(getVersion).mockResolvedValue(null);
+
+			const result = await detectPython();
+
+			expect(result.version).toBeUndefined();
 		});
 	});
 });

@@ -84,4 +84,16 @@ describe("logger", () => {
 			expect(() => logger.warn("test", { key: "value" })).not.toThrow();
 		});
 	});
+
+	describe("error handling", () => {
+		it("should silently fail when writer throws", () => {
+			vi.mocked(getFlags).mockReturnValue({ verbose: false, help: undefined });
+			mockWrite.mockImplementation(() => {
+				throw new Error("Write failed");
+			});
+
+			// Should not throw even if writer throws
+			expect(() => logger.warn("test")).not.toThrow();
+		});
+	});
 });

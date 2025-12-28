@@ -181,6 +181,24 @@ describe("lineProcessor", () => {
 			// "ab" 从 0 开始，"cd" 从 3 开始（ab 的长度 2 + \n 的 1）
 			expect(result.lineOffsets).toEqual([0, 3]);
 		});
+
+		it("should handle cursor beyond text length (foundCursor false case)", () => {
+			// When cursor position is beyond text length, foundCursor stays false
+			// and code falls through to the "if (!foundCursor)" branch
+			const result = processLines("hello", "", 100, 80, 2);
+
+			// Should set cursor to last line end position
+			expect(result.cursorLine).toBe(0);
+			expect(result.cursorCol).toBe(5); // Display width of "hello"
+		});
+
+		it("should handle cursor beyond text with multiple lines", () => {
+			const result = processLines("hi\nthere", "", 100, 80, 2);
+
+			// Should set cursor to last line
+			expect(result.cursorLine).toBe(1);
+			expect(result.cursorCol).toBe(5); // Display width of "there"
+		});
 	});
 
 	describe("getInputEndInfo", () => {

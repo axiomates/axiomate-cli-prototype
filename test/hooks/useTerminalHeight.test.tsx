@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
 import { render } from "ink-testing-library";
 import { Text } from "ink";
@@ -27,5 +27,23 @@ describe("useTerminalHeight", () => {
 
 		const height = parseInt(match![1]!, 10);
 		expect(height).toBeGreaterThan(0);
+	});
+
+	it("should clean up event listeners on unmount", () => {
+		const { unmount, lastFrame } = render(<TestComponent />);
+		expect(lastFrame()).toContain("Height:");
+		// Should not throw when unmounting
+		expect(() => unmount()).not.toThrow();
+	});
+
+	it("should handle stdout rows change", () => {
+		const { lastFrame, rerender } = render(<TestComponent />);
+
+		// First render
+		expect(lastFrame()).toContain("Height:");
+
+		// Rerender to trigger forceUpdate effect
+		rerender(<TestComponent />);
+		expect(lastFrame()).toContain("Height:");
 	});
 });

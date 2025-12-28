@@ -58,4 +58,28 @@ describe("useTranslation", () => {
 
 		expect(lastFrame()).toContain("nonexistent.key");
 	});
+
+	it("should clean up listener on unmount", () => {
+		const { unmount, lastFrame } = render(
+			<TestComponent translationKey="app.name" />,
+		);
+
+		expect(lastFrame()).toContain("en:");
+
+		// Unmount should clean up listener without throwing
+		expect(() => unmount()).not.toThrow();
+	});
+
+	it("should handle translation with parameters", () => {
+		// Test component that uses translation with parameters
+		function ParamComponent() {
+			const { t } = useTranslation();
+			return <Text>{t("commandHandler.modelSwitched", { model: "GPT-4" })}</Text>;
+		}
+
+		const { lastFrame } = render(<ParamComponent />);
+
+		// Should contain the model name from the parameter
+		expect(lastFrame()).toContain("GPT-4");
+	});
 });

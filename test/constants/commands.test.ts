@@ -235,5 +235,23 @@ describe("commands", () => {
 		it("should support 'in' operator through proxy", () => {
 			expect(0 in SLASH_COMMANDS).toBe(true);
 		});
+
+		it("should support Object.keys through proxy (ownKeys)", () => {
+			const keys = Object.keys(SLASH_COMMANDS);
+			expect(keys.length).toBeGreaterThan(0);
+			expect(keys).toContain("0");
+		});
+
+		it("should support Object.getOwnPropertyDescriptor through proxy", () => {
+			const descriptor = Object.getOwnPropertyDescriptor(SLASH_COMMANDS, "0");
+			expect(descriptor).toBeDefined();
+			expect(descriptor!.value).toBeDefined();
+		});
+
+		it("should support spread operator through proxy", () => {
+			const spread = [...SLASH_COMMANDS];
+			expect(spread.length).toBeGreaterThan(0);
+			expect(spread[0]).toHaveProperty("name");
+		});
 	});
 });

@@ -211,6 +211,48 @@ describe("heightCalculator", () => {
 				// 1 (input) + 1 (divider) + 9 (visible) + 1 (more after)
 				expect(result).toBe(12);
 			});
+
+			it("should show more before when scrolled in file mode", () => {
+				const manyFiles: FileItem[] = Array.from({ length: 15 }, (_, i) => ({
+					name: `file${i}.txt`,
+					isDirectory: false,
+					path: `file${i}.txt`,
+				}));
+
+				const result = calculateInputAreaHeight({
+					inputLines: 1,
+					uiMode: { type: "file", selectedIndex: 12 },
+					filteredCommands: [],
+					filteredFiles: manyFiles,
+					commandPath: [],
+					filePath: [],
+					filesLoading: false,
+				});
+
+				// 1 (input) + 1 (divider) + 1 (more before) + 9 (visible) + 1 (more after)
+				expect(result).toBe(13);
+			});
+
+			it("should handle file selection at end of list", () => {
+				const manyFiles: FileItem[] = Array.from({ length: 15 }, (_, i) => ({
+					name: `file${i}.txt`,
+					isDirectory: false,
+					path: `file${i}.txt`,
+				}));
+
+				const result = calculateInputAreaHeight({
+					inputLines: 1,
+					uiMode: { type: "file", selectedIndex: 14 },
+					filteredCommands: [],
+					filteredFiles: manyFiles,
+					commandPath: [],
+					filePath: [],
+					filesLoading: false,
+				});
+
+				// 1 (input) + 1 (divider) + 1 (more before) + 9 (visible, no more after)
+				expect(result).toBe(12);
+			});
 		});
 
 		describe("help mode", () => {

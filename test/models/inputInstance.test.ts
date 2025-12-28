@@ -22,6 +22,7 @@ import {
 	removeSelectedFile,
 	isMessageInstance,
 	isCommandInstance,
+	getInstanceText,
 	type InputInstance,
 	type SelectedFile,
 } from "../../source/models/inputInstance.js";
@@ -525,6 +526,27 @@ describe("models/inputInstance", () => {
 		it("returns false for message type", () => {
 			const instance = createMessageInstance("hello");
 			expect(isCommandInstance(instance)).toBe(false);
+		});
+	});
+
+	// ============================================================================
+	// Utility Functions
+	// ============================================================================
+
+	describe("getInstanceText", () => {
+		it("returns text from instance", () => {
+			const instance = createMessageInstance("hello world");
+			expect(getInstanceText(instance)).toBe("hello world");
+		});
+
+		it("returns empty string for empty instance", () => {
+			const instance = createEmptyInstance();
+			expect(getInstanceText(instance)).toBe("");
+		});
+
+		it("returns text from command instance", () => {
+			const instance = createCommandInstance(["model"], false);
+			expect(getInstanceText(instance)).toBe("/model");
 		});
 	});
 });

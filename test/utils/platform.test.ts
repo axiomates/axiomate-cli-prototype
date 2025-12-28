@@ -309,5 +309,191 @@ describe("platform", () => {
 				expect.any(Object),
 			);
 		});
+
+		it("should spawn cmd.exe on Windows when neither wt nor powershell available", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("win32");
+			// All commands throw - falls back to cmd
+			vi.mocked(childProcess.execSync).mockImplementation(() => {
+				throw new Error("not found");
+			});
+
+			// Import fresh to reset restartPromise
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise = freshRestartApp();
+			await new Promise((r) => setTimeout(r, 10));
+
+			expect(childProcess.spawn).toHaveBeenCalledWith(
+				"cmd.exe",
+				expect.arrayContaining(["/C"]),
+				expect.any(Object),
+			);
+		});
+
+		it("should use execPath with args on Unix", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("linux");
+
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise = freshRestartApp();
+			await new Promise((r) => setTimeout(r, 10));
+
+			expect(childProcess.spawn).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.any(Array),
+				expect.objectContaining({
+					stdio: "inherit",
+					detached: true,
+				}),
+			);
+		});
+
+		it("should handle Bun packaged exe args", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("win32");
+			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+				if (cmd.includes("wt.exe")) return Buffer.from("");
+				throw new Error("not found");
+			});
+
+			Object.defineProperty(process, "argv", {
+				value: ["bun", "B:/~BUN/root/test.exe", "--flag", "value"],
+				writable: true,
+			});
+
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise = freshRestartApp();
+			await new Promise((r) => setTimeout(r, 10));
+
+			// Should use args from slice(2) for Bun packaged exe
+			expect(childProcess.spawn).toHaveBeenCalledWith(
+				"wt.exe",
+				expect.arrayContaining(["--flag", "value"]),
+				expect.any(Object),
+			);
+		});
+
+		it("should return same promise on multiple calls", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("win32");
+			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+				if (cmd.includes("wt.exe")) return Buffer.from("");
+				throw new Error("not found");
+			});
+
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise1 = freshRestartApp();
+			const promise2 = freshRestartApp();
+
+			expect(promise1).toBe(promise2);
+		});
+
+		it("should handle spawn error", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("win32");
+			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+				if (cmd.includes("wt.exe")) return Buffer.from("");
+				throw new Error("not found");
+			});
+
+			// Create spawn mock that triggers error
+			const errorSpawnMock = vi.fn(() => ({
+				on: vi.fn((event, callback) => {
+					if (event === "error") {
+						setTimeout(() => callback(new Error("spawn error")), 0);
+					}
+				}),
+			}));
+			vi.mocked(childProcess.spawn).mockImplementation(errorSpawnMock as unknown as typeof childProcess.spawn);
+
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise = freshRestartApp();
+
+			// Should reject on error
+			await expect(promise).rejects.toThrow("spawn error");
+
+			// Restore spawn mock
+			vi.mocked(childProcess.spawn).mockImplementation(() => ({
+				on: vi.fn((event, callback) => {
+					if (event === "close") {
+						setTimeout(callback, 0);
+					}
+				}),
+			}) as unknown as ReturnType<typeof childProcess.spawn>);
+		});
+
+		it("should escape PowerShell args with single quotes", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("win32");
+			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
+				if (cmd.includes("powershell.exe")) return Buffer.from("");
+				throw new Error("not found");
+			});
+
+			Object.defineProperty(process, "argv", {
+				value: ["node", "script.js", "arg with 'quotes'"],
+				writable: true,
+			});
+
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise = freshRestartApp();
+			await new Promise((r) => setTimeout(r, 10));
+
+			expect(childProcess.spawn).toHaveBeenCalledWith(
+				"powershell.exe",
+				expect.arrayContaining([
+					"-Command",
+					expect.stringContaining("''"), // Escaped single quotes
+				]),
+				expect.any(Object),
+			);
+		});
+
+		it("should escape CMD args with spaces", async () => {
+			vi.resetModules();
+			vi.mocked(os.platform).mockReturnValue("win32");
+			vi.mocked(childProcess.execSync).mockImplementation(() => {
+				throw new Error("not found");
+			});
+
+			Object.defineProperty(process, "argv", {
+				value: ["node", "script.js", "arg with spaces"],
+				writable: true,
+			});
+
+			const { restartApp: freshRestartApp } = await import(
+				"../../source/utils/platform.js"
+			);
+
+			const promise = freshRestartApp();
+			await new Promise((r) => setTimeout(r, 10));
+
+			expect(childProcess.spawn).toHaveBeenCalledWith(
+				"cmd.exe",
+				expect.arrayContaining([
+					"/C",
+					expect.stringContaining('"arg with spaces"'), // Quoted spaces
+				]),
+				expect.any(Object),
+			);
+		});
 	});
 });

@@ -129,6 +129,24 @@ describe("SuggestionClient", () => {
 			expect(callBody.messages[1].content).toContain("/home/user");
 		});
 
+		it("should include projectType in cache key", async () => {
+			fetchMock.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						choices: [{ message: { content: "suggestion" } }],
+					}),
+			});
+
+			// First call with projectType
+			await client.getSuggestion("hello", { cwd: "/home/user", projectType: "node" });
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+
+			// Second call with same input but different projectType - should not be cached
+			await client.getSuggestion("hello", { cwd: "/home/user", projectType: "python" });
+			expect(fetchMock).toHaveBeenCalledTimes(2);
+		});
+
 		it("should clean up suggestion by removing quotes", async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: true,
@@ -167,6 +185,37 @@ describe("SuggestionClient", () => {
 			const result = await client.getSuggestion("test");
 			expect(result.suggestion).not.toContain("\n");
 			expect(result.suggestion).not.toContain("\r");
+		});
+
+		it("should return null when cleaned suggestion is empty after processing", async () => {
+			// Input: "hello world", suggestion after quote removal is just the same text
+			// After removing input prefix, it becomes empty or whitespace
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						choices: [{ message: { content: '"hello"' } }], // Just the input wrapped in quotes
+					}),
+			});
+
+			const result = await client.getSuggestion("hello");
+			// After cleaning: "hello" -> remove quotes -> "hello" -> remove input prefix -> ""
+			expect(result.suggestion).toBeNull();
+		});
+
+		it("should return null when suggestion becomes whitespace after cleaning", async () => {
+			// Content that passes the initial check but becomes whitespace after quote removal
+			// "'   '" -> trim -> "'   '" -> remove quotes -> "   " -> collapse spaces -> " " -> trim -> "" (empty)
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						choices: [{ message: { content: "'   '" } }], // Quoted whitespace
+					}),
+			});
+
+			const result = await client.getSuggestion("test");
+			expect(result.suggestion).toBeNull();
 		});
 
 		it("should abort previous request when new one starts", async () => {

@@ -334,4 +334,47 @@ describe("LogWriter", () => {
 			expect(fs.promises.appendFile).toHaveBeenCalledTimes(3);
 		});
 	});
+
+	describe("checkRotation during writes", () => {
+		it("should rotate on date change during multiple writes", async () => {
+			vi.mocked(fs.promises.readdir).mockResolvedValue([]);
+
+			// First write
+			writer.write("info", "Day 1 message");
+			await vi.runAllTimersAsync();
+
+			// Change date
+			vi.setSystemTime(new Date("2024-12-21T10:30:00.000Z"));
+
+			// Second write should detect date change and reset file index
+			writer.write("info", "Day 2 message");
+			await vi.runAllTimersAsync();
+
+			// Should have written to both dates
+			const calls = vi.mocked(fs.promises.appendFile).mock.calls;
+			expect(calls[0]![0]).toContain("2024-12-20");
+			expect(calls[1]![0]).toContain("2024-12-21");
+		});
+
+		it("should rotate on size exceeded during multiple writes", async () => {
+			const maxSize = 50;
+			writer = new LogWriter(basePath, { maxFileSize: maxSize });
+
+			vi.mocked(fs.promises.readdir).mockResolvedValue([]);
+
+			// First write - sets up the state
+			writer.write("info", "First message that is longer than max size limit to trigger rotation");
+			await vi.runAllTimersAsync();
+
+			// Second write should detect size limit and rotate
+			writer.write("info", "Second message");
+			await vi.runAllTimersAsync();
+
+			const calls = vi.mocked(fs.promises.appendFile).mock.calls;
+			// First write to .log
+			expect(calls[0]![0]).toContain("axiomate.2024-12-20.log");
+			// After rotation, second write should go to .1.log
+			expect(calls[1]![0]).toContain("axiomate.2024-12-20.1.log");
+		});
+	});
 });
