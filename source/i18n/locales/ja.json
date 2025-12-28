@@ -5,7 +5,8 @@
 		"modeSwitchHint": "Shift+↑↓",
 		"headerHintType": "入力",
 		"headerHintForCommands": "でコマンド、",
-		"headerHintForShortcuts": "でショートカット"
+		"headerHintForShortcuts": "でショートカット",
+		"welcomeMessage": "{{pink:axiomate}} - {{yellow:/}} でコマンド、{{yellow:?}} でショートカット。"
 	},
 	"welcome": {
 		"title": "axiomate へようこそ！",

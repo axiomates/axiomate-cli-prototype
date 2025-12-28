@@ -202,8 +202,7 @@ export default function App({ initResult }: Props) {
 				hasShownWelcomeRef.current = true;
 				setMessages([
 					{
-						content:
-							"{{pink:axiomate}} - 输入 {{yellow:/}} 打开命令，{{yellow:?}} 显示快捷键。",
+						content: t("app.welcomeMessage"),
 						type: "welcome",
 						markdown: false,
 					},

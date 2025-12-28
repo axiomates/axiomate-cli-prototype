@@ -5,7 +5,8 @@
 		"modeSwitchHint": "Shift+↑↓",
 		"headerHintType": "输入",
 		"headerHintForCommands": "打开命令，",
-		"headerHintForShortcuts": "显示快捷键"
+		"headerHintForShortcuts": "显示快捷键",
+		"welcomeMessage": "{{pink:axiomate}} - 输入 {{yellow:/}} 打开命令，{{yellow:?}} 显示快捷键。"
 	},
 	"welcome": {
 		"title": "欢迎使用 axiomate！",

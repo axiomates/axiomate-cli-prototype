@@ -5,7 +5,8 @@
 		"modeSwitchHint": "Shift+↑↓",
 		"headerHintType": "Type",
 		"headerHintForCommands": "for commands,",
-		"headerHintForShortcuts": "for shortcuts"
+		"headerHintForShortcuts": "for shortcuts",
+		"welcomeMessage": "{{pink:axiomate}} - Type {{yellow:/}} for commands, {{yellow:?}} for shortcuts."
 	},
 	"welcome": {
 		"title": "Welcome to axiomate!",

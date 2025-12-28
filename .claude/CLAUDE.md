@@ -155,6 +155,14 @@ Commands are defined in `constants/commands.ts` with dynamic generation:
 - Browse mode: `Enter` to toggle, `e` expand all, `c` collapse all
 - Uses `▶` (collapsed) and `▼` (expanded) indicators
 
+### Welcome Message
+
+- Shown once per app lifecycle when session is empty
+- Uses `type: "welcome"` message type with colored segments syntax: `{{color:text}}`
+- Not saved to session, not collapsible
+- Supports `pink` and `yellow` color keys (maps to theme colors)
+- i18n key: `app.welcomeMessage`
+
 ### Session Management
 
 - `SessionStore` manages multiple sessions with persistence
@@ -222,6 +230,7 @@ Uses local directory analysis (not AI two-phase):
 - Chinese comments acceptable
 - Use `PATH_SEPARATOR` from `constants/platform.ts`
 - Markdown rendering may strip leading spaces - use visible markers (like `○`) instead
+- **All user-facing text must use i18n** - add translations to `i18n/locales/*.json` files (en, zh-CN, ja) and use `t()` function
 
 ## Common Tasks
 

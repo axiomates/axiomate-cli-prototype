@@ -1128,19 +1128,51 @@ export default function MessageOutput({
 
 		// 欢迎消息行的特殊渲染（彩色段落，无 > 前缀）
 		if (line.isWelcome && line.welcomeSegments) {
-			contentRows.push(
-				<Box key={`welcome-${line.msgIndex}-${i}`} height={1}>
-					{line.welcomeSegments.map((seg, idx) =>
-						seg.color ? (
-							<Text key={idx} color={seg.color}>
-								{seg.text}
-							</Text>
-						) : (
-							<Text key={idx}>{seg.text}</Text>
-						),
-					)}
-				</Box>,
-			);
+			if (isCursorLine && line.welcomeSegments.length > 0) {
+				// 光标行：第一个 segment 的第一个字符显示背景色
+				const firstSeg = line.welcomeSegments[0]!;
+				const firstChar = firstSeg.text[0] || " ";
+				const restOfFirstSeg = firstSeg.text.slice(1);
+				const firstSegColor = firstSeg.color || "white";
+
+				contentRows.push(
+					<Box key={`welcome-${line.msgIndex}-${i}`} height={1}>
+						{/* 第一个字符带背景色 */}
+						<Text backgroundColor={firstSegColor} color={firstSegColor} bold>
+							{firstChar}
+						</Text>
+						{/* 第一个 segment 的剩余部分 */}
+						{restOfFirstSeg && (
+							<Text color={firstSeg.color}>{restOfFirstSeg}</Text>
+						)}
+						{/* 其余 segments */}
+						{line.welcomeSegments.slice(1).map((seg, idx) =>
+							seg.color ? (
+								<Text key={idx + 1} color={seg.color}>
+									{seg.text}
+								</Text>
+							) : (
+								<Text key={idx + 1}>{seg.text}</Text>
+							),
+						)}
+					</Box>,
+				);
+			} else {
+				// 非光标行：正常渲染
+				contentRows.push(
+					<Box key={`welcome-${line.msgIndex}-${i}`} height={1}>
+						{line.welcomeSegments.map((seg, idx) =>
+							seg.color ? (
+								<Text key={idx} color={seg.color}>
+									{seg.text}
+								</Text>
+							) : (
+								<Text key={idx}>{seg.text}</Text>
+							),
+						)}
+					</Box>,
+				);
+			}
 			continue;
 		}
 
