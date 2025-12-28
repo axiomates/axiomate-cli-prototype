@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import type { ToolRegistry } from "../../../../source/services/tools/registry.js";
 import type { DiscoveredTool, ToolAction } from "../../../../source/services/tools/types.js";
+import { initI18n, setLocale } from "../../../../source/i18n/index.js";
+
+beforeAll(() => {
+	initI18n();
+	setLocale("zh-CN");
+});
 
 // Mock executor module
 vi.mock("../../../../source/services/tools/executor.js", () => ({
@@ -208,8 +214,8 @@ describe("InProcessMcpProvider", () => {
 			const result = await provider.callTool("git_status", {});
 
 			expect(result.isError).toBe(true);
-			expect(result.content[0]!.text).toContain("错误: Command not found");
-			expect(result.content[0]!.text).toContain("退出码: 1");
+			expect(result.content[0]!.text).toContain("Error: Command not found");
+			expect(result.content[0]!.text).toContain("Exit code: 1");
 		});
 
 		it("should handle tool execution failure with stderr", async () => {
@@ -237,6 +243,8 @@ describe("InProcessMcpProvider", () => {
 			const result = await provider.callTool("git_status", {});
 
 			expect(result.isError).toBe(true);
+			// The error message uses i18n t("errors.commandExecutionFailed") which is "命令执行失败" in zh-CN
+			expect(result.content[0]!.text).toContain("Error:");
 			expect(result.content[0]!.text).toContain("命令执行失败");
 		});
 

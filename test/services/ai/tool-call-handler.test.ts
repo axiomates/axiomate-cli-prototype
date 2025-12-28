@@ -1,10 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import {
 	ToolCallHandler,
 	createToolCallHandler,
 } from "../../../source/services/ai/tool-call-handler.js";
 import type { IToolRegistry } from "../../../source/services/tools/types.js";
 import type { ToolCall } from "../../../source/services/ai/types.js";
+import { initI18n, setLocale } from "../../../source/i18n/index.js";
+
+beforeAll(() => {
+	initI18n();
+	setLocale("zh-CN");
+});
 
 // Mock executor
 vi.mock("../../../source/services/tools/executor.js", () => ({

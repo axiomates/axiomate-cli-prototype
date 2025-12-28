@@ -13,7 +13,7 @@ import type { DiscoveredTool, ToolCapability, IToolRegistry } from "./types.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { platform } from "node:os";
-import { t } from "../../i18n/index.js";
+import { tArray } from "../../i18n/index.js";
 
 /**
  * Keyword to tool ID mapping
@@ -86,8 +86,8 @@ const KEYWORD_MAP: Record<string, string[]> = {
 function getKeywordsForTool(toolId: string): string[] {
 	const staticKeywords = KEYWORD_MAP[toolId] || [];
 	if (toolId === "web") {
-		const i18nKeywords = t("tools.webKeywords") as unknown as string[];
-		if (Array.isArray(i18nKeywords)) {
+		const i18nKeywords = tArray("tools.webKeywords");
+		if (i18nKeywords.length > 0) {
 			return [...staticKeywords, ...i18nKeywords];
 		}
 	}

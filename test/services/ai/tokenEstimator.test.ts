@@ -1,10 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
+import { initI18n, setLocale } from "../../../source/i18n/index.js";
 import {
 	estimateTokens,
 	fitsInContext,
 	truncateToFit,
 	truncateFilesProportionally,
 } from "../../../source/services/ai/tokenEstimator.js";
+
+beforeAll(() => {
+	initI18n();
+	setLocale("zh-CN");
+});
 
 describe("tokenEstimator", () => {
 	describe("estimateTokens", () => {

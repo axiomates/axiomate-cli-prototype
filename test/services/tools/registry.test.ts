@@ -1,4 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { initI18n, setLocale } from "../../../source/i18n/index.js";
+
+beforeAll(() => {
+	initI18n();
+	setLocale("zh-CN");
+});
 
 // Mock the discoverers module
 vi.mock("../../../source/services/tools/discoverers/index.js", () => ({

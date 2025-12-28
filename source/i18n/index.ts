@@ -98,14 +98,10 @@ export function setLocale(locale: Locale): void {
 }
 
 /**
- * Get translation for a key path
- * Supports nested keys with dot notation: "app.inputMode"
- * Supports template variables: "Hello {{name}}" with { name: "World" }
+ * Get raw translation value for a key path (can return any type including arrays)
+ * Internal helper function
  */
-export function t(
-	key: string,
-	params?: Record<string, string | number>,
-): string {
+function getTranslationValue(key: string): unknown {
 	const keys = key.split(".");
 	let value: unknown = translations[currentLocale];
 
@@ -120,14 +116,27 @@ export function t(
 				if (fallback && typeof fallback === "object" && fk in fallback) {
 					fallback = (fallback as Record<string, unknown>)[fk];
 				} else {
-					// Return key itself if not found in any locale
-					return key;
+					// Return undefined if not found in any locale
+					return undefined;
 				}
 			}
-			value = fallback;
-			break;
+			return fallback;
 		}
 	}
+
+	return value;
+}
+
+/**
+ * Get translation for a key path
+ * Supports nested keys with dot notation: "app.inputMode"
+ * Supports template variables: "Hello {{name}}" with { name: "World" }
+ */
+export function t(
+	key: string,
+	params?: Record<string, string | number>,
+): string {
+	const value = getTranslationValue(key);
 
 	if (typeof value !== "string") {
 		return key;
@@ -142,6 +151,20 @@ export function t(
 	}
 
 	return value;
+}
+
+/**
+ * Get array translation for a key path
+ * Returns the array value if it exists, otherwise returns an empty array
+ */
+export function tArray(key: string): string[] {
+	const value = getTranslationValue(key);
+
+	if (Array.isArray(value)) {
+		return value;
+	}
+
+	return [];
 }
 
 /**

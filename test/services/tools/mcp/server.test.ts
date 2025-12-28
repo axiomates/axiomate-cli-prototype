@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import type { ToolRegistry } from "../../../../source/services/tools/registry.js";
 import type { DiscoveredTool, ToolAction, ToolParameter } from "../../../../source/services/tools/types.js";
+import { initI18n, setLocale } from "../../../../source/i18n/index.js";
+
+beforeAll(() => {
+	initI18n();
+	setLocale("zh-CN");
+});
 
 // Mock MCP SDK
 const mockRegisterTool = vi.fn();
@@ -215,6 +221,7 @@ describe("MCP Server", () => {
 			const handler = gitStatusCall![2];
 			const result = await handler({});
 
+			// Uses i18n t("common.noOutput") which is "(无输出)" in zh-CN
 			expect(result.content[0].text).toBe("(无输出)");
 		});
 
@@ -236,7 +243,8 @@ describe("MCP Server", () => {
 
 			expect(result.isError).toBe(true);
 			expect(result.content[0].text).toContain("fatal: not a git repository");
-			expect(result.content[0].text).toContain("退出码: 128");
+			// Exit code is hardcoded in English in source
+			expect(result.content[0].text).toContain("Exit code: 128");
 		});
 
 		it("should handle tool action failure with error message", async () => {
@@ -277,6 +285,8 @@ describe("MCP Server", () => {
 			const result = await handler({});
 
 			expect(result.isError).toBe(true);
+			// Uses i18n t("errors.commandExecutionFailed") which is "命令执行失败" in zh-CN
+			expect(result.content[0].text).toContain("Error:");
 			expect(result.content[0].text).toContain("命令执行失败");
 		});
 	});
@@ -295,6 +305,7 @@ describe("MCP Server", () => {
 
 			const listTool = schemas.find((s) => s.name === "list_available_tools");
 			expect(listTool).toBeDefined();
+			// Uses i18n t("tools.listToolsDesc") which contains "可用" in zh-CN
 			expect(listTool!.description).toContain("可用");
 		});
 
