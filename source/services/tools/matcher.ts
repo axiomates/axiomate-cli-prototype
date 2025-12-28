@@ -13,6 +13,7 @@ import type { DiscoveredTool, ToolCapability, IToolRegistry } from "./types.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { platform } from "node:os";
+import { t } from "../../i18n/index.js";
 
 /**
  * Keyword to tool ID mapping
@@ -75,20 +76,23 @@ const KEYWORD_MAP: Record<string, string[]> = {
 	postgresql: ["postgresql", "postgres", "psql"],
 	sqlite3: ["sqlite", "sqlite3"],
 
-	// Web
-	web: [
-		"web",
-		"webpage",
-		"website",
-		"url",
-		"http",
-		"https",
-		"fetch",
-		"网页",
-		"网站",
-		"链接",
-	],
+	// Web (static English keywords only, i18n keywords added dynamically)
+	web: ["web", "webpage", "website", "url", "http", "https", "fetch"],
 };
+
+/**
+ * Get keywords for a tool, including i18n keywords
+ */
+function getKeywordsForTool(toolId: string): string[] {
+	const staticKeywords = KEYWORD_MAP[toolId] || [];
+	if (toolId === "web") {
+		const i18nKeywords = t("tools.webKeywords") as unknown as string[];
+		if (Array.isArray(i18nKeywords)) {
+			return [...staticKeywords, ...i18nKeywords];
+		}
+	}
+	return staticKeywords;
+}
 
 /**
  * Capability to tool mapping
@@ -273,7 +277,8 @@ export class ToolMatcher implements IToolMatcher {
 		const installedTools = this.registry.getInstalled();
 
 		// 1. Keyword matching
-		for (const [toolId, keywords] of Object.entries(KEYWORD_MAP)) {
+		for (const toolId of Object.keys(KEYWORD_MAP)) {
+			const keywords = getKeywordsForTool(toolId);
 			const matchedKeyword = keywords.find((kw) => queryLower.includes(kw));
 			if (matchedKeyword) {
 				const tool = this.registry.getTool(toolId);

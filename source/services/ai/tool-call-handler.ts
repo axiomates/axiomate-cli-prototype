@@ -15,6 +15,7 @@ import type {
 	ToolAction,
 } from "../tools/types.js";
 import { executeToolAction, getToolAction } from "../tools/executor.js";
+import { t } from "../../i18n/index.js";
 
 /**
  * 工具调用处理器实现
@@ -59,7 +60,7 @@ export class ToolCallHandler implements IToolCallHandler {
 				result: {
 					success: false,
 					output: "",
-					error: `工具 "${toolId}" 未找到`,
+					error: t("errors.toolNotFound", { toolId }),
 				},
 			};
 		}
@@ -69,7 +70,10 @@ export class ToolCallHandler implements IToolCallHandler {
 				result: {
 					success: false,
 					output: "",
-					error: `工具 "${tool.name}" 未安装。${tool.installHint || ""}`,
+					error: t("errors.toolNotInstalled", {
+						toolName: tool.name,
+						hint: tool.installHint || "",
+					}),
 				},
 				tool,
 			};
@@ -81,7 +85,10 @@ export class ToolCallHandler implements IToolCallHandler {
 				result: {
 					success: false,
 					output: "",
-					error: `工具 "${tool.name}" 没有动作 "${actionName}"`,
+					error: t("errors.toolActionNotFound", {
+						toolName: tool.name,
+						actionName,
+					}),
 				},
 				tool,
 			};
@@ -96,7 +103,9 @@ export class ToolCallHandler implements IToolCallHandler {
 				result: {
 					success: false,
 					output: "",
-					error: `参数解析失败: ${e instanceof Error ? e.message : String(e)}`,
+					error: t("errors.paramParseFailed", {
+						message: e instanceof Error ? e.message : String(e),
+					}),
 				},
 				tool,
 				action,
@@ -116,7 +125,9 @@ export class ToolCallHandler implements IToolCallHandler {
 				success: execResult.success,
 				output: execResult.success
 					? execResult.stdout
-					: execResult.error || execResult.stderr || "执行失败",
+					: execResult.error ||
+						execResult.stderr ||
+						t("errors.executionFailed"),
 				error: execResult.success
 					? undefined
 					: execResult.error || execResult.stderr,
@@ -139,9 +150,9 @@ export class ToolCallHandler implements IToolCallHandler {
 			// 构建工具结果消息
 			let content: string;
 			if (result.success) {
-				content = result.output || "(执行成功，无输出)";
+				content = result.output || t("common.executionSuccess");
 			} else {
-				content = `Error: ${result.error || "未知错误"}`;
+				content = `Error: ${result.error || t("errors.unknownError")}`;
 			}
 
 			// 添加执行信息

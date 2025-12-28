@@ -10,6 +10,7 @@ import {
 	type ExecutionResult,
 	paramsToJsonSchema,
 } from "../executor.js";
+import { t } from "../../../i18n/index.js";
 
 export type McpTool = {
 	name: string;
@@ -64,14 +65,14 @@ export class InProcessMcpProvider {
 		// list_available_tools
 		tools.push({
 			name: "list_available_tools",
-			description: "列出所有可用/未安装的本地开发工具",
+			description: t("tools.listToolsDesc"),
 			inputSchema: { type: "object", properties: {}, required: [] },
 		});
 
 		// get_tools_stats
 		tools.push({
 			name: "get_tools_stats",
-			description: "获取工具统计信息",
+			description: t("tools.toolStatsDesc"),
 			inputSchema: { type: "object", properties: {}, required: [] },
 		});
 
@@ -107,7 +108,7 @@ export class InProcessMcpProvider {
 		const mapping = this.toolMap.get(name);
 		if (!mapping) {
 			return {
-				content: [{ type: "text", text: `未找到工具: ${name}` }],
+				content: [{ type: "text", text: t("tools.toolNotFoundMcp", { name }) }],
 				isError: true,
 			};
 		}
@@ -168,7 +169,7 @@ export class InProcessMcpProvider {
 				content: [
 					{
 						type: "text",
-						text: result.stdout || "(无输出)",
+						text: result.stdout || t("common.noOutput"),
 					},
 				],
 			};
@@ -177,7 +178,7 @@ export class InProcessMcpProvider {
 				content: [
 					{
 						type: "text",
-						text: `错误: ${result.error || result.stderr || "命令执行失败"}\n退出码: ${result.exitCode}`,
+						text: `Error: ${result.error || result.stderr || t("errors.commandExecutionFailed")}\nExit code: ${result.exitCode}`,
 					},
 				],
 				isError: true,

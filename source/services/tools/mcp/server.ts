@@ -9,6 +9,7 @@ import type { ToolRegistry } from "../registry.js";
 import type { DiscoveredTool, ToolAction, ToolParameter } from "../types.js";
 import { executeToolAction, paramsToJsonSchema } from "../executor.js";
 import { VERSION } from "../../../constants/meta.js";
+import { t } from "../../../i18n/index.js";
 
 /**
  * 将 ToolParameter 数组转换为 Zod Schema
@@ -69,7 +70,7 @@ export function createToolsMcpServer(registry: ToolRegistry): McpServer {
 	// 注册工具列表查询
 	server.registerTool(
 		"list_available_tools",
-		{ description: "列出所有可用/未安装的本地开发工具" },
+		{ description: t("tools.listToolsDesc") },
 		async () => {
 			const installed = registry.getInstalled().map((t) => ({
 				id: t.id,
@@ -106,7 +107,7 @@ export function createToolsMcpServer(registry: ToolRegistry): McpServer {
 	// 注册工具统计
 	server.registerTool(
 		"get_tools_stats",
-		{ description: "获取工具统计信息" },
+		{ description: t("tools.toolStatsDesc") },
 		async () => {
 			const stats = registry.getStats();
 			return {
@@ -142,7 +143,7 @@ export function createToolsMcpServer(registry: ToolRegistry): McpServer {
 							content: [
 								{
 									type: "text" as const,
-									text: result.stdout || "(无输出)",
+									text: result.stdout || t("common.noOutput"),
 								},
 							],
 						};
@@ -151,7 +152,7 @@ export function createToolsMcpServer(registry: ToolRegistry): McpServer {
 							content: [
 								{
 									type: "text" as const,
-									text: `错误: ${result.error || result.stderr || "命令执行失败"}\n退出码: ${result.exitCode}`,
+									text: `Error: ${result.error || result.stderr || t("errors.commandExecutionFailed")}\nExit code: ${result.exitCode}`,
 								},
 							],
 							isError: true,
@@ -182,7 +183,7 @@ export function getToolsAsJsonSchema(registry: ToolRegistry): Array<{
 	// list_available_tools
 	tools.push({
 		name: "list_available_tools",
-		description: "列出所有可用/未安装的本地开发工具",
+		description: t("tools.listToolsDesc"),
 		parameters: { type: "object", properties: {}, required: [] },
 	});
 

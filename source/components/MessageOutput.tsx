@@ -317,7 +317,7 @@ export default function MessageOutput({
 
 					// 思考块头部行
 					const isReasoningCollapsed = msg.reasoningCollapsed ?? false;
-					const headerSymbol = isReasoningCollapsed ? "▶" : "▼";
+					const headerSymbol = isReasoningCollapsed ? "▸" : "▼";
 					const headerText = isReasoningCollapsed
 						? `${headerSymbol} ${t("message.thinkingProcess")} (${totalReasoningLines} ${t("message.lines")})`
 						: `${headerSymbol} ${t("message.thinkingProcess")}`;

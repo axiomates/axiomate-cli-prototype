@@ -233,7 +233,7 @@ export default function App({ initResult }: Props) {
 				setMessages((prev) => [
 					...prev,
 					{
-						content: `⚠️ ${buildResult.truncationNotice}`,
+						content: `${buildResult.truncationNotice}`,
 						type: "system" as const,
 						markdown: false,
 					},

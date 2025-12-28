@@ -6,6 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { readdirSync, statSync } from "fs";
 import { join, normalize } from "path";
+import { t } from "../../../i18n/index.js";
 
 /**
  * 文件项类型
@@ -108,7 +109,7 @@ export function useFileSelect(
 				setFiles(filtered);
 			}
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "读取目录失败");
+			setError(err instanceof Error ? err.message : t("errors.readDirFailed"));
 			setFiles([]);
 		} finally {
 			setLoading(false);

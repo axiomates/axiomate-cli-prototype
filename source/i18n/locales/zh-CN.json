@@ -159,7 +159,13 @@
 		"streamError": "流式传输出错：{{error}}",
 		"toolExecuting": "执行工具：{{tool}}",
 		"toolSuccess": "工具执行成功",
-		"toolError": "工具执行失败：{{error}}"
+		"toolError": "工具执行失败：{{error}}",
+		"filesOmitted": "⚠️ 上下文空间不足，{{count}} 个文件内容被完全省略",
+		"contentOmitted": "[内容因上下文限制被省略]",
+		"filesTruncated": "⚠️ {{count}} 个文件内容被截断以适应上下文限制",
+		"fileSummary": "包含 {{count}} 个文件: {{files}}",
+		"directory": "目录 {{path}}",
+		"file": "文件 {{path}}"
 	},
 	"session": {
 		"created": "已创建新会话：{{name}}",
@@ -186,14 +192,25 @@
 		"linesCount": "{{count}} 行",
 		"scrollUpHint": "↑ 还有 {{count}} 行 (PageUp 翻页)",
 		"scrollDownHint": "↓ 还有 {{count}} 行 (PageDown 翻页)",
-		"groupLineCount": "({{count}} 行)"
+		"groupLineCount": "({{count}} 行)",
+		"systemMessage": "(系统)"
 	},
 	"errors": {
 		"fileNotFound": "文件未找到：{{path}}",
 		"readError": "读取文件出错：{{path}}",
+		"readDirFailed": "读取目录失败",
 		"parseError": "解析错误：{{message}}",
 		"networkError": "网络错误：{{message}}",
-		"apiError": "API 错误：{{message}}"
+		"apiError": "API 错误：{{message}}",
+		"mcpServerStartFailed": "MCP Server 启动失败:",
+		"toolNotFound": "工具 \"{{toolId}}\" 未找到",
+		"toolNotInstalled": "工具 \"{{toolName}}\" 未安装。{{hint}}",
+		"toolActionNotFound": "工具 \"{{toolName}}\" 没有动作 \"{{actionName}}\"",
+		"paramParseFailed": "参数解析失败: {{message}}",
+		"executionFailed": "执行失败",
+		"unknownError": "未知错误",
+		"maxToolCallsReached": "已达到最大工具调用轮数限制。",
+		"commandExecutionFailed": "命令执行失败"
 	},
 	"toolCategories": {
 		"vcs": "版本控制",
@@ -203,8 +220,14 @@
 		"diff": "差异工具",
 		"container": "容器",
 		"build": "构建工具",
+		"package": "包管理",
 		"database": "数据库",
+		"web": "网络工具",
 		"other": "其他"
+	},
+	"toolList": {
+		"notInstalled": "✗ 未安装",
+		"installHint": "安装: {{hint}}"
 	},
 	"message": {
 		"thinkingProcess": "思考过程",
@@ -228,6 +251,18 @@
 		"installed": "已安装",
 		"notInstalled": "未安装",
 		"version": "版本",
-		"waiting": "等待中..."
+		"waiting": "等待中...",
+		"noOutput": "(无输出)",
+		"executionSuccess": "(执行成功，无输出)"
+	},
+	"tools": {
+		"webKeywords": ["网页", "网站", "链接"],
+		"contentTruncated": "\n[... 内容已截断，共 {{total}} 行，仅显示前 {{kept}} 行 ...]",
+		"listToolsDesc": "列出所有可用/未安装的本地开发工具",
+		"toolStatsDesc": "获取工具统计信息",
+		"toolNotFoundMcp": "未找到工具: {{name}}",
+		"fetchWebDesc": "获取网页内容",
+		"fetchWebActionDesc": "获取网页内容并转换为文本",
+		"urlParamDesc": "要获取的网页 URL"
 	}
 }

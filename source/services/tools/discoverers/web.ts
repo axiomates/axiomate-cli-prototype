@@ -4,6 +4,7 @@
  */
 
 import type { DiscoveredTool } from "../types.js";
+import { t } from "../../../i18n/index.js";
 
 /**
  * 创建 Web Fetch 工具
@@ -13,7 +14,7 @@ export async function detectWebFetch(): Promise<DiscoveredTool> {
 	return {
 		id: "web",
 		name: "Web Fetch",
-		description: "获取网页内容",
+		description: t("tools.fetchWebDesc"),
 		category: "web",
 		capabilities: ["execute"],
 		executablePath: "builtin",
@@ -22,12 +23,12 @@ export async function detectWebFetch(): Promise<DiscoveredTool> {
 		actions: [
 			{
 				name: "fetch",
-				description: "获取网页内容并转换为文本",
+				description: t("tools.fetchWebActionDesc"),
 				commandTemplate: "{{url}}",
 				parameters: [
 					{
 						name: "url",
-						description: "要获取的网页 URL",
+						description: t("tools.urlParamDesc"),
 						type: "string",
 						required: true,
 					},

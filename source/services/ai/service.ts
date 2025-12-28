@@ -27,6 +27,7 @@ import {
 	type CompactCheckResult,
 } from "./session.js";
 import { buildSystemPrompt, SYSTEM_PROMPT } from "../../constants/prompts.js";
+import { t } from "../../i18n/index.js";
 
 /**
  * 默认上下文窗口大小
@@ -461,11 +462,12 @@ export class AIService implements IAIService {
 		}
 
 		// 达到最大轮数
+		const maxToolCallsMsg = t("errors.maxToolCallsReached");
 		callbacks?.onEnd?.({
 			reasoning: reasoningContent,
-			content: fullContent || "已达到最大工具调用轮数限制。",
+			content: fullContent || maxToolCallsMsg,
 		});
-		return fullContent || "已达到最大工具调用轮数限制。";
+		return fullContent || maxToolCallsMsg;
 	}
 
 	/**
@@ -591,7 +593,7 @@ export class AIService implements IAIService {
 
 		// 达到最大轮数
 		return {
-			content: "已达到最大工具调用轮数限制。",
+			content: t("errors.maxToolCallsReached"),
 			sessionStatus: this.session.getStatus(),
 			historyTrimmed: false,
 		};

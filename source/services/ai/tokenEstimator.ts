@@ -3,6 +3,8 @@
  * 使用基于字符的启发式方法估算 token 数量（无外部依赖）
  */
 
+import { t } from "../../i18n/index.js";
+
 /**
  * 估算文本的 token 数量
  *
@@ -115,7 +117,10 @@ export function truncateToFit(
 	}
 
 	// 添加截断提示
-	const notice = `\n[... 内容已截断，共 ${originalLines} 行，仅显示前 ${keptLines} 行 ...]`;
+	const notice = t("tools.contentTruncated", {
+		total: originalLines,
+		kept: keptLines,
+	});
 	result += notice;
 
 	return {

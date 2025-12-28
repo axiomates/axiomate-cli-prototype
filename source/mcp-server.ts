@@ -11,6 +11,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ToolRegistry } from "./services/tools/registry.js";
 import { createToolsMcpServer } from "./services/tools/mcp/server.js";
+import { t } from "./i18n/index.js";
 
 async function main(): Promise<void> {
 	// 发现本地工具
@@ -35,6 +36,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-	console.error("MCP Server 启动失败:", err);
+	console.error(t("errors.mcpServerStartFailed"), err);
 	process.exit(1);
 });

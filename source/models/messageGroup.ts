@@ -145,7 +145,7 @@ export function generateGroupHeaderParts(
 
 	const userPreview = group.userMessage
 		? truncateText(group.userMessage.content, Math.floor(availableWidth * 0.45))
-		: "(系统)";
+		: t("messageOutput.systemMessage");
 
 	const responsePreview =
 		group.responses.length > 0

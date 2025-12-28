@@ -159,7 +159,13 @@
 		"streamError": "ストリーミング中にエラーが発生: {{error}}",
 		"toolExecuting": "ツールを実行中: {{tool}}",
 		"toolSuccess": "ツールの実行が成功しました",
-		"toolError": "ツールの実行に失敗しました: {{error}}"
+		"toolError": "ツールの実行に失敗しました: {{error}}",
+		"filesOmitted": "⚠️ コンテキスト容量不足のため、{{count}}個のファイル内容が完全に省略されました",
+		"contentOmitted": "[コンテキスト制限により内容が省略されました]",
+		"filesTruncated": "⚠️ {{count}}個のファイル内容がコンテキスト制限に合わせて切り詰められました",
+		"fileSummary": "{{count}}個のファイルを含む: {{files}}",
+		"directory": "ディレクトリ {{path}}",
+		"file": "ファイル {{path}}"
 	},
 	"session": {
 		"created": "新しいセッションを作成しました: {{name}}",
@@ -186,14 +192,25 @@
 		"linesCount": "{{count}}行",
 		"scrollUpHint": "↑ 上に{{count}}行（PageUpでスクロール）",
 		"scrollDownHint": "↓ 下に{{count}}行（PageDownでスクロール）",
-		"groupLineCount": "({{count}}行)"
+		"groupLineCount": "({{count}}行)",
+		"systemMessage": "(システム)"
 	},
 	"errors": {
 		"fileNotFound": "ファイルが見つかりません: {{path}}",
 		"readError": "ファイルの読み取りエラー: {{path}}",
+		"readDirFailed": "ディレクトリの読み取りに失敗しました",
 		"parseError": "解析エラー: {{message}}",
 		"networkError": "ネットワークエラー: {{message}}",
-		"apiError": "APIエラー: {{message}}"
+		"apiError": "APIエラー: {{message}}",
+		"mcpServerStartFailed": "MCP Serverの起動に失敗しました:",
+		"toolNotFound": "ツール \"{{toolId}}\" が見つかりません",
+		"toolNotInstalled": "ツール \"{{toolName}}\" がインストールされていません。{{hint}}",
+		"toolActionNotFound": "ツール \"{{toolName}}\" にはアクション \"{{actionName}}\" がありません",
+		"paramParseFailed": "パラメータの解析に失敗しました: {{message}}",
+		"executionFailed": "実行に失敗しました",
+		"unknownError": "不明なエラー",
+		"maxToolCallsReached": "最大ツール呼び出し回数の制限に達しました。",
+		"commandExecutionFailed": "コマンドの実行に失敗しました"
 	},
 	"toolCategories": {
 		"vcs": "バージョン管理",
@@ -203,8 +220,14 @@
 		"diff": "差分ツール",
 		"container": "コンテナ",
 		"build": "ビルドツール",
+		"package": "パッケージ管理",
 		"database": "データベース",
+		"web": "Webツール",
 		"other": "その他"
+	},
+	"toolList": {
+		"notInstalled": "✗ 未インストール",
+		"installHint": "インストール: {{hint}}"
 	},
 	"message": {
 		"thinkingProcess": "思考中",
@@ -228,6 +251,18 @@
 		"installed": "インストール済み",
 		"notInstalled": "未インストール",
 		"version": "バージョン",
-		"waiting": "待機中..."
+		"waiting": "待機中...",
+		"noOutput": "(出力なし)",
+		"executionSuccess": "(実行成功、出力なし)"
+	},
+	"tools": {
+		"webKeywords": ["ウェブページ", "ウェブサイト", "リンク", "URL"],
+		"contentTruncated": "\n[... 内容が切り詰められました、全{{total}}行、最初の{{kept}}行を表示 ...]",
+		"listToolsDesc": "利用可能/未インストールのローカル開発ツールをすべて表示",
+		"toolStatsDesc": "ツール統計情報を取得",
+		"toolNotFoundMcp": "ツールが見つかりません: {{name}}",
+		"fetchWebDesc": "ウェブページの内容を取得",
+		"fetchWebActionDesc": "ウェブページの内容を取得してテキストに変換",
+		"urlParamDesc": "取得するウェブページのURL"
 	}
 }

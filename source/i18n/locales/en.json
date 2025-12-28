@@ -159,7 +159,13 @@
 		"streamError": "Error during streaming: {{error}}",
 		"toolExecuting": "Executing tool: {{tool}}",
 		"toolSuccess": "Tool executed successfully",
-		"toolError": "Tool execution failed: {{error}}"
+		"toolError": "Tool execution failed: {{error}}",
+		"filesOmitted": "⚠️ Insufficient context space, {{count}} file(s) content completely omitted",
+		"contentOmitted": "[Content omitted due to context limit]",
+		"filesTruncated": "⚠️ {{count}} file(s) content truncated to fit context limit",
+		"fileSummary": "Contains {{count}} file(s): {{files}}",
+		"directory": "directory {{path}}",
+		"file": "file {{path}}"
 	},
 	"session": {
 		"created": "Created new session: {{name}}",
@@ -186,14 +192,25 @@
 		"linesCount": "{{count}} lines",
 		"scrollUpHint": "↑ {{count}} more lines (PageUp to scroll)",
 		"scrollDownHint": "↓ {{count}} more lines (PageDown to scroll)",
-		"groupLineCount": "({{count}} lines)"
+		"groupLineCount": "({{count}} lines)",
+		"systemMessage": "(System)"
 	},
 	"errors": {
 		"fileNotFound": "File not found: {{path}}",
 		"readError": "Error reading file: {{path}}",
+		"readDirFailed": "Failed to read directory",
 		"parseError": "Parse error: {{message}}",
 		"networkError": "Network error: {{message}}",
-		"apiError": "API error: {{message}}"
+		"apiError": "API error: {{message}}",
+		"mcpServerStartFailed": "MCP Server failed to start:",
+		"toolNotFound": "Tool \"{{toolId}}\" not found",
+		"toolNotInstalled": "Tool \"{{toolName}}\" is not installed. {{hint}}",
+		"toolActionNotFound": "Tool \"{{toolName}}\" has no action \"{{actionName}}\"",
+		"paramParseFailed": "Parameter parsing failed: {{message}}",
+		"executionFailed": "Execution failed",
+		"unknownError": "Unknown error",
+		"maxToolCallsReached": "Maximum tool call rounds limit reached.",
+		"commandExecutionFailed": "Command execution failed"
 	},
 	"toolCategories": {
 		"vcs": "Version Control",
@@ -203,8 +220,14 @@
 		"diff": "Diff Tool",
 		"container": "Container",
 		"build": "Build Tool",
+		"package": "Package Manager",
 		"database": "Database",
+		"web": "Web Tools",
 		"other": "Other"
+	},
+	"toolList": {
+		"notInstalled": "✗ Not installed",
+		"installHint": "Install: {{hint}}"
 	},
 	"message": {
 		"thinkingProcess": "Thinking",
@@ -228,6 +251,18 @@
 		"installed": "Installed",
 		"notInstalled": "Not Installed",
 		"version": "Version",
-		"waiting": "waiting..."
+		"waiting": "waiting...",
+		"noOutput": "(no output)",
+		"executionSuccess": "(execution succeeded, no output)"
+	},
+	"tools": {
+		"webKeywords": ["webpage", "website", "link", "url"],
+		"contentTruncated": "\n[... content truncated, {{total}} lines total, showing first {{kept}} lines ...]",
+		"listToolsDesc": "List all available/not installed local development tools",
+		"toolStatsDesc": "Get tool statistics",
+		"toolNotFoundMcp": "Tool not found: {{name}}",
+		"fetchWebDesc": "Fetch webpage content",
+		"fetchWebActionDesc": "Fetch webpage content and convert to text",
+		"urlParamDesc": "The URL of the webpage to fetch"
 	}
 }

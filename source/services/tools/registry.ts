@@ -10,6 +10,7 @@ import type {
 	IToolRegistry,
 } from "./types.js";
 import { discoverAllTools } from "./discoverers/index.js";
+import { t } from "../../i18n/index.js";
 
 export class ToolRegistry implements IToolRegistry {
 	tools: Map<string, DiscoveredTool> = new Map();
@@ -124,31 +125,21 @@ export class ToolRegistry implements IToolRegistry {
 			categories.set(tool.category, list);
 		}
 
-		// 类别显示名称
-		const categoryNames: Record<ToolCategory, string> = {
-			vcs: "版本控制",
-			runtime: "运行时",
-			shell: "Shell",
-			diff: "比较工具",
-			ide: "IDE",
-			build: "构建工具",
-			package: "包管理",
-			container: "容器",
-			database: "数据库",
-			web: "网络工具",
-			other: "其他",
-		};
-
 		// 输出每个类别
 		for (const [category, tools] of categories) {
-			lines.push(`\n## ${categoryNames[category] || category}`);
+			const categoryName = t(`toolCategories.${category}`);
+			lines.push(`\n## ${categoryName || category}`);
 			lines.push(""); // 空行让 marked 正确解析段落
 			for (const tool of tools) {
-				const status = tool.installed ? `✓ ${tool.version || ""}` : "✗ 未安装";
+				const status = tool.installed
+					? `✓ ${tool.version || ""}`
+					: t("toolList.notInstalled");
 				// 每个工具作为单独段落（需要前后空行）
 				lines.push(`**${tool.name}** \`${tool.id}\` ${status}`);
 				if (!tool.installed && tool.installHint) {
-					lines.push(`> 安装: ${tool.installHint.split("\n")[0]}`);
+					lines.push(
+						`> ${t("toolList.installHint", { hint: tool.installHint.split("\n")[0] })}`,
+					);
 				}
 				lines.push(""); // 段落分隔
 			}
