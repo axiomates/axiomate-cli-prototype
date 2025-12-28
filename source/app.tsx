@@ -2,7 +2,7 @@ import { Box, useApp, useInput } from "ink";
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import AutocompleteInput from "./components/AutocompleteInput/index.js";
 import Divider from "./components/Divider.js";
-import Header from "./components/Header.js";
+import StatusBar from "./components/StatusBar.js";
 import MessageOutput, { type Message } from "./components/MessageOutput.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
 import { SLASH_COMMANDS } from "./constants/commands.js";
@@ -1004,9 +1004,9 @@ export default function App({ initResult }: Props) {
 				<Divider />
 			</Box>
 
-			{/* 标题区域 - 固定在底部 */}
+			{/* 状态栏 - 固定在底部 */}
 			<Box flexShrink={0}>
-				<Header focusMode={focusMode} />
+				<StatusBar focusMode={focusMode} />
 			</Box>
 		</Box>
 	);

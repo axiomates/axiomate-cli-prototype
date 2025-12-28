@@ -9,7 +9,7 @@ type Props = {
 	focusMode?: FocusMode;
 };
 
-export default function Header({ focusMode = "input" }: Props) {
+export default function StatusBar({ focusMode = "input" }: Props) {
 	const { t } = useTranslation();
 	const isOutputMode = focusMode === "output";
 
