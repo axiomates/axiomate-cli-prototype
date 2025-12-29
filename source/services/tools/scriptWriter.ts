@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { platform } from "node:os";
 import { ensureDir } from "./fileOperations.js";
 
-export type ScriptType = "powershell" | "pwsh" | "python" | "cmd" | "bash";
+export type ScriptType = "pwsh" | "powershell" | "python" | "cmd" | "bash";
 
 const SCRIPT_EXTENSIONS: Record<ScriptType, string> = {
 	powershell: ".ps1",

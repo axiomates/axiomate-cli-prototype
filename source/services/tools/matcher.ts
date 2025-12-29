@@ -416,16 +416,13 @@ export class ToolMatcher implements IToolMatcher {
 			addTool(toolId);
 		}
 
-		// 2. Always add Python if available (preferred for file operations due to better encoding support)
-		addTool("python");
-
-		// 3. Detect project type
+		// 2. Detect project type
 		let projectType = context.projectType;
 		if (!projectType && context.cwd) {
 			projectType = detectProjectType(context.cwd);
 		}
 
-		// 4. Add project-specific tools
+		// 3. Add project-specific tools
 		if (projectType) {
 			const projectTools = PROJECT_TYPE_TOOLS[projectType] || [];
 			for (const toolId of projectTools) {
@@ -433,7 +430,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 5. Detect tools from directory contents (.git, Dockerfile, CMakeLists.txt, etc.)
+		// 4. Detect tools from directory contents (.git, Dockerfile, CMakeLists.txt, etc.)
 		if (context.cwd) {
 			const detectedTools = this.detectToolsFromDirectory(context.cwd);
 			for (const toolId of detectedTools) {
@@ -441,7 +438,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 6. Infer tools from selected files
+		// 5. Infer tools from selected files
 		if (context.selectedFiles) {
 			for (const file of context.selectedFiles) {
 				const ext = path.extname(file).toLowerCase();
@@ -459,7 +456,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 7. Infer tools from current files
+		// 6. Infer tools from current files
 		if (context.currentFiles) {
 			for (const file of context.currentFiles) {
 				const ext = path.extname(file).toLowerCase();
