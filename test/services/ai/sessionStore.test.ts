@@ -159,7 +159,6 @@ describe("SessionStore", () => {
 
 			const session = store.createSession();
 			expect(session.name).toBe("New Session");
-			expect(session.modelId).toBe("test-model");
 		});
 
 		it("should create session with custom name", async () => {
@@ -485,9 +484,8 @@ describe("SessionStore", () => {
 						name: "Old",
 						createdAt: 1000,
 						updatedAt: 1000,
-						tokenUsage: 0,
-						messageCount: 0,
-						modelId: "test-model",
+						tokenUsage: 100,
+						messageCount: 5,
 						isActive: false,
 					},
 					{
@@ -495,9 +493,8 @@ describe("SessionStore", () => {
 						name: "Recent",
 						createdAt: 2000,
 						updatedAt: 3000,
-						tokenUsage: 0,
-						messageCount: 0,
-						modelId: "test-model",
+						tokenUsage: 200,
+						messageCount: 10,
 						isActive: false,
 					},
 				],
@@ -511,6 +508,7 @@ describe("SessionStore", () => {
 			const store = new SessionStore(4096);
 			await store.initialize();
 
+			// Should select most recent session (sorted by updatedAt desc)
 			expect(store.getActiveSessionId()).toBe("recent-session");
 		});
 
@@ -524,9 +522,8 @@ describe("SessionStore", () => {
 						name: "Existing",
 						createdAt: 1000,
 						updatedAt: 2000,
-						tokenUsage: 0,
-						messageCount: 0,
-						modelId: "test-model",
+						tokenUsage: 100,
+						messageCount: 5,
 						isActive: false,
 					},
 				],

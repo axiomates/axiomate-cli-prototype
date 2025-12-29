@@ -258,7 +258,7 @@ describe("AIService", () => {
 
 			await service.sendMessage("Hello", { cwd: "/project" });
 
-			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node");
+			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node", false);
 		});
 
 		it("should not re-inject context on subsequent messages", async () => {

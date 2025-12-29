@@ -14,6 +14,7 @@ vi.mock("../../source/utils/config.js", () => ({
 	}),
 	isThinkingEnabled: vi.fn(() => false),
 	isSuggestionEnabled: vi.fn(() => true),
+	isPlanModeEnabled: vi.fn(() => false),
 	getSuggestionModelId: vi.fn(() => "model2"),
 }));
 

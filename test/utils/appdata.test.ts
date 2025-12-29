@@ -5,7 +5,6 @@ import * as path from "node:path";
 import {
 	getAppDataPath,
 	getLogsPath,
-	getHistoryPath,
 	getSessionsPath,
 	initAppData,
 } from "../../source/utils/appdata.js";
@@ -33,13 +32,6 @@ describe("appdata", () => {
 		it("should return logs subdirectory", () => {
 			const result = getLogsPath();
 			expect(result).toBe(path.join(mockHomeDir, ".axiomate", "logs"));
-		});
-	});
-
-	describe("getHistoryPath", () => {
-		it("should return history subdirectory", () => {
-			const result = getHistoryPath();
-			expect(result).toBe(path.join(mockHomeDir, ".axiomate", "history"));
 		});
 	});
 
@@ -77,15 +69,14 @@ describe("appdata", () => {
 			vi.mocked(fs.existsSync)
 				.mockReturnValueOnce(true) // 主目录存在
 				.mockReturnValueOnce(false) // logs 不存在
-				.mockReturnValueOnce(false) // history 不存在
 				.mockReturnValueOnce(false); // sessions 不存在
 
 			vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
 
 			initAppData();
 
-			// 应该创建 3 个子目录
-			expect(fs.mkdirSync).toHaveBeenCalledTimes(3);
+			// 应该创建 2 个子目录 (logs, sessions)
+			expect(fs.mkdirSync).toHaveBeenCalledTimes(2);
 		});
 	});
 });
