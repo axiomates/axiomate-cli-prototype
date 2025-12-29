@@ -216,7 +216,7 @@ export class AIService implements IAIService {
 	 * @param userMessage 用户消息
 	 * @param context 上下文信息
 	 * @param callbacks 流式回调
-	 * @param options 流式选项（包含 AbortSignal）
+	 * @param options 流式选项（包含 AbortSignal 和 planMode）
 	 */
 	async streamMessage(
 		userMessage: string,
@@ -227,8 +227,11 @@ export class AIService implements IAIService {
 		// 增强上下文
 		const enhancedContext = this.enhanceContext(context);
 
+		// Extract planMode from options (default false)
+		const planMode = options?.planMode ?? false;
+
 		// 确保上下文已注入到 System Prompt
-		this.ensureContextInSystemPrompt(enhancedContext);
+		this.ensureContextInSystemPrompt(enhancedContext, planMode);
 
 		// 创建检查点（在添加用户消息前）
 		const checkpoint = this.session.checkpoint();
@@ -236,8 +239,8 @@ export class AIService implements IAIService {
 		// 添加用户消息到 Session
 		this.session.addUserMessage(userMessage);
 
-		// 获取相关工具
-		const tools = this.getContextTools(enhancedContext);
+		// 获取相关工具 (plan mode only gets plan tool)
+		const tools = this.getContextTools(enhancedContext, planMode);
 
 		// 通知流式开始
 		callbacks?.onStart?.();
@@ -263,20 +266,31 @@ export class AIService implements IAIService {
 
 	/**
 	 * 确保上下文已注入到 System Prompt（仅首次调用时生效）
+	 * @param planMode Whether plan mode is enabled (from snapshot)
 	 */
-	private ensureContextInSystemPrompt(context: MatchContext): void {
+	private ensureContextInSystemPrompt(context: MatchContext, planMode: boolean = false): void {
 		if (this.contextInjected) return;
 
 		// 构建带上下文的 System Prompt
-		const prompt = buildSystemPrompt(context.cwd, context.projectType);
+		const prompt = buildSystemPrompt(context.cwd, context.projectType, planMode);
 		this.session.setSystemPrompt(prompt);
 		this.contextInjected = true;
 	}
 
 	/**
 	 * 获取上下文相关工具
+	 * @param planMode Whether plan mode is enabled (from snapshot)
 	 */
-	private getContextTools(context: MatchContext): OpenAITool[] {
+	private getContextTools(context: MatchContext, planMode: boolean = false): OpenAITool[] {
+		// Plan mode: only plan tool is available
+		if (planMode) {
+			const planTool = this.registry.getTool("plan");
+			if (planTool && planTool.installed) {
+				return toOpenAITools([planTool]);
+			}
+			return [];
+		}
+
 		if (!this.contextAwareEnabled) {
 			return [];
 		}

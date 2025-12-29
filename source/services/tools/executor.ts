@@ -7,12 +7,20 @@
  */
 
 import { spawn, type SpawnOptions } from "node:child_process";
+import { join, isAbsolute } from "node:path";
 import type { DiscoveredTool, ToolAction, ToolParameter } from "./types.js";
 import {
 	writeScript,
 	buildScriptCommand,
 	type ScriptType,
 } from "./scriptWriter.js";
+import {
+	readFileContent,
+	writeFileContent,
+	editFileContent,
+	type WriteMode,
+} from "./fileWriter.js";
+import { getPlanFilePath } from "./discoverers/plan.js";
 import { getCurrentModelId, getModelById } from "../../utils/config.js";
 
 // Map tool IDs to script types for run_script_content action
@@ -231,6 +239,98 @@ export async function executeToolAction(
 	// Handle builtin web fetch tool
 	if (tool.id === "web" && action.name === "fetch") {
 		return executeWebFetch(filledParams.url as string, options?.timeout);
+	}
+
+	// Handle file operations
+	if (action.commandTemplate === "__FILE_READ__") {
+		const path = filledParams.path as string;
+		const cwd = options?.cwd || process.cwd();
+		const fullPath = isAbsolute(path) ? path : join(cwd, path);
+		const result = readFileContent(fullPath);
+		return {
+			success: result.success,
+			stdout: result.content || "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__FILE_WRITE__") {
+		const path = filledParams.path as string;
+		const content = filledParams.content as string;
+		const mode = (filledParams.mode as WriteMode) || "overwrite";
+		const cwd = options?.cwd || process.cwd();
+		const fullPath = isAbsolute(path) ? path : join(cwd, path);
+		const result = writeFileContent(fullPath, content, mode);
+		return {
+			success: result.success,
+			stdout: result.success ? `Written to ${result.path}` : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__FILE_EDIT__") {
+		const path = filledParams.path as string;
+		const oldContent = filledParams.old_content as string;
+		const newContent = filledParams.new_content as string;
+		const replaceAll = filledParams.replace_all === true;
+		const cwd = options?.cwd || process.cwd();
+		const fullPath = isAbsolute(path) ? path : join(cwd, path);
+		const result = editFileContent(fullPath, oldContent, newContent, replaceAll);
+		return {
+			success: result.success,
+			stdout: result.success
+				? `Replaced ${result.replaced} occurrence(s) in ${result.path}`
+				: "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	// Handle plan operations (uses file operations but with fixed path)
+	if (action.commandTemplate === "__PLAN_READ__") {
+		const cwd = options?.cwd || process.cwd();
+		const planPath = getPlanFilePath(cwd);
+		const result = readFileContent(planPath);
+		return {
+			success: true, // Always success, even if file doesn't exist
+			stdout: result.content || "[No plan file exists yet]",
+			stderr: "",
+			exitCode: 0,
+		};
+	}
+
+	if (action.commandTemplate === "__PLAN_WRITE__") {
+		const cwd = options?.cwd || process.cwd();
+		const planPath = getPlanFilePath(cwd);
+		const content = filledParams.content as string;
+		const result = writeFileContent(planPath, content, "overwrite");
+		return {
+			success: result.success,
+			stdout: result.success ? `Plan written to ${result.path}` : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__PLAN_EDIT__") {
+		const cwd = options?.cwd || process.cwd();
+		const planPath = getPlanFilePath(cwd);
+		const oldContent = filledParams.old_content as string;
+		const newContent = filledParams.new_content as string;
+		const result = editFileContent(planPath, oldContent, newContent, false);
+		return {
+			success: result.success,
+			stdout: result.success ? "Plan updated" : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
 	}
 
 	// Handle special run_script_content action

@@ -15,6 +15,7 @@ import {
 	setSuggestionModelId,
 	setSuggestionEnabled,
 	setThinkingEnabled,
+	setPlanModeEnabled,
 } from "../utils/config.js";
 import { t, setLocale } from "../i18n/index.js";
 import { getSessionStore } from "./ai/sessionStore.js";
@@ -374,6 +375,25 @@ const internalHandlers: Record<string, InternalHandler> = {
 		return {
 			type: "message" as const,
 			content: t("commandHandler.thinkingDisabled"),
+		};
+	},
+
+	// Plan mode handlers
+	plan_on: () => {
+		setPlanModeEnabled(true);
+		clearCommandCache();
+		return {
+			type: "message" as const,
+			content: t("commandHandler.planEnabled"),
+		};
+	},
+
+	plan_off: () => {
+		setPlanModeEnabled(false);
+		clearCommandCache();
+		return {
+			type: "message" as const,
+			content: t("commandHandler.planDisabled"),
 		};
 	},
 };

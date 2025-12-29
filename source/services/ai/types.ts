@@ -97,6 +97,8 @@ export type StreamContent = {
 export type StreamOptions = {
 	/** 用于取消请求的 AbortSignal */
 	signal?: AbortSignal;
+	/** Whether plan mode is enabled (affects tool selection and system prompt) */
+	planMode?: boolean;
 };
 
 // ============================================================================

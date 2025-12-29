@@ -118,6 +118,12 @@
 			"onDesc": "思考モードを有効にする",
 			"offDesc": "思考モードを無効にする"
 		},
+		"plan": {
+			"name": "plan",
+			"description": "プランモード",
+			"onDesc": "プランモードを有効化（読み取り専用）",
+			"offDesc": "プランモードを無効化"
+		},
 		"session": {
 			"name": "session",
 			"description": "セッションを管理",
@@ -149,7 +155,9 @@
 		"suggestionModelSwitched": "提案モデルを切り替えました: {{model}}",
 		"thinkingEnabled": "AI思考モードが有効になりました",
 		"thinkingDisabled": "AI思考モードが無効になりました",
-		"thinkingAutoDisabled": "⚠️ このモデルは思考モードをサポートしていないため、思考モードが自動的に無効になりました。"
+		"thinkingAutoDisabled": "⚠️ このモデルは思考モードをサポートしていないため、思考モードが自動的に無効になりました。",
+		"planEnabled": "プランモードが有効になりました - AIは探索と計画のみを行い、変更は行いません",
+		"planDisabled": "プランモードが無効になりました - AIはアクションを実行できます"
 	},
 	"ai": {
 		"notConfigured": "AIサービスが設定されていません。API設定を確認してください。",

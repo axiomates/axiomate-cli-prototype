@@ -35,7 +35,7 @@ import {
 import type { InitResult } from "./utils/init.js";
 import { resumeInput } from "./utils/stdin.js";
 import { t } from "./i18n/index.js";
-import { isThinkingEnabled, currentModelSupportsThinking } from "./utils/config.js";
+import { isThinkingEnabled, currentModelSupportsThinking, isPlanModeEnabled } from "./utils/config.js";
 import {
 	initSessionStore,
 	SessionStore,
@@ -317,6 +317,7 @@ export default function App({ initResult }: Props) {
 			};
 
 			// 使用流式 API 发送给 AI
+			// Pass planMode from queued message snapshot
 			return aiService.streamMessage(
 				buildResult.content,
 				context,
@@ -325,7 +326,7 @@ export default function App({ initResult }: Props) {
 					onChunk: options?.streamCallbacks?.onChunk,
 					onEnd: options?.streamCallbacks?.onEnd,
 				},
-				{ signal: options?.signal },
+				{ signal: options?.signal, planMode: queuedMessage.planMode },
 			);
 		},
 		[],
@@ -582,7 +583,8 @@ export default function App({ initResult }: Props) {
 			const isQueueProcessing = messageQueueRef.current.isProcessing();
 
 			// 加入消息队列（异步处理）
-			const messageId = messageQueueRef.current.enqueue(content, files);
+			// Capture plan mode state at enqueue time (snapshot for concurrency safety)
+			const messageId = messageQueueRef.current.enqueue(content, files, isPlanModeEnabled());
 
 			if (isUserMessage) {
 				setMessages((prev) => {

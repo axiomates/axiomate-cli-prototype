@@ -14,11 +14,14 @@ export type ToolCategory =
 	| "container" // 容器 (docker, podman)
 	| "database" // 数据库工具 (mysql, psql, sqlite3)
 	| "web" // 网络工具 (web fetch)
+	| "utility" // 通用工具 (file, plan)
 	| "other";
 
 // 工具能力
 export type ToolCapability =
 	| "execute" // 可执行命令
+	| "read" // 读取文件
+	| "write" // 写入文件
 	| "diff" // 文件比较
 	| "merge" // 文件合并
 	| "edit" // 编辑文件

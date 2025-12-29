@@ -17,6 +17,8 @@ export type QueuedMessage = {
 	files: FileReference[];
 	/** 创建时间 */
 	createdAt: number;
+	/** Plan mode snapshot (captured at enqueue time) */
+	planMode: boolean;
 };
 
 /**
@@ -121,9 +123,10 @@ export class MessageQueue {
 	 * 添加消息到队列
 	 * @param content 消息内容
 	 * @param files 附带的文件
+	 * @param planMode Plan mode snapshot (captured at enqueue time)
 	 * @returns 消息 ID
 	 */
-	enqueue(content: string, files: FileReference[] = []): string {
+	enqueue(content: string, files: FileReference[] = [], planMode: boolean = false): string {
 		// 新消息入队时重置停止状态
 		this.stopped = false;
 
@@ -133,6 +136,7 @@ export class MessageQueue {
 			content,
 			files,
 			createdAt: Date.now(),
+			planMode,
 		};
 
 		this.queue.push(message);

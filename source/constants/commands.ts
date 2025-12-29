@@ -6,6 +6,7 @@ import {
 	isThinkingEnabled,
 	isSuggestionEnabled,
 	getSuggestionModelId,
+	isPlanModeEnabled,
 } from "../utils/config.js";
 import { t, addLocaleChangeListener } from "../i18n/index.js";
 import { getSessionStore } from "../services/ai/sessionStore.js";
@@ -121,6 +122,7 @@ export function getSlashCommands(): SlashCommand[] {
 	const currentSuggestionModelName = getCurrentSuggestionModelDisplay();
 	const thinkingStatus = isThinkingEnabled() ? t("common.on") : t("common.off");
 	const suggestionStatus = isSuggestionEnabled() ? t("common.on") : t("common.off");
+	const planStatus = isPlanModeEnabled() ? t("common.on") : t("common.off");
 
 	return [
 		{
@@ -148,6 +150,24 @@ export function getSlashCommands(): SlashCommand[] {
 					description: t("commands.thinking.offDesc"),
 					action: { type: "internal", handler: "thinking_off" },
 					prefix: isThinkingEnabled() ? "  " : "▸ ",
+				},
+			],
+		},
+		{
+			name: "plan",
+			description: `${t("commands.plan.description")} [${planStatus}]`,
+			children: [
+				{
+					name: "on",
+					description: t("commands.plan.onDesc"),
+					action: { type: "internal", handler: "plan_on" },
+					prefix: isPlanModeEnabled() ? "▸ " : "  ",
+				},
+				{
+					name: "off",
+					description: t("commands.plan.offDesc"),
+					action: { type: "internal", handler: "plan_off" },
+					prefix: isPlanModeEnabled() ? "  " : "▸ ",
 				},
 			],
 		},

@@ -118,6 +118,12 @@
 			"onDesc": "Enable thinking mode",
 			"offDesc": "Disable thinking mode"
 		},
+		"plan": {
+			"name": "plan",
+			"description": "Plan mode",
+			"onDesc": "Enable plan mode (read-only exploration)",
+			"offDesc": "Disable plan mode"
+		},
 		"session": {
 			"name": "session",
 			"description": "Manage sessions",
@@ -149,7 +155,9 @@
 		"suggestionModelSwitched": "Suggestion model switched to: {{model}}",
 		"thinkingEnabled": "AI thinking mode enabled",
 		"thinkingDisabled": "AI thinking mode disabled",
-		"thinkingAutoDisabled": "⚠️ Thinking mode has been automatically disabled as this model does not support it."
+		"thinkingAutoDisabled": "⚠️ Thinking mode has been automatically disabled as this model does not support it.",
+		"planEnabled": "Plan mode enabled - AI will explore and plan without making changes",
+		"planDisabled": "Plan mode disabled - AI can now execute actions"
 	},
 	"ai": {
 		"notConfigured": "AI service not configured. Please check your API settings.",

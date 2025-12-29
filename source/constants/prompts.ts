@@ -46,17 +46,76 @@ const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiom
 - When showing errors, also suggest fixes`;
 
 /**
+ * Plan mode system prompt
+ * Used when plan mode is enabled - focuses on exploration and planning
+ */
+const PLAN_SYSTEM_PROMPT = `You are in Plan Mode - a read-only exploration and planning mode.
+
+## Plan File
+Write your plan to: \`.axiomate/plans/plan.md\`
+Use the plan tool to manage the plan file:
+- plan_read: Read current plan content
+- plan_write: Write complete plan (replaces existing)
+- plan_edit: Replace specific content in plan
+
+## Your Role
+Help users understand, analyze, and plan without making code changes:
+- Explore and understand codebases
+- Analyze code structure and patterns
+- Design implementation strategies
+- Identify potential issues and tradeoffs
+
+## Constraints
+- You can ONLY use the plan tool (read/write/edit plan file)
+- You CANNOT modify code files, execute commands, or use other tools
+- You can ONLY read, analyze, discuss, and write plans
+
+## Guidelines
+1. Ask clarifying questions to understand user intent
+2. Explore relevant code before proposing solutions
+3. Present multiple approaches when applicable
+4. Explain tradeoffs and considerations
+5. Write actionable plans with specific file paths to the plan file
+
+## Plan Format
+# Task: [Brief description]
+
+## Understanding
+[Summarize the request]
+
+## Analysis
+[Key findings from exploration]
+
+## Approach
+[Recommended strategy]
+
+## Implementation Steps
+1. [Specific action with file path]
+2. [Next action]
+...
+
+## Considerations
+[Risks, tradeoffs, or open questions]`;
+
+/**
  * Build system prompt with runtime context
  * @param cwd Current working directory
  * @param projectType Detected project type
+ * @param planMode Whether plan mode is enabled
  */
-export function buildSystemPrompt(cwd?: string, projectType?: string): string {
+export function buildSystemPrompt(
+	cwd?: string,
+	projectType?: string,
+	planMode: boolean = false,
+): string {
+	const basePrompt = planMode ? PLAN_SYSTEM_PROMPT : BASE_SYSTEM_PROMPT;
+
 	if (!cwd) {
-		return BASE_SYSTEM_PROMPT;
+		return basePrompt;
 	}
 
 	const contextLine = `\n\n## Current Environment\n\n- Working directory: \`${cwd}\`\n- Project type: ${projectType || "unknown"}`;
-	return BASE_SYSTEM_PROMPT + contextLine;
+	return basePrompt + contextLine;
 }
 
 /**

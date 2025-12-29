@@ -47,6 +47,8 @@ export type Config = {
 	suggestionEnabled?: boolean;
 	/** 是否启用 AI 思考模式（可选，默认 false，只有用户手动设置时才写入文件） */
 	thinkingEnabled?: boolean;
+	/** 是否启用 Plan 模式（可选，默认 false，只有用户手动设置时才写入文件） */
+	planModeEnabled?: boolean;
 };
 
 /**
@@ -327,4 +329,20 @@ export function currentModelSupportsThinking(): boolean {
  */
 export function setThinkingEnabled(enabled: boolean): void {
 	updateConfig({ thinkingEnabled: enabled });
+}
+
+/**
+ * 检查是否启用 Plan 模式
+ * 默认为 false（如果配置文件中未指定）
+ */
+export function isPlanModeEnabled(): boolean {
+	const config = getConfig();
+	return config.planModeEnabled === true;
+}
+
+/**
+ * 设置是否启用 Plan 模式
+ */
+export function setPlanModeEnabled(enabled: boolean): void {
+	updateConfig({ planModeEnabled: enabled });
 }
