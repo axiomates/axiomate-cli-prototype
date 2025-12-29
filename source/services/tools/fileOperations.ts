@@ -10,13 +10,17 @@ import {
 	appendFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
-import { createRequire } from "node:module";
+// iconv-lite uses CommonJS export, need workaround for ESM + Bun bundling
+import iconvModule from "iconv-lite";
 
-const require = createRequire(import.meta.url);
-const iconv = require("iconv-lite") as {
+// Type for iconv functions we use
+type IconvLite = {
 	decode(buffer: Buffer | Uint8Array, encoding: string): string;
 	encode(content: string, encoding: string): Buffer;
 };
+
+// Handle both ESM default export and CommonJS module.exports
+const iconv: IconvLite = (iconvModule as unknown as { default?: IconvLite }).default ?? (iconvModule as unknown as IconvLite);
 import {
 	detectEncoding,
 	normalizeEncodingName,

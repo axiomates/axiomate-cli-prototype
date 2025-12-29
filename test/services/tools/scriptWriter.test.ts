@@ -117,16 +117,17 @@ describe("scriptWriter", () => {
 			expect(buffer[2]).toBe(0xbf);
 		});
 
-		it("should write pwsh script with UTF-8 BOM", () => {
+		it("should write pwsh script without BOM (pwsh defaults to UTF-8)", () => {
 			vi.mocked(platform).mockReturnValue("win32");
 
-			writeScript("/project", "pwsh", "Write-Host 'Hello'");
+			writeScript("/project", "pwsh", "Write-Host 'Hello'\nWrite-Host 'World'");
 
-			const call = vi.mocked(writeFileSync).mock.calls[0];
-			const buffer = call?.[1] as Buffer;
-			expect(buffer[0]).toBe(0xef);
-			expect(buffer[1]).toBe(0xbb);
-			expect(buffer[2]).toBe(0xbf);
+			// pwsh uses UTF-8 without BOM, but CRLF on Windows
+			expect(writeFileSync).toHaveBeenCalledWith(
+				expect.stringContaining(".ps1"),
+				"Write-Host 'Hello'\r\nWrite-Host 'World'",
+				{ encoding: "utf8" },
+			);
 		});
 
 		it("should write bash script with LF line endings", () => {

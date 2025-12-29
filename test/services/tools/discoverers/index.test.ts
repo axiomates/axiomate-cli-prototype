@@ -83,8 +83,8 @@ describe("discoverers index", () => {
 		});
 
 		it("should contain all expected discoverers", () => {
-			// Should have all the discoverers we've mocked (24 total)
-			expect(allDiscoverers.length).toBe(24);
+			// Should have all the discoverers we've mocked (26 total: 24 original + file + plan)
+			expect(allDiscoverers.length).toBe(26);
 		});
 
 		it("should have all functions be callable", () => {
