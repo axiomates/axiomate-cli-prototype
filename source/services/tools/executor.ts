@@ -18,8 +18,10 @@ import {
 	readFileContent,
 	writeFileContent,
 	editFileContent,
+	readFileLines,
+	searchInFile,
 	type WriteMode,
-} from "./fileWriter.js";
+} from "./fileOperations.js";
 import { getPlanFilePath } from "./discoverers/plan.js";
 import { getCurrentModelId, getModelById } from "../../utils/config.js";
 
@@ -244,12 +246,35 @@ export async function executeToolAction(
 	// Handle file operations
 	if (action.commandTemplate === "__FILE_READ__") {
 		const path = filledParams.path as string;
+		const encoding = filledParams.encoding as string | undefined;
 		const cwd = options?.cwd || process.cwd();
 		const fullPath = isAbsolute(path) ? path : join(cwd, path);
-		const result = readFileContent(fullPath);
+		const result = readFileContent(fullPath, encoding);
+		const encodingInfo = result.encoding
+			? `[Encoding: ${result.encoding.encoding}${result.encoding.hasBOM ? " (with BOM)" : ""}]\n`
+			: "";
 		return {
 			success: result.success,
-			stdout: result.content || "",
+			stdout: result.success ? encodingInfo + (result.content || "") : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__FILE_READ_LINES__") {
+		const path = filledParams.path as string;
+		const startLine = (filledParams.start_line as number) || 1;
+		const endLine = (filledParams.end_line as number) ?? -1;
+		const cwd = options?.cwd || process.cwd();
+		const fullPath = isAbsolute(path) ? path : join(cwd, path);
+		const result = readFileLines(fullPath, startLine, endLine);
+		const header = result.success
+			? `[Lines ${result.startLine}-${result.endLine} of ${result.totalLines}]\n`
+			: "";
+		return {
+			success: result.success,
+			stdout: result.success ? header + (result.lines?.join("\n") || "") : "",
 			stderr: "",
 			exitCode: result.success ? 0 : 1,
 			error: result.error,
@@ -260,12 +285,43 @@ export async function executeToolAction(
 		const path = filledParams.path as string;
 		const content = filledParams.content as string;
 		const mode = (filledParams.mode as WriteMode) || "overwrite";
+		const encoding = filledParams.encoding as string | undefined;
 		const cwd = options?.cwd || process.cwd();
 		const fullPath = isAbsolute(path) ? path : join(cwd, path);
-		const result = writeFileContent(fullPath, content, mode);
+		const result = writeFileContent(fullPath, content, mode, encoding);
 		return {
 			success: result.success,
-			stdout: result.success ? `Written to ${result.path}` : "",
+			stdout: result.success
+				? `Written to ${result.path} (encoding: ${result.encoding || "utf-8"})`
+				: "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__FILE_SEARCH__") {
+		const path = filledParams.path as string;
+		const pattern = filledParams.pattern as string;
+		const isRegex = filledParams.regex === true;
+		const maxMatches = (filledParams.max_matches as number) || 100;
+		const cwd = options?.cwd || process.cwd();
+		const fullPath = isAbsolute(path) ? path : join(cwd, path);
+
+		const searchPattern = isRegex ? new RegExp(pattern, "gm") : pattern;
+		const result = searchInFile(fullPath, searchPattern, maxMatches);
+
+		const output = result.success
+			? result.matches.length > 0
+				? result.matches
+						.map((m) => `${m.line}:${m.column}: ${m.content}`)
+						.join("\n")
+				: "(no matches)"
+			: "";
+
+		return {
+			success: result.success,
+			stdout: output,
 			stderr: "",
 			exitCode: result.success ? 0 : 1,
 			error: result.error,

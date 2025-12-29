@@ -5,9 +5,10 @@
  * with proper UTF-8 encoding for execution by shell tools.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { platform } from "node:os";
+import { ensureDir } from "./fileOperations.js";
 
 export type ScriptType = "powershell" | "pwsh" | "python" | "cmd" | "bash";
 
@@ -31,9 +32,9 @@ export function getScriptsDir(cwd: string): string {
  */
 export function ensureScriptsDir(cwd: string): string {
 	const scriptsDir = getScriptsDir(cwd);
-	if (!existsSync(scriptsDir)) {
-		mkdirSync(scriptsDir, { recursive: true });
-	}
+	// ensureDir creates parent directories for a file path
+	// Use a placeholder file path to ensure the scripts directory is created
+	ensureDir(join(scriptsDir, ".placeholder"));
 	return scriptsDir;
 }
 

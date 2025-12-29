@@ -22,6 +22,7 @@ export type ToolCapability =
 	| "execute" // 可执行命令
 	| "read" // 读取文件
 	| "write" // 写入文件
+	| "search" // 搜索文件内容
 	| "diff" // 文件比较
 	| "merge" // 文件合并
 	| "edit" // 编辑文件
