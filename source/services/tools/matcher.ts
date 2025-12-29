@@ -133,6 +133,14 @@ function getDefaultShellTools(): string[] {
 }
 
 /**
+ * Get builtin utility tools (cross-platform, always available)
+ * - file: File operations with auto encoding detection
+ */
+function getBuiltinUtilityTools(): string[] {
+	return ["file"];
+}
+
+/**
  * Project type to tools mapping
  * - Shell tools are NOT included here (they are added dynamically in autoSelect)
  * - Python is included for file operations (better encoding support)
@@ -416,13 +424,19 @@ export class ToolMatcher implements IToolMatcher {
 			addTool(toolId);
 		}
 
-		// 2. Detect project type
+		// 2. Always add builtin utility tools (cross-platform)
+		const utilityTools = getBuiltinUtilityTools();
+		for (const toolId of utilityTools) {
+			addTool(toolId);
+		}
+
+		// 3. Detect project type
 		let projectType = context.projectType;
 		if (!projectType && context.cwd) {
 			projectType = detectProjectType(context.cwd);
 		}
 
-		// 3. Add project-specific tools
+		// 4. Add project-specific tools
 		if (projectType) {
 			const projectTools = PROJECT_TYPE_TOOLS[projectType] || [];
 			for (const toolId of projectTools) {
@@ -430,7 +444,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 4. Detect tools from directory contents (.git, Dockerfile, CMakeLists.txt, etc.)
+		// 5. Detect tools from directory contents (.git, Dockerfile, CMakeLists.txt, etc.)
 		if (context.cwd) {
 			const detectedTools = this.detectToolsFromDirectory(context.cwd);
 			for (const toolId of detectedTools) {
@@ -438,7 +452,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 5. Infer tools from selected files
+		// 6. Infer tools from selected files
 		if (context.selectedFiles) {
 			for (const file of context.selectedFiles) {
 				const ext = path.extname(file).toLowerCase();
@@ -456,7 +470,7 @@ export class ToolMatcher implements IToolMatcher {
 			}
 		}
 
-		// 6. Infer tools from current files
+		// 7. Infer tools from current files
 		if (context.currentFiles) {
 			for (const file of context.currentFiles) {
 				const ext = path.extname(file).toLowerCase();
