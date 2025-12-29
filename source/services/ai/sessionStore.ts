@@ -10,7 +10,6 @@ import { logger } from "../../utils/logger.js";
 import {
 	Session,
 	createSession,
-	type SessionConfig,
 	type SessionMessage,
 	type SessionInternalState,
 } from "./session.js";

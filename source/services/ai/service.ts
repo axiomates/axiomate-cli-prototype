@@ -23,7 +23,6 @@ import { ToolMatcher, detectProjectType } from "../tools/matcher.js";
 import {
 	Session,
 	type SessionStatus,
-	type TrimResult,
 	type CompactCheckResult,
 } from "./session.js";
 import { buildSystemPrompt } from "../../constants/prompts.js";
@@ -42,10 +41,6 @@ export type SendMessageResult = {
 	content: string;
 	/** Session 状态 */
 	sessionStatus: SessionStatus;
-	/** 是否进行了历史裁剪 */
-	historyTrimmed: boolean;
-	/** 裁剪详情（如果有裁剪） */
-	trimResult?: TrimResult;
 };
 
 /**
@@ -204,14 +199,6 @@ export class AIService implements IAIService {
 		// 确保上下文已注入到 System Prompt
 		this.ensureContextInSystemPrompt(enhancedContext);
 
-		// 检查是否需要先裁剪历史
-		const estimatedTokens = userMessage.length / 4; // 粗略估算
-		let trimResult: TrimResult | undefined;
-
-		if (!this.session.canAccommodate(estimatedTokens)) {
-			trimResult = this.session.ensureSpace(estimatedTokens);
-		}
-
 		// 添加用户消息到 Session
 		this.session.addUserMessage(userMessage);
 
@@ -221,8 +208,6 @@ export class AIService implements IAIService {
 		return {
 			content: result.content,
 			sessionStatus: this.session.getStatus(),
-			historyTrimmed: trimResult?.trimmed ?? false,
-			trimResult,
 		};
 	}
 
@@ -538,7 +523,6 @@ export class AIService implements IAIService {
 		return {
 			content: response.message.content,
 			sessionStatus: this.session.getStatus(),
-			historyTrimmed: false,
 		};
 	}
 
@@ -583,7 +567,6 @@ export class AIService implements IAIService {
 			return {
 				content: response.message.content,
 				sessionStatus: this.session.getStatus(),
-				historyTrimmed: false,
 			};
 		}
 
@@ -591,7 +574,6 @@ export class AIService implements IAIService {
 		return {
 			content: t("errors.maxToolCallsReached"),
 			sessionStatus: this.session.getStatus(),
-			historyTrimmed: false,
 		};
 	}
 }

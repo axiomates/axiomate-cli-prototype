@@ -49,22 +49,6 @@ export type SessionConfig = {
 	nearLimitThreshold?: number;
 	/** 已满的阈值 (0-1)，默认 0.95 */
 	fullThreshold?: number;
-	/** 历史裁剪时保留的最小消息数，默认 4 */
-	minMessagesToKeep?: number;
-};
-
-/**
- * 裁剪结果
- */
-export type TrimResult = {
-	/** 是否进行了裁剪 */
-	trimmed: boolean;
-	/** 移除的消息数 */
-	removedCount: number;
-	/** 释放的 token 数 */
-	freedTokens: number;
-	/** 裁剪后的状态 */
-	status: SessionStatus;
 };
 
 /**
@@ -110,7 +94,6 @@ export class Session {
 			reserveRatio: config.reserveRatio ?? 0,
 			nearLimitThreshold: config.nearLimitThreshold ?? 0.8,
 			fullThreshold: config.fullThreshold ?? 0.95,
-			minMessagesToKeep: config.minMessagesToKeep ?? 4,
 		};
 	}
 
@@ -276,76 +259,6 @@ export class Session {
 	 */
 	getHistory(): ChatMessage[] {
 		return this.messages.map((m) => m.message);
-	}
-
-	/**
-	 * 检查是否能容纳指定 token 数的新消息
-	 */
-	canAccommodate(tokens: number): boolean {
-		return this.getAvailableTokens() >= tokens;
-	}
-
-	/**
-	 * 裁剪历史以释放空间
-	 * 保留最近的消息，移除较早的消息
-	 */
-	trimHistory(targetFreeTokens: number): TrimResult {
-		const initialStatus = this.getStatus();
-
-		if (this.messages.length <= this.config.minMessagesToKeep) {
-			return {
-				trimmed: false,
-				removedCount: 0,
-				freedTokens: 0,
-				status: initialStatus,
-			};
-		}
-
-		let freedTokens = 0;
-		let removedCount = 0;
-		const minKeep = this.config.minMessagesToKeep;
-
-		// 从最早的消息开始移除
-		while (this.messages.length > minKeep && freedTokens < targetFreeTokens) {
-			const removed = this.messages.shift();
-			if (removed) {
-				freedTokens += removed.tokens;
-				removedCount++;
-			}
-		}
-
-		// 重置实际 token 计数（因为历史已改变，需要重新从 API 获取）
-		if (removedCount > 0) {
-			this.actualPromptTokens = 0;
-			this.actualCompletionTokens = 0;
-		}
-
-		return {
-			trimmed: removedCount > 0,
-			removedCount,
-			freedTokens,
-			status: this.getStatus(),
-		};
-	}
-
-	/**
-	 * 自动裁剪以确保有足够空间
-	 * 返回是否成功腾出空间
-	 */
-	ensureSpace(requiredTokens: number): TrimResult {
-		const available = this.getAvailableTokens();
-
-		if (available >= requiredTokens) {
-			return {
-				trimmed: false,
-				removedCount: 0,
-				freedTokens: 0,
-				status: this.getStatus(),
-			};
-		}
-
-		const needed = requiredTokens - available;
-		return this.trimHistory(needed);
 	}
 
 	/**

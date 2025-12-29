@@ -45,7 +45,6 @@ export {
 	Session,
 	createSession,
 	type SessionConfig,
-	type TrimResult,
 	type TokenUsage,
 } from "./session.js";
 
