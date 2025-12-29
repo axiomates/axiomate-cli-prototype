@@ -27,7 +27,6 @@ describe("Session", () => {
 		reserveRatio: 0,
 		nearLimitThreshold: 0.8,
 		fullThreshold: 0.95,
-		minMessagesToKeep: 4,
 	};
 
 	beforeEach(() => {
@@ -43,7 +42,6 @@ describe("Session", () => {
 			expect(config.reserveRatio).toBe(0);
 			expect(config.nearLimitThreshold).toBe(0.8);
 			expect(config.fullThreshold).toBe(0.95);
-			expect(config.minMessagesToKeep).toBe(4);
 		});
 
 		it("should create session with custom values", () => {
@@ -52,7 +50,6 @@ describe("Session", () => {
 				reserveRatio: 0.2,
 				nearLimitThreshold: 0.7,
 				fullThreshold: 0.9,
-				minMessagesToKeep: 2,
 			});
 			const config = session.getConfig();
 
@@ -60,7 +57,6 @@ describe("Session", () => {
 			expect(config.reserveRatio).toBe(0.2);
 			expect(config.nearLimitThreshold).toBe(0.7);
 			expect(config.fullThreshold).toBe(0.9);
-			expect(config.minMessagesToKeep).toBe(2);
 		});
 	});
 
@@ -270,83 +266,8 @@ describe("Session", () => {
 		});
 	});
 
-	describe("canAccommodate", () => {
-		it("should return true when enough space", () => {
-			const session = new Session(defaultConfig);
-			expect(session.canAccommodate(1000)).toBe(true);
-		});
-
-		it("should return false when not enough space", () => {
-			const session = new Session(defaultConfig);
-			expect(session.canAccommodate(5000)).toBe(false);
-		});
-	});
-
-	describe("trimHistory", () => {
-		it("should not trim when below minimum messages", () => {
-			const session = new Session(defaultConfig);
-			session.addUserMessage("Message 1");
-			session.addAssistantMessage({ role: "assistant", content: "Response 1" });
-
-			const result = session.trimHistory(1000);
-			expect(result.trimmed).toBe(false);
-			expect(result.removedCount).toBe(0);
-		});
-
-		it("should trim oldest messages first", () => {
-			const session = new Session({
-				...defaultConfig,
-				minMessagesToKeep: 2,
-			});
-
-			session.addUserMessage("Message 1");
-			session.addAssistantMessage({ role: "assistant", content: "Response 1" });
-			session.addUserMessage("Message 2");
-			session.addAssistantMessage({ role: "assistant", content: "Response 2" });
-			session.addUserMessage("Message 3");
-			session.addAssistantMessage({ role: "assistant", content: "Response 3" });
-
-			const result = session.trimHistory(100);
-			expect(result.trimmed).toBe(true);
-			expect(result.removedCount).toBeGreaterThan(0);
-		});
-	});
-
-	describe("ensureSpace", () => {
-		it("should not trim when space available", () => {
-			const session = new Session(defaultConfig);
-			const result = session.ensureSpace(100);
-
-			expect(result.trimmed).toBe(false);
-		});
-
-		it("should trim when space needed", () => {
-			const session = new Session({
-				contextWindow: 100,
-				minMessagesToKeep: 1,
-			});
-
-			// 添加多条消息使其超过 context window
-			session.addUserMessage("A".repeat(40)); // ~10 tokens
-			session.addAssistantMessage({
-				role: "assistant",
-				content: "B".repeat(40),
-			}); // ~10 tokens
-			session.addUserMessage("C".repeat(40)); // ~10 tokens
-			session.addAssistantMessage({
-				role: "assistant",
-				content: "D".repeat(40),
-			}); // ~10 tokens
-			session.addUserMessage("E".repeat(40)); // ~10 tokens
-
-			// 需要更多空间时应该裁剪
-			const result = session.ensureSpace(80);
-			expect(result.trimmed).toBe(true);
-		});
-	});
-
 	describe("clear", () => {
-		it("should clear all messages but keep system prompt", () => {
+		it("should clear all messages including system prompt", () => {
 			const session = new Session(defaultConfig);
 			session.setSystemPrompt("System");
 			session.addUserMessage("User");
@@ -355,8 +276,7 @@ describe("Session", () => {
 			session.clear();
 
 			const messages = session.getMessages();
-			expect(messages).toHaveLength(1);
-			expect(messages[0]!.role).toBe("system");
+			expect(messages).toHaveLength(0);
 		});
 	});
 

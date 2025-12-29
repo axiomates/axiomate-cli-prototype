@@ -170,9 +170,9 @@ Commands are defined in `constants/commands.ts` with dynamic generation:
 - Session switch/delete commands use **session name** (not ID) as identifier
 
 **Session Restoration**:
-- `restoreSession()` in `service.ts` re-sets `SYSTEM_PROMPT` after loading persisted session
-- This ensures consistent token calculation between app startup and `/session new`
-- Without this, restored sessions would show 0 tokens while new sessions show ~350 (SYSTEM_PROMPT size)
+- `restoreSession()` in `service.ts` clears persisted system prompt and resets `contextInjected` flag
+- System prompt is lazily set on first message via `ensureContextInSystemPrompt()`
+- This ensures consistent behavior: system prompt is always set when user sends first message
 
 ### StatusBar Usage Display
 
@@ -183,35 +183,22 @@ Commands are defined in `constants/commands.ts` with dynamic generation:
 
 ### Context Window Management
 
-**Two Independent Mechanisms**:
+**Two Mechanisms**:
 
 | Mechanism | Trigger | Purpose |
 |-----------|---------|---------|
-| **File Truncation** | Single file > available space | Fit large files into context |
-| **Auto-Compact** | History + new message > 85% | Free up space by summarizing history |
+| **File Truncation** | File content > available space | Truncate large files to fit context |
+| **Auto-Compact** | History + new message > 85% | Summarize history to free space |
 
-**Truncation**: When a file exceeds available context space, it's truncated proportionally. This happens regardless of session state - even an empty session can't fit a 70k token file into a 32k context window.
+**File Truncation** (`contentBuilder.ts`): When file content exceeds available context space, it's truncated proportionally using `truncateFilesProportionally()`. Large files are cut, not history.
 
-**Auto-Compact**: When projected usage exceeds 85% AND there are ≥2 real messages in history, the system summarizes the conversation to free space. Only compacts history, not the current message's file attachments.
-
-**Example Flow**:
-```
-Message 1: @readme.md (70k tokens) + "帮我看看"
-  → Session empty, no compact needed
-  → But 70k > 32k context, so file truncated to ~31k tokens
-  → AI responds, session now has history
-
-Message 2: @tsconfig.json (small file) + "看看配置"
-  → Session has history from message 1
-  → History + new message > 85% threshold
-  → Auto-compact triggers: summarize history
-  → Then send tsconfig.json with summary as context
-```
+**Auto-Compact** (`shouldCompact` + `compactWith`): When projected usage exceeds 85% AND there are ≥2 real messages in history, the system calls AI to summarize the conversation. Only compacts history, not current message's file attachments.
 
 **Key Design Decisions**:
 - `reserveRatio` = 0 (compact threshold provides buffer, no double-reservation)
 - Compact check happens BEFORE file truncation (maximize available space)
 - `realMessageCount >= 2` prevents compact on first message or right after compact
+- No `trimHistory` mechanism - files are truncated, history is preserved
 
 ## AI Service
 

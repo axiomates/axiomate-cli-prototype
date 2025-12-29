@@ -289,7 +289,6 @@ describe("AIService", () => {
 
 			expect(result.content).toBe("Test response");
 			expect(result.sessionStatus).toHaveProperty("usedTokens");
-			expect(result.historyTrimmed).toBe(false);
 		});
 	});
 
