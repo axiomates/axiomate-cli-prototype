@@ -43,8 +43,6 @@ export type SerializedSession = {
 	info: SessionInfo;
 	/** Session 消息 */
 	messages: SessionMessage[];
-	/** 系统提示（如果自定义） */
-	systemPrompt?: SessionMessage | null;
 	/** Token 状态 */
 	tokenState: {
 		actualPromptTokens: number;
@@ -399,7 +397,7 @@ export class SessionStore {
 
 			const state: SessionInternalState = {
 				messages: data.messages,
-				systemPrompt: data.systemPrompt ?? null,
+				systemPrompt: null,
 				actualPromptTokens: data.tokenState.actualPromptTokens,
 				actualCompletionTokens: data.tokenState.actualCompletionTokens,
 			};
@@ -447,7 +445,6 @@ export class SessionStore {
 		const data: SerializedSession = {
 			info,
 			messages: state.messages,
-			systemPrompt: state.systemPrompt,
 			tokenState: {
 				actualPromptTokens: state.actualPromptTokens,
 				actualCompletionTokens: state.actualCompletionTokens,
