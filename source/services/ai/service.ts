@@ -26,7 +26,7 @@ import {
 	type TrimResult,
 	type CompactCheckResult,
 } from "./session.js";
-import { buildSystemPrompt, SYSTEM_PROMPT } from "../../constants/prompts.js";
+import { buildSystemPrompt } from "../../constants/prompts.js";
 import { t } from "../../i18n/index.js";
 
 /**
@@ -71,13 +71,10 @@ export class AIService implements IAIService {
 		this.maxToolCallRounds = config.maxToolCallRounds ?? 40;
 		this.contextAwareEnabled = config.contextAwareEnabled ?? true;
 
-		// 创建 Session
+		// 创建 Session（system prompt 延迟到首次消息时设置）
 		this.session = new Session({
 			contextWindow: config.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
 		});
-
-		// 设置 System Prompt
-		this.session.setSystemPrompt(SYSTEM_PROMPT);
 	}
 
 	/**
@@ -95,14 +92,12 @@ export class AIService implements IAIService {
 	}
 
 	/**
-	 * 清空对话历史（新 session 自动重新设置 system prompt）
+	 * 清空对话历史（system prompt 延迟到首次消息时设置）
 	 */
 	clearHistory(): void {
 		this.session.clear();
 		// 重置上下文注入标志，下次消息会重新注入
 		this.contextInjected = false;
-		// 重新设置 System Prompt，确保新 session 也有
-		this.session.setSystemPrompt(SYSTEM_PROMPT);
 	}
 
 	/**
@@ -153,9 +148,8 @@ export class AIService implements IAIService {
 	 */
 	restoreSession(session: Session): void {
 		this.session = session;
-		// 恢复 session 后重新设置 system prompt，确保 token 计算一致
-		this.session.setSystemPrompt(SYSTEM_PROMPT);
-		// 重置上下文注入标志
+		// 清空持久化的 system prompt，统一延迟到首次消息时设置
+		this.session.setSystemPrompt("");
 		this.contextInjected = false;
 	}
 

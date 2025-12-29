@@ -349,13 +349,13 @@ export class Session {
 	}
 
 	/**
-	 * 清空会话
+	 * 清空会话（同时清空系统提示词，延迟到首次消息时设置）
 	 */
 	clear(): void {
 		this.messages = [];
 		this.actualPromptTokens = 0;
 		this.actualCompletionTokens = 0;
-		// 保留系统提示
+		this.systemPrompt = null;
 	}
 
 	/**
