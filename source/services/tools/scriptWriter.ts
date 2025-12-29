@@ -83,10 +83,10 @@ export function writeScript(
 		normalizedContent = content.replace(/\r\n/g, "\n").replace(/\n/g, "\r\n");
 	}
 
-	// For PowerShell scripts, add UTF-8 BOM so PowerShell 5.1 reads the file correctly
+	// For PowerShell 5.1 scripts, add UTF-8 BOM so it reads the file correctly
 	// PowerShell 5.1 defaults to system encoding (e.g., GBK) without BOM
-	// pwsh (PowerShell Core) also benefits from BOM for consistency
-	if (scriptType === "powershell" || scriptType === "pwsh") {
+	// pwsh (PowerShell Core) defaults to UTF-8, no BOM needed
+	if (scriptType === "powershell") {
 		const bom = Buffer.from([0xef, 0xbb, 0xbf]); // UTF-8 BOM
 		const contentBuffer = Buffer.from(normalizedContent, "utf8");
 		writeFileSync(filePath, Buffer.concat([bom, contentBuffer]));

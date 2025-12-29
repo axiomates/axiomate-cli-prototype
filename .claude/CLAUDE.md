@@ -65,6 +65,11 @@ source/
 │   │   └── clients/           # OpenAI/Anthropic API clients
 │   └── tools/                 # Local development tools discovery
 │       ├── registry.ts        # ToolRegistry singleton
+│       ├── matcher.ts         # Tool selection based on context
+│       ├── executor.ts        # Tool action execution
+│       ├── fileOperations.ts  # File ops with encoding detection
+│       ├── encodingDetector.ts # BOM + chardet encoding detection
+│       ├── scriptWriter.ts    # Script file generation (UTF-8 BOM for PS)
 │       └── discoverers/       # Per-tool discovery modules
 ├── i18n/                      # Internationalization (en, zh-CN, ja)
 └── utils/
@@ -214,6 +219,46 @@ Uses local directory analysis (not AI two-phase):
 - Detects project type from marker files (package.json, requirements.txt, etc.)
 - Infers from @selected file extensions
 - Saves tokens and reduces latency
+
+**Default Tools** (always provided to AI):
+1. **Shell tools** (platform-specific):
+   - Windows: `pwsh`, `powershell`, `cmd`
+   - Unix/macOS: `bash`
+2. **Builtin utility tools** (cross-platform):
+   - `file` - File operations with auto encoding detection
+
+### File Tool
+
+Cross-platform builtin tool for file operations with automatic encoding detection.
+
+**Actions**:
+| Action | Description |
+|--------|-------------|
+| `read` | Read file with auto encoding detection |
+| `read_lines` | Read specific line range (1-based) |
+| `write` | Write file (preserves encoding for existing, UTF-8 for new) |
+| `edit` | Replace content (preserves original encoding) |
+| `search` | Search for pattern (string or regex) |
+
+**Encoding Support**:
+- Two-stage detection: BOM first (100% confidence), then chardet statistical analysis
+- Supported: UTF-8, UTF-16 LE/BE, UTF-32 LE/BE, GBK, GB18030, Shift-JIS, Windows-1252, ISO-8859-1
+- BOM preservation: Files with BOM keep BOM after edit
+- Uses `iconv-lite` for encoding conversion
+
+### Script Execution
+
+For AI-generated scripts, `scriptWriter.ts` handles proper encoding:
+
+| Script Type | Line Endings | Encoding |
+|-------------|--------------|----------|
+| PowerShell 5.1 (.ps1) | CRLF (Windows) | UTF-8 with BOM |
+| pwsh (.ps1) | CRLF (Windows) | UTF-8 (no BOM) |
+| CMD (.bat) | CRLF | UTF-8 (no BOM) |
+| Bash (.sh) | LF | UTF-8 (no BOM) |
+| Python (.py) | Platform default | UTF-8 (no BOM) |
+
+**Why UTF-8 BOM for PowerShell 5.1 only**: PowerShell 5.1 defaults to system encoding (e.g., GBK on Chinese Windows) without BOM. pwsh (PowerShell Core) defaults to UTF-8 on all platforms, no BOM needed.
 
 ## Internationalization
 
