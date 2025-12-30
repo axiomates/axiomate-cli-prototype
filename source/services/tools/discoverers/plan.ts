@@ -14,13 +14,34 @@ const planDefinition: ToolDefinition = {
 	name: "Plan",
 	description: "Plan file management (restricted to .axiomate/plans/plan.md)",
 	category: "utility",
-	capabilities: ["read", "write"],
+	capabilities: ["read", "write", "search"],
 	actions: [
 		{
 			name: "read",
 			description: "Read the current plan file content",
 			parameters: [],
 			commandTemplate: "__PLAN_READ__",
+		},
+		{
+			name: "read_lines",
+			description: "Read specific line range from plan file",
+			parameters: [
+				{
+					name: "start_line",
+					description: "Start line (1-based, default: 1)",
+					type: "number",
+					required: false,
+					default: 1,
+				},
+				{
+					name: "end_line",
+					description: "End line (1-based, -1 for EOF, default: -1)",
+					type: "number",
+					required: false,
+					default: -1,
+				},
+			],
+			commandTemplate: "__PLAN_READ_LINES__",
 		},
 		{
 			name: "write",
@@ -34,6 +55,19 @@ const planDefinition: ToolDefinition = {
 				},
 			],
 			commandTemplate: "__PLAN_WRITE__",
+		},
+		{
+			name: "append",
+			description: "Append content to the end of plan file",
+			parameters: [
+				{
+					name: "content",
+					description: "Content to append",
+					type: "string",
+					required: true,
+				},
+			],
+			commandTemplate: "__PLAN_APPEND__",
 		},
 		{
 			name: "edit",
@@ -51,8 +85,42 @@ const planDefinition: ToolDefinition = {
 					type: "string",
 					required: true,
 				},
+				{
+					name: "replace_all",
+					description: "Replace all occurrences (default: false)",
+					type: "boolean",
+					required: false,
+					default: false,
+				},
 			],
 			commandTemplate: "__PLAN_EDIT__",
+		},
+		{
+			name: "search",
+			description: "Search for pattern in plan file",
+			parameters: [
+				{
+					name: "pattern",
+					description: "Search pattern (string or regex)",
+					type: "string",
+					required: true,
+				},
+				{
+					name: "regex",
+					description: "Treat pattern as regex (default: false)",
+					type: "boolean",
+					required: false,
+					default: false,
+				},
+				{
+					name: "max_matches",
+					description: "Maximum matches to return (default: 100)",
+					type: "number",
+					required: false,
+					default: 100,
+				},
+			],
+			commandTemplate: "__PLAN_SEARCH__",
 		},
 	],
 };

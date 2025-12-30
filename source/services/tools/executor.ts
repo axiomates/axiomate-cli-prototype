@@ -374,15 +374,75 @@ export async function executeToolAction(
 		};
 	}
 
+	if (action.commandTemplate === "__PLAN_READ_LINES__") {
+		const cwd = options?.cwd || process.cwd();
+		const planPath = getPlanFilePath(cwd);
+		const startLine = (filledParams.start_line as number) || 1;
+		const endLine = (filledParams.end_line as number) ?? -1;
+		const result = readFileLines(planPath, startLine, endLine);
+		const header = result.success
+			? `[Lines ${result.startLine}-${result.endLine} of ${result.totalLines}]\n`
+			: "";
+		return {
+			success: result.success,
+			stdout: result.success ? header + (result.lines?.join("\n") || "") : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__PLAN_APPEND__") {
+		const cwd = options?.cwd || process.cwd();
+		const planPath = getPlanFilePath(cwd);
+		const content = filledParams.content as string;
+		const result = writeFileContent(planPath, content, "append");
+		return {
+			success: result.success,
+			stdout: result.success ? `Content appended to ${result.path}` : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
 	if (action.commandTemplate === "__PLAN_EDIT__") {
 		const cwd = options?.cwd || process.cwd();
 		const planPath = getPlanFilePath(cwd);
 		const oldContent = filledParams.old_content as string;
 		const newContent = filledParams.new_content as string;
-		const result = editFileContent(planPath, oldContent, newContent, false);
+		const replaceAll = filledParams.replace_all === true;
+		const result = editFileContent(planPath, oldContent, newContent, replaceAll);
 		return {
 			success: result.success,
 			stdout: result.success ? "Plan updated" : "",
+			stderr: "",
+			exitCode: result.success ? 0 : 1,
+			error: result.error,
+		};
+	}
+
+	if (action.commandTemplate === "__PLAN_SEARCH__") {
+		const cwd = options?.cwd || process.cwd();
+		const planPath = getPlanFilePath(cwd);
+		const pattern = filledParams.pattern as string;
+		const isRegex = filledParams.regex === true;
+		const maxMatches = (filledParams.max_matches as number) || 100;
+
+		const searchPattern = isRegex ? new RegExp(pattern, "gm") : pattern;
+		const result = searchInFile(planPath, searchPattern, maxMatches);
+
+		const output = result.success
+			? result.matches.length > 0
+				? result.matches
+						.map((m) => `${m.line}:${m.column}: ${m.content}`)
+						.join("\n")
+				: "(no matches)"
+			: "";
+
+		return {
+			success: result.success,
+			stdout: output,
 			stderr: "",
 			exitCode: result.success ? 0 : 1,
 			error: result.error,
