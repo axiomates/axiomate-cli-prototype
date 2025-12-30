@@ -74,6 +74,7 @@ export default function App({ initResult }: Props) {
 		options: string[];
 		onResolve: (answer: string) => void;
 	} | null>(null);
+	const [isAskUserCustomInput, setIsAskUserCustomInput] = useState(false);
 	const [inputAreaHeight, setInputAreaHeight] = useState(1);
 
 	// AI 加载状态（将来用于显示加载指示器）
@@ -526,6 +527,7 @@ export default function App({ initResult }: Props) {
 		if (pendingAskUser) {
 			pendingAskUser.onResolve(answer);
 			setPendingAskUser(null);
+			setIsAskUserCustomInput(false);
 		}
 	}, [pendingAskUser]);
 
@@ -534,8 +536,14 @@ export default function App({ initResult }: Props) {
 		if (pendingAskUser) {
 			pendingAskUser.onResolve(""); // 返回空字符串表示取消
 			setPendingAskUser(null);
+			setIsAskUserCustomInput(false);
 		}
 	}, [pendingAskUser]);
+
+	// ask_user 自定义输入模式变化
+	const handleAskUserCustomInputModeChange = useCallback((isCustomInput: boolean) => {
+		setIsAskUserCustomInput(isCustomInput);
+	}, []);
 
 	// 输入区域高度变化回调
 	const handleInputHeightChange = useCallback((height: number) => {
@@ -1077,10 +1085,16 @@ export default function App({ initResult }: Props) {
 			// AskUserMenu 高度计算:
 			// - divider: 1
 			// - question: 1
-			// - options: max 3 + 1 custom input = 4
+			// - content: options list OR custom input (1 line)
 			// - hints: 1
+			if (isAskUserCustomInput) {
+				// Custom input mode: divider + question + input + hints
+				const askUserHeight = 1 + 1 + 1 + 1;
+				return askUserHeight + 2; // + bottom divider + statusbar
+			}
+			// Options mode: divider + question + options + hints
 			const optionsCount = Math.min(pendingAskUser.options.length, 3) + 1; // max 3 options + custom input
-			const askUserHeight = 1 + 1 + optionsCount + 1; // divider + question + options + hints
+			const askUserHeight = 1 + 1 + optionsCount + 1;
 			return askUserHeight + 2; // + bottom divider + statusbar
 		}
 		return 3 + inputAreaHeight;
@@ -1118,6 +1132,7 @@ export default function App({ initResult }: Props) {
 						onSelect={handleAskUserSelect}
 						onCancel={handleAskUserCancel}
 						columns={terminalWidth}
+						onCustomInputModeChange={handleAskUserCustomInputModeChange}
 					/>
 				</Box>
 			)}

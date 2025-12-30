@@ -21,6 +21,8 @@ type AskUserMenuProps = {
 	onCancel?: () => void;
 	/** Terminal width */
 	columns: number;
+	/** Callback when custom input mode changes */
+	onCustomInputModeChange?: (isCustomInput: boolean) => void;
 };
 
 export function AskUserMenu({
@@ -29,6 +31,7 @@ export function AskUserMenu({
 	onSelect,
 	onCancel,
 	columns,
+	onCustomInputModeChange,
 }: AskUserMenuProps) {
 	// Limit to max 3 options + custom input
 	const limitedOptions = options.slice(0, 3);
@@ -46,11 +49,12 @@ export function AskUserMenu({
 		if (selectedIndex === allOptions.length - 1) {
 			// User selected "Custom input..."
 			setIsCustomInputMode(true);
+			onCustomInputModeChange?.(true);
 		} else {
 			// User selected a predefined option
 			onSelect(limitedOptions[selectedIndex] ?? "");
 		}
-	}, [selectedIndex, allOptions.length, limitedOptions, onSelect]);
+	}, [selectedIndex, allOptions.length, limitedOptions, onSelect, onCustomInputModeChange]);
 
 	// Handle custom input submit
 	const handleCustomInputSubmit = useCallback(() => {
@@ -63,7 +67,8 @@ export function AskUserMenu({
 	const handleCustomInputCancel = useCallback(() => {
 		setIsCustomInputMode(false);
 		setCustomInputValue("");
-	}, []);
+		onCustomInputModeChange?.(false);
+	}, [onCustomInputModeChange]);
 
 	// Keyboard input handling
 	useInput(
