@@ -1169,22 +1169,20 @@ export default function App({ initResult }: Props) {
 				</Box>
 			)}
 
-			{/* 输入框区域（输入模式且无 ask_user 菜单时显示） */}
-			{isInputMode && !pendingAskUser && (
-				<Box flexShrink={0}>
-					<AutocompleteInput
-						prompt="> "
-						onSubmit={handleSubmit}
-						onClear={handleClear}
-						onExit={clearAndExit}
-						slashCommands={SLASH_COMMANDS}
-						isActive={isInputMode && !pendingAskUser}
-						onHeightChange={handleInputHeightChange}
-						injectText={injectText}
-						onInjectTextHandled={handleInjectTextHandled}
-					/>
-				</Box>
-			)}
+			{/* 输入框区域（始终挂载以保留输入历史，通过 display 控制显示） */}
+			<Box flexShrink={0} display={isInputMode && !pendingAskUser ? "flex" : "none"}>
+				<AutocompleteInput
+					prompt="> "
+					onSubmit={handleSubmit}
+					onClear={handleClear}
+					onExit={clearAndExit}
+					slashCommands={SLASH_COMMANDS}
+					isActive={isInputMode && !pendingAskUser}
+					onHeightChange={handleInputHeightChange}
+					injectText={injectText}
+					onInjectTextHandled={handleInjectTextHandled}
+				/>
+			</Box>
 
 			{/* 状态栏上方分隔线 */}
 			<Box flexShrink={0}>
