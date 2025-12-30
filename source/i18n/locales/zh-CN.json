@@ -276,5 +276,11 @@
 	},
 	"statusBar": {
 		"notConfigured": "N/A"
+	},
+	"askUser": {
+		"customInput": "[自定义输入...]",
+		"placeholder": "输入你的回答...",
+		"navigationHint": "↑/↓ 导航 · Enter 选择 · Esc 取消",
+		"customInputHint": "Enter 提交 · Esc 返回"
 	}
 }

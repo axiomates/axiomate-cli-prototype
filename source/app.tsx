@@ -4,7 +4,9 @@ import AutocompleteInput from "./components/AutocompleteInput/index.js";
 import Divider from "./components/Divider.js";
 import StatusBar from "./components/StatusBar.js";
 import MessageOutput, { type Message } from "./components/MessageOutput.js";
+import { AskUserMenu } from "./components/AskUserMenu.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
+import useTerminalWidth from "./hooks/useTerminalWidth.js";
 import { SLASH_COMMANDS } from "./constants/commands.js";
 import { VERSION, APP_NAME } from "./constants/meta.js";
 import {
@@ -13,7 +15,6 @@ import {
 	isMessageInput,
 	isCommandInput,
 } from "./models/input.js";
-import type { HistoryEntry } from "./models/inputInstance.js";
 import { groupMessages, canCollapse } from "./models/messageGroup.js";
 import {
 	handleCommand,
@@ -65,13 +66,15 @@ export default function App({ initResult }: Props) {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [focusMode, setFocusMode] = useState<FocusMode>("input");
 	const terminalHeight = useTerminalHeight();
-	const [inputAreaHeight, setInputAreaHeight] = useState(1);
+	const terminalWidth = useTerminalWidth();
 
-	// 输入历史记录（提升到 App 组件，避免模式切换时丢失）
-	const [inputHistory, setInputHistory] = useState<HistoryEntry[]>([]);
-	const handleHistoryChange = useCallback((history: HistoryEntry[]) => {
-		setInputHistory(history);
-	}, []);
+	// ask_user 工具状态
+	const [pendingAskUser, setPendingAskUser] = useState<{
+		question: string;
+		options: string[];
+		onResolve: (answer: string) => void;
+	} | null>(null);
+	const [inputAreaHeight, setInputAreaHeight] = useState(1);
 
 	// AI 加载状态（将来用于显示加载指示器）
 	const [, setIsLoading] = useState(false);
@@ -318,6 +321,20 @@ export default function App({ initResult }: Props) {
 
 			// 使用流式 API 发送给 AI
 			// Pass planMode from queued message snapshot
+			// 创建 ask_user 回调
+			const onAskUser = async (
+				question: string,
+				askOptions: string[],
+			): Promise<string> => {
+				return new Promise((resolve) => {
+					setPendingAskUser({
+						question,
+						options: askOptions,
+						onResolve: resolve,
+					});
+				});
+			};
+
 			return aiService.streamMessage(
 				buildResult.content,
 				context,
@@ -327,6 +344,7 @@ export default function App({ initResult }: Props) {
 					onEnd: options?.streamCallbacks?.onEnd,
 				},
 				{ signal: options?.signal, planMode: queuedMessage.planMode },
+				onAskUser,
 			);
 		},
 		[],
@@ -502,6 +520,22 @@ export default function App({ initResult }: Props) {
 	const toggleFocusMode = useCallback(() => {
 		setFocusMode((prev) => (prev === "input" ? "output" : "input"));
 	}, []);
+
+	// ask_user 选择处理
+	const handleAskUserSelect = useCallback((answer: string) => {
+		if (pendingAskUser) {
+			pendingAskUser.onResolve(answer);
+			setPendingAskUser(null);
+		}
+	}, [pendingAskUser]);
+
+	// ask_user 取消处理
+	const handleAskUserCancel = useCallback(() => {
+		if (pendingAskUser) {
+			pendingAskUser.onResolve(""); // 返回空字符串表示取消
+			setPendingAskUser(null);
+		}
+	}, [pendingAskUser]);
 
 	// 输入区域高度变化回调
 	const handleInputHeightChange = useCallback((height: number) => {
@@ -1036,7 +1070,18 @@ export default function App({ initResult }: Props) {
 	// 计算 MessageOutput 的可用高度
 	// 输入模式: MessageOutput + Divider(1) + InputArea(动态) + Divider(1) + StatusBar(1)
 	// 浏览模式: MessageOutput + Divider(1) + StatusBar(1) = 2 行固定
-	const fixedHeight = isOutputMode ? 2 : 3 + inputAreaHeight;
+	// AskUser 模式: MessageOutput + AskUserMenu(问题1行 + 选项数 + 提示1行 + divider1行) + Divider(1) + StatusBar(1)
+	const getFixedHeight = () => {
+		if (isOutputMode) return 2;
+		if (pendingAskUser) {
+			// AskUserMenu 高度: divider(1) + question(1) + options + customInput(1) + hints(1)
+			const optionsCount = pendingAskUser.options.length + 1; // +1 for custom input option
+			const askUserHeight = 1 + 1 + Math.min(optionsCount, 9) + 1; // divider + question + options (max 9) + hints
+			return askUserHeight + 2; // + bottom divider + statusbar
+		}
+		return 3 + inputAreaHeight;
+	};
+	const fixedHeight = getFixedHeight();
 	const messageOutputHeight = Math.max(1, terminalHeight - fixedHeight);
 
 	return (
@@ -1053,15 +1098,28 @@ export default function App({ initResult }: Props) {
 				onToggleReasoningCollapse={toggleReasoningCollapse}
 			/>
 
-			{/* 输出区域与输入框分隔线（仅输入模式显示） */}
-			{isInputMode && (
+			{/* 输出区域与输入框分隔线（输入模式且无 ask_user 菜单时显示，AskUserMenu 内部有自己的 divider） */}
+			{isInputMode && !pendingAskUser && (
 				<Box flexShrink={0}>
 					<Divider />
 				</Box>
 			)}
 
-			{/* 输入框区域（仅输入模式显示） */}
-			{isInputMode && (
+			{/* ask_user 菜单（AI 等待用户回答时显示） */}
+			{pendingAskUser && (
+				<Box flexShrink={0}>
+					<AskUserMenu
+						question={pendingAskUser.question}
+						options={pendingAskUser.options}
+						onSelect={handleAskUserSelect}
+						onCancel={handleAskUserCancel}
+						columns={terminalWidth}
+					/>
+				</Box>
+			)}
+
+			{/* 输入框区域（输入模式且无 ask_user 菜单时显示） */}
+			{isInputMode && !pendingAskUser && (
 				<Box flexShrink={0}>
 					<AutocompleteInput
 						prompt="> "
@@ -1069,12 +1127,10 @@ export default function App({ initResult }: Props) {
 						onClear={handleClear}
 						onExit={clearAndExit}
 						slashCommands={SLASH_COMMANDS}
-						isActive={isInputMode}
+						isActive={isInputMode && !pendingAskUser}
 						onHeightChange={handleInputHeightChange}
 						injectText={injectText}
 						onInjectTextHandled={handleInjectTextHandled}
-						history={inputHistory}
-						onHistoryChange={handleHistoryChange}
 					/>
 				</Box>
 			)}

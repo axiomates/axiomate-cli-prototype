@@ -150,10 +150,6 @@ export type AutocompleteInputProps = {
 	injectText?: string;
 	/** injectText 处理完成后的回调 */
 	onInjectTextHandled?: () => void;
-	/** 输入历史记录（由父组件管理，避免组件卸载时丢失） */
-	history: HistoryEntry[];
-	/** 历史记录变化回调 */
-	onHistoryChange: (history: HistoryEntry[]) => void;
 };
 
 // ============================================================================

@@ -22,6 +22,7 @@ import { detectMysql, detectPsql, detectSqlite } from "./database.js";
 import { detectWebFetch } from "./web.js";
 import { detectFile } from "./file.js";
 import { detectPlan } from "./plan.js";
+import { detectAskUser } from "./ask_user.js";
 
 // 导出基础工具函数
 export * from "./base.js";
@@ -68,6 +69,7 @@ export const allDiscoverers: DiscoverFunction[] = [
 	// Utility
 	detectFile,
 	detectPlan,
+	detectAskUser,
 ];
 
 /**

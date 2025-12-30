@@ -8,6 +8,7 @@ import type {
 	ToolCall,
 	ChatMessage,
 	ToolExecutionResult,
+	AskUserCallback,
 } from "./types.js";
 import type {
 	IToolRegistry,
@@ -140,11 +141,25 @@ export class ToolCallHandler implements IToolCallHandler {
 
 	/**
 	 * 处理 AI 返回的工具调用
+	 * @param toolCalls 工具调用列表
+	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
 	 */
-	async handleToolCalls(toolCalls: ToolCall[]): Promise<ChatMessage[]> {
+	async handleToolCalls(
+		toolCalls: ToolCall[],
+		onAskUser?: AskUserCallback,
+	): Promise<ChatMessage[]> {
 		const results: ChatMessage[] = [];
 
 		for (const call of toolCalls) {
+			const { toolId, actionName } = this.parseToolCallName(call.function.name);
+
+			// Special handling for askuser tool
+			if (toolId === "askuser" && actionName === "ask") {
+				const askResult = await this.handleAskUser(call, onAskUser);
+				results.push(askResult);
+				continue;
+			}
+
 			const { result, tool, action } = await this.executeSingleCall(call);
 
 			// 构建工具结果消息
@@ -172,6 +187,78 @@ export class ToolCallHandler implements IToolCallHandler {
 		}
 
 		return results;
+	}
+
+	/**
+	 * Handle ask_user tool call
+	 * Pauses execution and waits for user input via callback
+	 */
+	private async handleAskUser(
+		call: ToolCall,
+		onAskUser?: AskUserCallback,
+	): Promise<ChatMessage> {
+
+		// Parse arguments
+		let args: { question?: string; options?: string } = {};
+		try {
+			args = JSON.parse(call.function.arguments);
+		} catch {
+			return {
+				role: "tool",
+				tool_call_id: call.id,
+				content: "[Ask User] Error: Failed to parse arguments",
+			};
+		}
+
+		const question = args.question || "";
+		let options: string[] = [];
+
+		// Parse options if provided (JSON array string)
+		if (args.options) {
+			try {
+				const parsed = JSON.parse(args.options);
+				if (Array.isArray(parsed)) {
+					options = parsed.map(String);
+				}
+			} catch {
+				// Ignore parse error, use empty options
+			}
+		}
+
+		// If no callback provided, return error
+		if (!onAskUser) {
+			return {
+				role: "tool",
+				tool_call_id: call.id,
+				content: "[Ask User] Error: User interaction not available in this context",
+			};
+		}
+
+		// Call the callback and wait for user response
+		try {
+			const userAnswer = await onAskUser(question, options);
+
+			// User cancelled (empty string)
+			if (userAnswer === "") {
+				return {
+					role: "tool",
+					tool_call_id: call.id,
+					content: "[Ask User] User cancelled the question",
+				};
+			}
+
+			return {
+				role: "tool",
+				tool_call_id: call.id,
+				content: `[Ask User] User answered: ${userAnswer}`,
+			};
+		} catch (error) {
+			return {
+				role: "tool",
+				tool_call_id: call.id,
+				content: `[Ask User] Error: ${error instanceof Error ? error.message : String(error)}`,
+			};
+		}
 	}
 }
 

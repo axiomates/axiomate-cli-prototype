@@ -226,6 +226,7 @@ Uses local directory analysis (not AI two-phase):
    - Unix/macOS: `bash`
 2. **Builtin utility tools** (cross-platform):
    - `file` - File operations with auto encoding detection
+   - `ask_user` - Ask user questions and wait for response
 
 ### File Tool
 
@@ -239,6 +240,25 @@ Cross-platform builtin tool for file operations with automatic encoding detectio
 | `write` | Write file (preserves encoding for existing, UTF-8 for new) |
 | `edit` | Replace content (preserves original encoding) |
 | `search` | Search for pattern (string or regex) |
+
+**Encoding Support**:
+
+### Ask User Tool
+
+Builtin tool that allows AI to pause execution and ask user a question.
+
+**Usage**:
+- AI calls `ask_user_ask` with `question` and optional `options` (JSON array string)
+- UI displays question with predefined options + custom input option
+- User navigates with ↑/↓, selects with Enter, cancels with Escape
+- User can choose "[Custom input...]" to type their own answer
+- AI receives user's answer and continues processing
+
+**Implementation**:
+- Tool discoverer: `source/services/tools/discoverers/ask_user.ts`
+- UI component: `source/components/AskUserMenu.tsx`
+- Callback type: `AskUserCallback` in `source/services/ai/types.ts`
+- Integration: `app.tsx` state `pendingAskUser` + handlers
 
 **Encoding Support**:
 - Two-stage detection: BOM first (100% confidence), then chardet statistical analysis

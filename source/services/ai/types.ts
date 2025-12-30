@@ -297,9 +297,13 @@ export type IToolCallHandler = {
 	/**
 	 * 处理 AI 返回的工具调用
 	 * @param toolCalls 工具调用列表
+	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
 	 * @returns 工具结果消息列表
 	 */
-	handleToolCalls(toolCalls: ToolCall[]): Promise<ChatMessage[]>;
+	handleToolCalls(
+		toolCalls: ToolCall[],
+		onAskUser?: AskUserCallback,
+	): Promise<ChatMessage[]>;
 
 	/**
 	 * 解析工具调用名称
@@ -405,6 +409,7 @@ export type IAIService = {
 	 * @param context 上下文信息
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal）
+	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
 	 * @returns 最终完整响应
 	 */
 	streamMessage(
@@ -412,6 +417,7 @@ export type IAIService = {
 		context?: MatchContext,
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
+		onAskUser?: AskUserCallback,
 	): Promise<string>;
 
 	/**
@@ -473,3 +479,18 @@ export type IAIService = {
 	 */
 	savePartialResponse(content: string): void;
 };
+
+// ============================================================================
+// Ask User Types
+// ============================================================================
+
+/**
+ * Callback for ask_user tool to pause execution and wait for user input
+ * @param question The question to ask the user
+ * @param options Predefined options (can be empty array for free-form input)
+ * @returns User's answer (selected option or custom input)
+ */
+export type AskUserCallback = (
+	question: string,
+	options: string[],
+) => Promise<string>;

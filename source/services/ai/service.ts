@@ -14,6 +14,7 @@ import type {
 	OpenAITool,
 	StreamCallbacks,
 	StreamOptions,
+	AskUserCallback,
 } from "./types.js";
 import type { IToolRegistry } from "../tools/types.js";
 import type { IToolMatcher } from "./types.js";
@@ -217,12 +218,14 @@ export class AIService implements IAIService {
 	 * @param context 上下文信息
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal 和 planMode）
+	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
 	 */
 	async streamMessage(
 		userMessage: string,
 		context?: MatchContext,
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
+		onAskUser?: AskUserCallback,
 	): Promise<string> {
 		// 增强上下文
 		const enhancedContext = this.enhanceContext(context);
@@ -248,7 +251,7 @@ export class AIService implements IAIService {
 		try {
 			// 使用流式 API
 			// 注意：streamChatWithTools 内部已经调用了 onEnd，这里不需要重复调用
-			const result = await this.streamChatWithTools(tools, callbacks, options);
+			const result = await this.streamChatWithTools(tools, callbacks, options, onAskUser);
 
 			return result;
 		} catch (error) {
@@ -330,11 +333,13 @@ export class AIService implements IAIService {
 	 * @param tools 工具列表
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal）
+	 * @param onAskUser 可选的 ask_user 回调
 	 */
 	private async streamChatWithTools(
 		tools: OpenAITool[],
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
+		onAskUser?: AskUserCallback,
 	): Promise<string> {
 		// 检查客户端是否支持流式
 		if (!this.client.streamChat) {
@@ -399,9 +404,10 @@ export class AIService implements IAIService {
 					this.session.addAssistantMessage(assistantMessage);
 					messages.push(assistantMessage);
 
-					// 执行工具调用
+					// 执行工具调用（传递 onAskUser 回调）
 					const toolResults = await this.toolCallHandler.handleToolCalls(
 						chunk.delta.tool_calls,
+						onAskUser,
 					);
 
 					// 添加工具结果到 Session 和消息

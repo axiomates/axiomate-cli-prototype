@@ -135,9 +135,10 @@ function getDefaultShellTools(): string[] {
 /**
  * Get builtin utility tools (cross-platform, always available)
  * - file: File operations with auto encoding detection
+ * - askuser: Ask user questions and wait for response
  */
 function getBuiltinUtilityTools(): string[] {
-	return ["file"];
+	return ["file", "askuser"];
 }
 
 /**

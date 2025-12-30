@@ -276,5 +276,11 @@
 	},
 	"statusBar": {
 		"notConfigured": "N/A"
+	},
+	"askUser": {
+		"customInput": "[カスタム入力...]",
+		"placeholder": "回答を入力...",
+		"navigationHint": "↑/↓ 移動 · Enter 選択 · Esc キャンセル",
+		"customInputHint": "Enter 送信 · Esc 戻る"
 	}
 }

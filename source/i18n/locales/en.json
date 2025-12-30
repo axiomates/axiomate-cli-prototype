@@ -276,5 +276,11 @@
 	},
 	"statusBar": {
 		"notConfigured": "N/A"
+	},
+	"askUser": {
+		"customInput": "[Custom input...]",
+		"placeholder": "Enter your answer...",
+		"navigationHint": "↑/↓ navigate · Enter select · Esc cancel",
+		"customInputHint": "Enter to submit · Esc to go back"
 	}
 }
