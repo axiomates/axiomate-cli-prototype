@@ -15,9 +15,11 @@ A terminal-based AI assistant built with React + Ink, featuring streaming respon
 ## Quick Start
 
 ```bash
+cp .env.local.example .env.local
+# edit .env.local
 npm install
 npm run build
-npm start
+npm run start
 ```
 
 On first launch, a welcome page appears with pre-configured API credentials for testing.
