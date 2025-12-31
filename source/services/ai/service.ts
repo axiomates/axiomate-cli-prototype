@@ -28,6 +28,8 @@ import {
 } from "./session.js";
 import { buildSystemPrompt } from "../../constants/prompts.js";
 import { t } from "../../i18n/index.js";
+import { logger } from "../../utils/logger.js";
+import { isPlanModeEnabled } from "../../utils/config.js";
 
 /**
  * 默认上下文窗口大小
@@ -231,10 +233,10 @@ export class AIService implements IAIService {
 		const enhancedContext = this.enhanceContext(context);
 
 		// Extract planMode from options (default false)
-		const planMode = options?.planMode ?? false;
+		const initialPlanMode = options?.planMode ?? false;
 
 		// 确保上下文已注入到 System Prompt
-		this.ensureContextInSystemPrompt(enhancedContext, planMode);
+		this.ensureContextInSystemPrompt(enhancedContext, initialPlanMode);
 
 		// 创建检查点（在添加用户消息前）
 		const checkpoint = this.session.checkpoint();
@@ -243,16 +245,17 @@ export class AIService implements IAIService {
 		this.session.addUserMessage(userMessage);
 
 		// 获取相关工具 (plan mode only gets plan tool)
-		const tools = this.getContextTools(enhancedContext, planMode);
+		const tools = this.getContextTools(enhancedContext, initialPlanMode);
 
 		// 通知流式开始
 		callbacks?.onStart?.();
 
 		try {
 			// 使用流式 API
-			// 注意：streamChatWithTools 内部已经调用了 onEnd，这里不需要重复调用
+			// 传入 context 以支持动态工具刷新（当 plan mode 切换时）
 			const result = await this.streamChatWithTools(
 				tools,
+				enhancedContext,
 				callbacks,
 				options,
 				onAskUser,
@@ -344,20 +347,34 @@ export class AIService implements IAIService {
 	}
 
 	/**
-	 * 流式对话（支持工具调用）
-	 * @param tools 工具列表
+	 * 流式对话（支持工具调用和动态工具刷新）
+	 * @param initialTools 初始工具列表
+	 * @param context 上下文信息（用于动态刷新工具）
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal）
 	 * @param onAskUser 可选的 ask_user 回调
 	 */
 	private async streamChatWithTools(
-		tools: OpenAITool[],
+		initialTools: OpenAITool[],
+		context: MatchContext,
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
 		onAskUser?: AskUserCallback,
 	): Promise<string> {
+		// 当前使用的工具列表（可能会动态更新）
+		let tools = initialTools;
+		// 跟踪当前 plan mode 状态
+		let currentPlanMode = options?.planMode ?? false;
+
+		logger.warn("[streamChatWithTools] Start", {
+			toolCount: tools.length,
+			toolNames: tools.map((t) => t.function.name),
+			planMode: currentPlanMode,
+		});
+
 		// 检查客户端是否支持流式
 		if (!this.client.streamChat) {
+			logger.warn("[streamChatWithTools] No streamChat support, fallback");
 			// 回退到非流式
 			const result =
 				tools.length > 0
@@ -371,8 +388,17 @@ export class AIService implements IAIService {
 		// 分离累积：思考内容和正式内容
 		let reasoningContent = "";
 		let fullContent = "";
+		// 跟踪总内容（跨工具调用轮次）
+		let totalContent = "";
 
 		while (rounds < this.maxToolCallRounds) {
+			logger.warn(`[streamChatWithTools] Round ${rounds + 1}`, {
+				messageCount: messages.length,
+				totalContentLen: totalContent.length,
+				toolCount: tools.length,
+				planMode: currentPlanMode,
+			});
+
 			// 检查是否已被中止
 			if (options?.signal?.aborted) {
 				throw new DOMException("Request was aborted", "AbortError");
@@ -398,9 +424,10 @@ export class AIService implements IAIService {
 				}
 				// 任何内容更新都触发回调
 				if (chunk.delta.reasoning_content || chunk.delta.content) {
+					// 发送总内容（包含之前轮次的内容）
 					callbacks?.onChunk?.({
 						reasoning: reasoningContent,
-						content: fullContent,
+						content: totalContent + fullContent,
 					});
 				}
 
@@ -410,6 +437,14 @@ export class AIService implements IAIService {
 					chunk.delta.tool_calls &&
 					chunk.delta.tool_calls.length > 0
 				) {
+					logger.warn("[streamChatWithTools] Tool call detected", {
+						toolCalls: chunk.delta.tool_calls.map((tc) => ({
+							name: tc.function?.name,
+							id: tc.id,
+						})),
+						currentContent: fullContent.substring(0, 100),
+					});
+
 					// 添加 assistant 消息到 Session（只保存正式内容，思考内容不入 session）
 					const assistantMessage: ChatMessage = {
 						role: "assistant",
@@ -419,16 +454,41 @@ export class AIService implements IAIService {
 					this.session.addAssistantMessage(assistantMessage);
 					messages.push(assistantMessage);
 
+					// 累积本轮内容到总内容
+					if (fullContent) {
+						totalContent += fullContent + "\n";
+					}
+
 					// 执行工具调用（传递 onAskUser 回调）
 					const toolResults = await this.toolCallHandler.handleToolCalls(
 						chunk.delta.tool_calls,
 						onAskUser,
 					);
 
+					logger.warn("[streamChatWithTools] Tool results", {
+						resultCount: toolResults.length,
+					});
+
 					// 添加工具结果到 Session 和消息
 					for (const result of toolResults) {
 						this.session.addToolMessage(result);
 						messages.push(result);
+					}
+
+					// 检查 plan mode 是否发生变化，如果变化则刷新工具列表
+					const newPlanMode = isPlanModeEnabled();
+					if (newPlanMode !== currentPlanMode) {
+						logger.warn("[streamChatWithTools] Plan mode changed", {
+							from: currentPlanMode,
+							to: newPlanMode,
+						});
+						currentPlanMode = newPlanMode;
+						// 动态刷新工具列表
+						tools = this.getContextTools(context, currentPlanMode);
+						logger.warn("[streamChatWithTools] Tools refreshed", {
+							toolCount: tools.length,
+							toolNames: tools.map((t) => t.function.name),
+						});
 					}
 
 					rounds++;
@@ -442,50 +502,67 @@ export class AIService implements IAIService {
 					chunk.finish_reason === "eos" ||
 					chunk.finish_reason === "length"
 				) {
+					logger.warn("[streamChatWithTools] Normal end", {
+						finishReason: chunk.finish_reason,
+						finalContentLen: (totalContent + fullContent).length,
+					});
+
+					const finalContent = totalContent + fullContent;
 					this.session.addAssistantMessage({
 						role: "assistant",
 						content: fullContent,
 					});
 					callbacks?.onEnd?.({
 						reasoning: reasoningContent,
-						content: fullContent,
+						content: finalContent,
 					});
-					return fullContent;
+					return finalContent;
 				}
 			}
 
 			// 如果是因为工具调用而 break，继续下一轮循环让 AI 看到工具结果
 			if (brokeForToolCall) {
-				// 通知 UI 开始新的流式消息（用于工具调用后 AI 继续回复）
-				callbacks?.onStart?.();
+				logger.warn(
+					"[streamChatWithTools] Continue after tool call, NOT calling onStart",
+				);
+				// 不调用 onStart，因为我们在同一个消息中累积内容
 				continue;
 			}
 
 			// 如果 for 循环正常结束（不是因为工具调用），说明流已经结束
-			if (fullContent || reasoningContent) {
+			if (fullContent || reasoningContent || totalContent) {
+				logger.warn("[streamChatWithTools] Loop end with content", {
+					fullContentLen: fullContent.length,
+					totalContentLen: totalContent.length,
+				});
+
+				const finalContent = totalContent + fullContent;
 				this.session.addAssistantMessage({
 					role: "assistant",
 					content: fullContent,
 				});
 				callbacks?.onEnd?.({
 					reasoning: reasoningContent,
-					content: fullContent,
+					content: finalContent,
 				});
-				return fullContent;
+				return finalContent;
 			}
 
 			// 流正常结束但没有内容，返回空
-			callbacks?.onEnd?.({ reasoning: "", content: "" });
-			return "";
+			logger.warn("[streamChatWithTools] Loop end with no content");
+			callbacks?.onEnd?.({ reasoning: "", content: totalContent || "" });
+			return totalContent || "";
 		}
 
 		// 达到最大轮数
+		logger.warn("[streamChatWithTools] Max rounds reached", { rounds });
 		const maxToolCallsMsg = t("errors.maxToolCallsReached");
+		const finalContent = totalContent + fullContent;
 		callbacks?.onEnd?.({
 			reasoning: reasoningContent,
-			content: fullContent || maxToolCallsMsg,
+			content: finalContent || maxToolCallsMsg,
 		});
-		return fullContent || maxToolCallsMsg;
+		return finalContent || maxToolCallsMsg;
 	}
 
 	/**
