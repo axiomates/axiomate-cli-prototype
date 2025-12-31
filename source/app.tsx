@@ -216,8 +216,60 @@ export default function App({ initResult }: Props) {
 						for (const msg of history) {
 							if (msg.role === "user") {
 								uiMessages.push({ content: msg.content, type: "user" });
-							} else if (msg.role === "assistant" && msg.content) {
-								uiMessages.push({ content: msg.content });
+							} else if (msg.role === "assistant") {
+								// 添加 assistant 的文本内容
+								if (msg.content) {
+									uiMessages.push({ content: msg.content });
+								}
+								// 检查是否有 ask_user 工具调用，提取问题
+								if (msg.tool_calls) {
+									for (const toolCall of msg.tool_calls) {
+										if (toolCall.function.name === "askuser_ask") {
+											try {
+												const args = JSON.parse(toolCall.function.arguments);
+												const question = args.question || "";
+												let options: string[] = [];
+												if (args.options) {
+													try {
+														const parsed = JSON.parse(args.options);
+														if (Array.isArray(parsed)) {
+															options = parsed.map(String);
+														}
+													} catch {
+														// 忽略解析错误
+													}
+												}
+												// 构建问题内容（包含选项）
+												let questionContent = question;
+												if (options.length > 0) {
+													questionContent +=
+														"\n" +
+														options.map((opt, i) => `  ${i + 1}. ${opt}`).join("\n");
+												}
+												uiMessages.push({
+													content: questionContent,
+													type: "system",
+													markdown: false,
+												});
+											} catch {
+												// 忽略解析错误
+											}
+										}
+									}
+								}
+							} else if (msg.role === "tool" && msg.content) {
+								// 解析 tool 消息，提取 ask_user 回答
+								const content = msg.content;
+								// 格式: "[Ask User] User answered: xxx"
+								const askUserMatch = content.match(
+									/^\[Ask User\] User answered: (.+)$/s,
+								);
+								if (askUserMatch) {
+									uiMessages.push({
+										content: askUserMatch[1]!,
+										type: "user-answer",
+									});
+								}
 							}
 						}
 						setMessages(uiMessages);
@@ -943,8 +995,60 @@ export default function App({ initResult }: Props) {
 			for (const msg of history) {
 				if (msg.role === "user") {
 					uiMessages.push({ content: msg.content, type: "user" });
-				} else if (msg.role === "assistant" && msg.content) {
-					uiMessages.push({ content: msg.content });
+				} else if (msg.role === "assistant") {
+					// 添加 assistant 的文本内容
+					if (msg.content) {
+						uiMessages.push({ content: msg.content });
+					}
+					// 检查是否有 ask_user 工具调用，提取问题
+					if (msg.tool_calls) {
+						for (const toolCall of msg.tool_calls) {
+							if (toolCall.function.name === "askuser_ask") {
+								try {
+									const args = JSON.parse(toolCall.function.arguments);
+									const question = args.question || "";
+									let options: string[] = [];
+									if (args.options) {
+										try {
+											const parsed = JSON.parse(args.options);
+											if (Array.isArray(parsed)) {
+												options = parsed.map(String);
+											}
+										} catch {
+											// 忽略解析错误
+										}
+									}
+									// 构建问题内容（包含选项）
+									let questionContent = question;
+									if (options.length > 0) {
+										questionContent +=
+											"\n" +
+											options.map((opt, i) => `  ${i + 1}. ${opt}`).join("\n");
+									}
+									uiMessages.push({
+										content: questionContent,
+										type: "system",
+										markdown: false,
+									});
+								} catch {
+									// 忽略解析错误
+								}
+							}
+						}
+					}
+				} else if (msg.role === "tool" && msg.content) {
+					// 解析 tool 消息，提取 ask_user 回答
+					const content = msg.content;
+					// 格式: "[Ask User] User answered: xxx"
+					const askUserMatch = content.match(
+						/^\[Ask User\] User answered: (.+)$/s,
+					);
+					if (askUserMatch) {
+						uiMessages.push({
+							content: askUserMatch[1]!,
+							type: "user-answer",
+						});
+					}
 				}
 			}
 			setMessages(uiMessages);
