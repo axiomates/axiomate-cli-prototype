@@ -79,6 +79,34 @@ source/
 
 `i18n/locales/*.json` - 三个语言文件都要加
 
+## Plan Mode
+
+两种模式：**Plan Mode**（只读规划）和 **Action Mode**（完整执行）。
+
+### 模式切换
+
+| 方式 | 命令/工具 | 生效时机 |
+|------|----------|---------|
+| 用户手动 | `/plan on`, `/plan off` | 下一条消息 |
+| AI 调用 | `plan_enter_mode`, `plan_exit_mode` | 立即生效 |
+
+### 工作流程
+
+1. AI 调用 `plan_enter_mode` → 切换到 Plan Mode（只有 plan 工具）
+2. AI 使用 `plan_write` 创建计划到 `.axiomate/plans/plan.md`
+3. AI 调用 `plan_exit_mode` → 切换回 Action Mode（所有工具）
+4. AI 执行计划，用 `plan_edit` 标记完成：`- [ ]` → `- [x]`
+
+### 关键实现
+
+| 功能 | 文件 |
+|------|------|
+| Plan 工具定义 | `services/tools/discoverers/plan.ts` |
+| 模式切换执行 | `services/tools/executor.ts` |
+| 动态工具刷新 | `services/ai/service.ts` (streamChatWithTools) |
+| System Prompt | `constants/prompts.ts` |
+| 状态存储 | `utils/config.ts` (planModeEnabled) |
+
 ## 代码规范
 
 - 用户可见文本必须用 i18n `t()` 函数

@@ -418,11 +418,13 @@ const internalHandlers: Record<string, InternalHandler> = {
 	},
 
 	// Plan mode handlers
+	// 使用 callback_with_message + recreate_ai_service 确保下一条消息使用新的 system prompt
 	plan_on: () => {
 		setPlanModeEnabled(true);
 		clearCommandCache();
 		return {
-			type: "message" as const,
+			type: "callback_with_message" as const,
+			callback: "recreate_ai_service" as const,
 			content: t("commandHandler.planEnabled"),
 		};
 	},
@@ -431,7 +433,8 @@ const internalHandlers: Record<string, InternalHandler> = {
 		setPlanModeEnabled(false);
 		clearCommandCache();
 		return {
-			type: "message" as const,
+			type: "callback_with_message" as const,
+			callback: "recreate_ai_service" as const,
 			content: t("commandHandler.planDisabled"),
 		};
 	},

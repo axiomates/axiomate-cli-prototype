@@ -34,6 +34,7 @@ type AnthropicAPIResponse = {
 	role: "assistant";
 	content: Array<
 		| { type: "text"; text: string }
+		| { type: "thinking"; thinking: string }
 		| {
 				type: "tool_use";
 				id: string;
@@ -130,6 +131,7 @@ export class AnthropicClient implements IAIClient {
 					headers: {
 						"x-api-key": this.config.apiKey,
 						"anthropic-version": "2023-06-01",
+						"anthropic-beta": "interleaved-thinking-2025-05-14",
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify(body),
@@ -173,10 +175,24 @@ export class AnthropicClient implements IAIClient {
 			.map((block) => block.text)
 			.join("");
 
+		// 提取思考内容 (thinking blocks)
+		const thinkingContent = data.content
+			.filter(
+				(block): block is { type: "thinking"; thinking: string } =>
+					block.type === "thinking",
+			)
+			.map((block) => block.thinking)
+			.join("");
+
 		const message: ChatMessage = {
 			role: "assistant",
 			content: textContent,
 		};
+
+		// 如果有思考内容，添加到消息中（使用 reasoning_content 字段保持一致性）
+		if (thinkingContent) {
+			message.reasoning_content = thinkingContent;
+		}
 
 		// 解析 tool_use 块
 		const toolUseBlocks = data.content.filter(
@@ -326,6 +342,7 @@ export class AnthropicClient implements IAIClient {
 				headers: {
 					"x-api-key": this.config.apiKey,
 					"anthropic-version": "2023-06-01",
+					"anthropic-beta": "interleaved-thinking-2025-05-14",
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify(body),

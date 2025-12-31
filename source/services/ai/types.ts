@@ -35,6 +35,8 @@ export type ChatMessage = {
 	tool_call_id?: string;
 	// AI 返回的工具调用请求
 	tool_calls?: ToolCall[];
+	// 思考内容（Anthropic extended thinking, DeepSeek-R1 等）
+	reasoning_content?: string;
 };
 
 // ============================================================================

@@ -475,7 +475,7 @@ export class AIService implements IAIService {
 						messages.push(result);
 					}
 
-					// 检查 plan mode 是否发生变化，如果变化则刷新工具列表
+					// 检查 plan mode 是否发生变化，如果变化则刷新工具列表和 system prompt
 					const newPlanMode = isPlanModeEnabled();
 					if (newPlanMode !== currentPlanMode) {
 						logger.warn("[streamChatWithTools] Plan mode changed", {
@@ -485,9 +485,22 @@ export class AIService implements IAIService {
 						currentPlanMode = newPlanMode;
 						// 动态刷新工具列表
 						tools = this.getContextTools(context, currentPlanMode);
-						logger.warn("[streamChatWithTools] Tools refreshed", {
+						// 动态更新 system prompt（让 AI 看到新模式的指导）
+						const newPrompt = buildSystemPrompt(
+							context.cwd,
+							context.projectType,
+							currentPlanMode,
+						);
+						this.session.setSystemPrompt(newPrompt);
+						// 同时更新 messages 数组的第一个元素（system prompt）
+						// 因为 messages 是快照，需要手动同步
+						if (messages.length > 0 && messages[0]?.role === "system") {
+							messages[0] = { role: "system", content: newPrompt };
+						}
+						logger.warn("[streamChatWithTools] Tools and prompt refreshed", {
 							toolCount: tools.length,
 							toolNames: tools.map((t) => t.function.name),
+							promptMode: currentPlanMode ? "plan" : "action",
 						});
 					}
 

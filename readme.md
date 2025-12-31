@@ -46,11 +46,30 @@ npm run package  # 需要 Bun
 | ------------- | ------------ |
 | `/model`      | 切换模型     |
 | `/thinking`   | 开关思考模式 |
+| `/plan`       | 开关规划模式 |
 | `/session`    | 会话管理     |
 | `/compact`    | 压缩上下文   |
 | `/tools`      | 工具管理     |
 | `/suggestion` | 输入建议设置 |
 | `/language`   | 切换语言     |
+
+## Plan Mode
+
+规划模式用于复杂任务的分步执行。
+
+- **Plan Mode** - 只读规划，AI 只能使用 plan 工具创建/编辑计划
+- **Action Mode** - 完整执行，AI 可使用所有工具
+
+### 使用方式
+
+1. 用户手动：`/plan on` / `/plan off`
+2. AI 自动：请求 AI "创建计划并执行"，AI 会自动切换模式
+
+### 工作流程
+
+1. AI 进入 Plan Mode，创建计划到 `.axiomate/plans/plan.md`
+2. AI 退出 Plan Mode，执行计划中的每个步骤
+3. AI 标记已完成步骤：`- [ ]` → `- [x]`
 
 ## 配置
 
