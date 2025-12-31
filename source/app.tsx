@@ -74,9 +74,6 @@ export default function App({ initResult }: Props) {
 		options: string[];
 		onResolve: (answer: string) => void;
 	} | null>(null);
-	const [isAskUserCustomInput, setIsAskUserCustomInput] = useState(false);
-	const [askUserInputLineCount, setAskUserInputLineCount] = useState(1);
-	const [inputAreaHeight, setInputAreaHeight] = useState(1);
 
 	// AI 加载状态（将来用于显示加载指示器）
 	const [, setIsLoading] = useState(false);
@@ -549,7 +546,6 @@ export default function App({ initResult }: Props) {
 			// onResolve 内部已经处理了消息添加，这里只需调用它
 			pendingAskUser.onResolve(answer);
 			setPendingAskUser(null);
-			setIsAskUserCustomInput(false);
 		}
 	}, [pendingAskUser]);
 
@@ -558,28 +554,9 @@ export default function App({ initResult }: Props) {
 		if (pendingAskUser) {
 			pendingAskUser.onResolve(""); // 返回空字符串表示取消
 			setPendingAskUser(null);
-			setIsAskUserCustomInput(false);
 		}
 	}, [pendingAskUser]);
 
-	// ask_user 自定义输入模式变化
-	const handleAskUserCustomInputModeChange = useCallback((isCustomInput: boolean) => {
-		setIsAskUserCustomInput(isCustomInput);
-		// 重置行数
-		if (!isCustomInput) {
-			setAskUserInputLineCount(1);
-		}
-	}, []);
-
-	// ask_user 输入行数变化
-	const handleAskUserInputLineCountChange = useCallback((lineCount: number) => {
-		setAskUserInputLineCount(lineCount);
-	}, []);
-
-	// 输入区域高度变化回调
-	const handleInputHeightChange = useCallback((height: number) => {
-		setInputAreaHeight(height);
-	}, []);
 
 	// 用于从 View 模式注入文本到输入框
 	const [injectText, setInjectText] = useState<string>("");
@@ -1104,41 +1081,12 @@ export default function App({ initResult }: Props) {
 
 	// 派生状态
 	const isInputMode = focusMode === "input";
-	const isOutputMode = focusMode === "output";
-
-	// 计算 MessageOutput 的可用高度
-	// 输入模式: MessageOutput + Divider(1) + InputArea(动态) + Divider(1) + StatusBar(1)
-	// 浏览模式: MessageOutput + Divider(1) + StatusBar(1) = 2 行固定
-	// AskUser 模式: MessageOutput + AskUserMenu(...) + Divider(1) + StatusBar(1)
-	const getFixedHeight = () => {
-		if (isOutputMode) return 2;
-		if (pendingAskUser) {
-			// AskUserMenu 高度计算:
-			// - divider: 1
-			// - question: 1
-			// - content: options list OR custom input (动态行数)
-			// - hints: 1
-			if (isAskUserCustomInput) {
-				// Custom input mode: divider + question + input lines + hints
-				const askUserHeight = 1 + 1 + askUserInputLineCount + 1;
-				return askUserHeight + 2; // + bottom divider + statusbar
-			}
-			// Options mode: divider + question + options + hints
-			const optionsCount = Math.min(pendingAskUser.options.length, 3) + 1; // max 3 options + custom input
-			const askUserHeight = 1 + 1 + optionsCount + 1;
-			return askUserHeight + 2; // + bottom divider + statusbar
-		}
-		return 3 + inputAreaHeight;
-	};
-	const fixedHeight = getFixedHeight();
-	const messageOutputHeight = Math.max(1, terminalHeight - fixedHeight);
 
 	return (
 		<Box flexDirection="column" height={terminalHeight}>
-			{/* 输出区域 - 使用计算的固定高度，位于最顶部 */}
+			{/* 输出区域 - 使用 flexGrow 自动占满剩余空间 */}
 			<MessageOutput
 				messages={messages}
-				height={messageOutputHeight}
 				focusMode={focusMode}
 				collapsedGroups={collapsedGroups}
 				onToggleCollapse={toggleCollapse}
@@ -1163,8 +1111,6 @@ export default function App({ initResult }: Props) {
 						onSelect={handleAskUserSelect}
 						onCancel={handleAskUserCancel}
 						columns={terminalWidth}
-						onCustomInputModeChange={handleAskUserCustomInputModeChange}
-						onInputLineCountChange={handleAskUserInputLineCountChange}
 					/>
 				</Box>
 			)}
@@ -1178,7 +1124,6 @@ export default function App({ initResult }: Props) {
 					onExit={clearAndExit}
 					slashCommands={SLASH_COMMANDS}
 					isActive={isInputMode && !pendingAskUser}
-					onHeightChange={handleInputHeightChange}
 					injectText={injectText}
 					onInjectTextHandled={handleInjectTextHandled}
 				/>

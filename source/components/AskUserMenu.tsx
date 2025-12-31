@@ -7,7 +7,7 @@
  * 自定义输入模式支持多行编辑（Ctrl+Enter 换行，上下键导航行）
  */
 
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Box, Text, useInput } from "ink";
 import { t } from "../i18n/index.js";
 
@@ -22,10 +22,6 @@ type AskUserMenuProps = {
 	onCancel?: () => void;
 	/** Terminal width */
 	columns: number;
-	/** Callback when custom input mode changes */
-	onCustomInputModeChange?: (isCustomInput: boolean) => void;
-	/** Callback when input line count changes (for height calculation) */
-	onInputLineCountChange?: (lineCount: number) => void;
 	/** Maximum allLines for custom input (default: 10) */
 	maxInputLines?: number;
 };
@@ -36,8 +32,6 @@ export function AskUserMenu({
 	onSelect,
 	onCancel,
 	columns,
-	onCustomInputModeChange,
-	onInputLineCountChange,
 	maxInputLines = 10,
 }: AskUserMenuProps) {
 	// Limit to max 3 options + custom input
@@ -57,12 +51,11 @@ export function AskUserMenu({
 		if (selectedIndex === allOptions.length - 1) {
 			// User selected "Custom input..."
 			setIsCustomInputMode(true);
-			onCustomInputModeChange?.(true);
 		} else {
 			// User selected a predefined option
 			onSelect(limitedOptions[selectedIndex] ?? "");
 		}
-	}, [selectedIndex, allOptions.length, limitedOptions, onSelect, onCustomInputModeChange]);
+	}, [selectedIndex, allOptions.length, limitedOptions, onSelect]);
 
 	// Handle custom input submit
 	const handleCustomInputSubmit = useCallback(() => {
@@ -76,8 +69,7 @@ export function AskUserMenu({
 		setIsCustomInputMode(false);
 		setCustomInputValue("");
 		setCursor(0);
-		onCustomInputModeChange?.(false);
-	}, [onCustomInputModeChange]);
+	}, []);
 
 	// 计算光标所在行和列（用于键盘导航）
 	const getCursorLineInfo = useCallback((text: string, cursorPos: number) => {
@@ -128,19 +120,6 @@ export function AskUserMenu({
 		};
 	}, [customInputValue, cursor, maxInputLines, getCursorLineInfo]);
 
-	// 通知父组件行数变化（包括省略指示器）
-	useEffect(() => {
-		let displayLineCount = lineInfo.visibleLines.length;
-		// 如果有上方省略指示器
-		if (lineInfo.visibleStartIndex > 0) {
-			displayLineCount += 1;
-		}
-		// 如果有下方省略指示器
-		if (lineInfo.visibleStartIndex + lineInfo.visibleLines.length < lineInfo.totalLineCount) {
-			displayLineCount += 1;
-		}
-		onInputLineCountChange?.(displayLineCount);
-	}, [lineInfo.visibleLines.length, lineInfo.visibleStartIndex, lineInfo.totalLineCount, onInputLineCountChange]);
 
 	// 计算给定行索引的起始字符位置
 	const getLineStartPosition = useCallback((lineIndex: number, allLines: string[]) => {

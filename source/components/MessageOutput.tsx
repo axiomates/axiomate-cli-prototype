@@ -1,5 +1,5 @@
-import { Box, Text, useInput } from "ink";
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { Box, Text, useInput, measureElement, type DOMElement } from "ink";
+import { useState, useCallback, useMemo, useEffect, useRef, useLayoutEffect } from "react";
 import useTerminalWidth from "../hooks/useTerminalWidth.js";
 import { THEME_PINK, THEME_LIGHT_YELLOW } from "../constants/colors.js";
 import {
@@ -30,7 +30,7 @@ type FocusMode = "input" | "output";
 
 type Props = {
 	messages: Message[];
-	height: number; // 可用高度（行数）
+	// height 不再从外部传入，使用 measureElement 自动测量
 	focusMode?: FocusMode; // 焦点模式（默认 input）
 	// 消息组折叠相关
 	collapsedGroups?: Set<string>; // 折叠的消息组 ID
@@ -108,7 +108,6 @@ type WelcomeSegment = {
 
 export default function MessageOutput({
 	messages,
-	height,
 	focusMode = "input",
 	collapsedGroups,
 	onToggleCollapse,
@@ -118,6 +117,21 @@ export default function MessageOutput({
 }: Props) {
 	const { t } = useTranslation();
 	const width = useTerminalWidth();
+
+	// 使用 ref 和 measureElement 自动测量高度
+	const boxRef = useRef<DOMElement>(null);
+	const [height, setHeight] = useState(10); // 默认值，首次渲染时使用
+
+	// 使用 useLayoutEffect 在渲染后测量高度
+	useLayoutEffect(() => {
+		if (boxRef.current) {
+			const measured = measureElement(boxRef.current);
+			if (measured.height !== height && measured.height > 0) {
+				setHeight(measured.height);
+			}
+		}
+	});
+
 	// scrollOffset: 从底部向上的偏移量（0 = 显示最新消息）
 	const [scrollOffset, setScrollOffset] = useState(0);
 
@@ -1248,9 +1262,10 @@ export default function MessageOutput({
 
 	return (
 		<Box
+			ref={boxRef}
 			flexDirection="column"
-			height={height}
-			flexShrink={0}
+			flexGrow={1}
+			flexShrink={1}
 			overflowY="hidden"
 		>
 			{finalRows}
