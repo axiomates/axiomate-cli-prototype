@@ -325,16 +325,31 @@ export default function App({ initResult }: Props) {
 				question: string,
 				askOptions: string[],
 			): Promise<string> => {
-				// 添加 AI 的问题到消息历史
+				// 当 AI 调用 ask_user 时，需要：
+				// 1. 结束当前流式消息（将 streaming 设为 false）
+				// 2. 添加 AI 的问题作为单独的 system 消息（包含选项）
 				setMessages((prev) => {
-					// 移除空的流式消息（如果有的话）
-					const newMessages = prev.filter(
-						(msg) => !(msg.streaming && !msg.content),
-					);
+					const newMessages = prev.map((msg) => {
+						if (msg.streaming) {
+							// 结束流式消息
+							return { ...msg, streaming: false };
+						}
+						return msg;
+					});
+					// 构建问题内容（包含选项）
+					let questionContent = question;
+					if (askOptions.length > 0) {
+						questionContent +=
+							"\n" + askOptions.map((opt, i) => `  ${i + 1}. ${opt}`).join("\n");
+					}
 					// 添加 AI 的问题
 					return [
 						...newMessages,
-						{ content: question, type: "system" as const, markdown: false },
+						{
+							content: questionContent,
+							type: "system" as const,
+							markdown: false,
+						},
 					];
 				});
 
@@ -343,12 +358,12 @@ export default function App({ initResult }: Props) {
 						question,
 						options: askOptions,
 						onResolve: (answer: string) => {
-							// 用户回答后，添加回答到消息历史，然后恢复流式
+							// 用户回答后，添加回答到消息历史
+							// 注意：不需要在这里添加新的流式消息占位
+							// AI 继续输出时会通过 onStreamStart 添加新的流式消息
 							setMessages((prev) => [
 								...prev,
 								{ content: answer, type: "user-answer" as const },
-								// 添加新的流式消息占位
-								{ content: "", reasoning: "", streaming: true },
 							]);
 							resolve(answer);
 						},

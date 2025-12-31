@@ -456,6 +456,8 @@ export class AIService implements IAIService {
 
 			// 如果是因为工具调用而 break，继续下一轮循环让 AI 看到工具结果
 			if (brokeForToolCall) {
+				// 通知 UI 开始新的流式消息（用于工具调用后 AI 继续回复）
+				callbacks?.onStart?.();
 				continue;
 			}
 
