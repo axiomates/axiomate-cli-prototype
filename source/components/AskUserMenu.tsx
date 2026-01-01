@@ -10,6 +10,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { Box, Text, useInput } from "ink";
 import { t } from "../i18n/index.js";
+import {
+	getPrevGraphemeBoundary,
+	getNextGraphemeBoundary,
+	splitGraphemes,
+} from "./AutocompleteInput/utils/grapheme.js";
 
 type AskUserMenuProps = {
 	/** The question to display */
@@ -206,7 +211,7 @@ export function AskUserMenu({
 				// 左箭头 - 光标左移
 				if (key.leftArrow) {
 					if (cursor > 0) {
-						setCursor(cursor - 1);
+						setCursor(getPrevGraphemeBoundary(customInputValue, cursor));
 					}
 					return;
 				}
@@ -214,7 +219,7 @@ export function AskUserMenu({
 				// 右箭头 - 光标右移
 				if (key.rightArrow) {
 					if (cursor < customInputValue.length) {
-						setCursor(cursor + 1);
+						setCursor(getNextGraphemeBoundary(customInputValue, cursor));
 					}
 					return;
 				}
@@ -228,11 +233,15 @@ export function AskUserMenu({
 							(input === "" || input === "\b" || input === "\x7f"));
 
 					if (isBackspace && cursor > 0) {
+						const prevBoundary = getPrevGraphemeBoundary(
+							customInputValue,
+							cursor,
+						);
 						const newValue =
-							customInputValue.slice(0, cursor - 1) +
+							customInputValue.slice(0, prevBoundary) +
 							customInputValue.slice(cursor);
 						setCustomInputValue(newValue);
-						setCursor(cursor - 1);
+						setCursor(prevBoundary);
 					}
 					return;
 				}
@@ -320,8 +329,17 @@ export function AskUserMenu({
 								{isCursorLine ? (
 									<>
 										<Text>{line.slice(0, lineInfo.cursorCol)}</Text>
-										<Text inverse>{line[lineInfo.cursorCol] ?? " "}</Text>
-										<Text>{line.slice(lineInfo.cursorCol + 1)}</Text>
+										<Text inverse>
+											{splitGraphemes(line.slice(lineInfo.cursorCol))[0] ?? " "}
+										</Text>
+										<Text>
+											{(() => {
+												const remaining = line.slice(lineInfo.cursorCol);
+												const graphemes = splitGraphemes(remaining);
+												const firstGrapheme = graphemes[0] ?? "";
+												return remaining.slice(firstGrapheme.length);
+											})()}
+										</Text>
 									</>
 								) : (
 									<Text>{line}</Text>
