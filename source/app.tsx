@@ -134,17 +134,33 @@ export default function App({ initResult }: Props) {
 		});
 	}, []);
 
-	// 展开所有组
+	// 展开所有组（包括消息组、reasoning、askuser）
 	const expandAll = useCallback(() => {
 		setCollapsedGroups(new Set());
+		// 展开所有 reasoning 和 askuser
+		setMessages((prev) =>
+			prev.map((msg) => ({
+				...msg,
+				reasoningCollapsed: false,
+				askUserCollapsed: false,
+			})),
+		);
 	}, []);
 
-	// 折叠所有可折叠的组
+	// 折叠所有可折叠的组（包括消息组、reasoning、askuser）
 	const collapseAll = useCallback(() => {
 		const toCollapse = messageGroups
 			.filter((g) => canCollapse(g))
 			.map((g) => g.id);
 		setCollapsedGroups(new Set(toCollapse));
+		// 折叠所有 reasoning 和 askuser
+		setMessages((prev) =>
+			prev.map((msg) => ({
+				...msg,
+				reasoningCollapsed: (msg.reasoning?.length ?? 0) > 0,
+				askUserCollapsed: !!msg.askUserQA,
+			})),
+		);
 	}, [messageGroups]);
 
 	// 切换消息思考内容的折叠状态
