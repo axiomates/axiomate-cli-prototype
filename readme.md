@@ -80,7 +80,7 @@ npm run package  # 需要 Bun
 
 ```bash
 npm run dev        # 开发模式
-npm test           # 测试
+npm run test           # 测试
 npm run lint:fix   # 修复代码风格
 ```
 
