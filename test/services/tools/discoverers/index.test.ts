@@ -95,6 +95,20 @@ vi.mock("../../../../source/services/tools/discoverers/web.js", () => ({
 	),
 }));
 
+vi.mock("../../../../source/services/tools/discoverers/file.js", () => ({
+	detectFile: vi.fn(() => Promise.resolve({ id: "file", installed: true })),
+}));
+
+vi.mock("../../../../source/services/tools/discoverers/plan.js", () => ({
+	detectPlan: vi.fn(() => Promise.resolve({ id: "plan", installed: true })),
+}));
+
+vi.mock("../../../../source/services/tools/discoverers/ask_user.js", () => ({
+	detectAskUser: vi.fn(() =>
+		Promise.resolve({ id: "askuser", installed: true }),
+	),
+}));
+
 describe("discoverers index", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -107,8 +121,8 @@ describe("discoverers index", () => {
 		});
 
 		it("should contain all expected discoverers", () => {
-			// Should have all the discoverers we've mocked (26 total: 24 original + file + plan)
-			expect(allDiscoverers.length).toBe(26);
+			// Should have all the discoverers we've mocked (27 total: 24 original + file + plan + ask_user)
+			expect(allDiscoverers.length).toBe(27);
 		});
 
 		it("should have all functions be callable", () => {

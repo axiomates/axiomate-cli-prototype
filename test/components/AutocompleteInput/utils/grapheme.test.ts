@@ -137,6 +137,14 @@ describe("grapheme utilities", () => {
 			expect(getNextGraphemeBoundary(text, 5)).toBe(10);
 			expect(getNextGraphemeBoundary(text, 9)).toBe(10);
 		});
+
+		it("should return text length when cursor is at last character", () => {
+			expect(getNextGraphemeBoundary("hello", 4)).toBe(5);
+		});
+
+		it("should handle cursor beyond text length", () => {
+			expect(getNextGraphemeBoundary("hello", 10)).toBe(5);
+		});
 	});
 
 	describe("snapToGraphemeBoundary", () => {
@@ -159,6 +167,16 @@ describe("grapheme utilities", () => {
 			expect(snapToGraphemeBoundary("hello", 0)).toBe(0);
 			expect(snapToGraphemeBoundary("hello", 5)).toBe(5);
 		});
+
+		it("should return 0 for negative cursor", () => {
+			expect(snapToGraphemeBoundary("hello", -1)).toBe(0);
+		});
+
+		it("should snap to 0 when inside first grapheme that is multi-codeunit", () => {
+			// Test where cursor is inside first grapheme, should snap back to 0
+			const text = `${family}abc`;
+			expect(snapToGraphemeBoundary(text, 3)).toBe(0);
+		});
 	});
 
 	describe("getGraphemeAt", () => {
@@ -174,6 +192,21 @@ describe("grapheme utilities", () => {
 			const family = "👨‍👩‍👧";
 			const text = `hello${family}world`;
 			expect(getGraphemeAt(text, 5)).toBe(family);
+		});
+
+		it("should return empty string for cursor beyond text length", () => {
+			expect(getGraphemeAt("hello", 100)).toBe("");
+		});
+
+		it("should return grapheme when cursor is inside multi-codeunit grapheme", () => {
+			const text = `ab${family}cd`;
+			// Cursor inside the emoji should return the whole emoji
+			expect(getGraphemeAt(text, 3)).toBe(family);
+			expect(getGraphemeAt(text, 5)).toBe(family);
+		});
+
+		it("should return first character at position 0", () => {
+			expect(getGraphemeAt("hello", 0)).toBe("h");
 		});
 	});
 });

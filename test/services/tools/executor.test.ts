@@ -14,11 +14,29 @@ import type {
 	DiscoveredTool,
 } from "../../../source/services/tools/types.js";
 import * as scriptWriter from "../../../source/services/tools/scriptWriter.js";
+import * as fileOperations from "../../../source/services/tools/fileOperations.js";
+import * as planDiscoverer from "../../../source/services/tools/discoverers/plan.js";
+import * as config from "../../../source/utils/config.js";
 
 // Mock config module
 vi.mock("../../../source/utils/config.js", () => ({
 	getCurrentModelId: vi.fn(() => "test-model"),
 	getModelById: vi.fn(() => ({ contextWindow: 32000 })),
+	setPlanModeEnabled: vi.fn(),
+}));
+
+// Mock file operations
+vi.mock("../../../source/services/tools/fileOperations.js", () => ({
+	readFileContent: vi.fn(),
+	writeFileContent: vi.fn(),
+	editFileContent: vi.fn(),
+	readFileLines: vi.fn(),
+	searchInFile: vi.fn(),
+}));
+
+// Mock plan discoverer
+vi.mock("../../../source/services/tools/discoverers/plan.js", () => ({
+	getPlanFilePath: vi.fn(() => "/test/.axiomate/plans/plan.md"),
 }));
 
 describe("Tool Executor", () => {
@@ -1063,6 +1081,498 @@ describe("Tool Executor", () => {
 			expect(result.stdout).toContain("©");
 			expect(result.stdout).toContain("™");
 			expect(result.stdout).toContain("…");
+		});
+	});
+
+	describe("executeToolAction - file operations", () => {
+		const fileTool: DiscoveredTool = {
+			id: "file",
+			name: "File",
+			description: "File operations",
+			category: "shell",
+			installed: true,
+			actions: [],
+		};
+
+		beforeEach(() => {
+			vi.clearAllMocks();
+		});
+
+		it("should handle __FILE_READ__ action", async () => {
+			vi.mocked(fileOperations.readFileContent).mockReturnValue({
+				success: true,
+				content: "file content",
+				encoding: { encoding: "utf-8", hasBOM: false },
+			});
+
+			const action: ToolAction = {
+				name: "read",
+				description: "Read file",
+				commandTemplate: "__FILE_READ__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+				],
+			};
+
+			const result = await executeToolAction(
+				fileTool,
+				action,
+				{ path: "/test/file.txt" },
+				{ cwd: "/test" },
+			);
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("file content");
+			expect(result.stdout).toContain("[Encoding: utf-8]");
+		});
+
+		it("should handle __FILE_READ__ failure", async () => {
+			vi.mocked(fileOperations.readFileContent).mockReturnValue({
+				success: false,
+				error: "File not found",
+			});
+
+			const action: ToolAction = {
+				name: "read",
+				description: "Read file",
+				commandTemplate: "__FILE_READ__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+				],
+			};
+
+			const result = await executeToolAction(fileTool, action, {
+				path: "/test/file.txt",
+			});
+
+			expect(result.success).toBe(false);
+			expect(result.error).toBe("File not found");
+		});
+
+		it("should handle __FILE_READ_LINES__ action", async () => {
+			vi.mocked(fileOperations.readFileLines).mockReturnValue({
+				success: true,
+				lines: ["line1", "line2", "line3"],
+				startLine: 1,
+				endLine: 3,
+				totalLines: 10,
+			});
+
+			const action: ToolAction = {
+				name: "read_lines",
+				description: "Read file lines",
+				commandTemplate: "__FILE_READ_LINES__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+					{
+						name: "start_line",
+						type: "number",
+						description: "Start",
+						required: false,
+					},
+					{
+						name: "end_line",
+						type: "number",
+						description: "End",
+						required: false,
+					},
+				],
+			};
+
+			const result = await executeToolAction(fileTool, action, {
+				path: "/test/file.txt",
+				start_line: 1,
+				end_line: 3,
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("[Lines 1-3 of 10]");
+			expect(result.stdout).toContain("line1");
+		});
+
+		it("should handle __FILE_WRITE__ action", async () => {
+			vi.mocked(fileOperations.writeFileContent).mockReturnValue({
+				success: true,
+				path: "/test/file.txt",
+				encoding: "utf-8",
+			});
+
+			const action: ToolAction = {
+				name: "write",
+				description: "Write file",
+				commandTemplate: "__FILE_WRITE__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+					{
+						name: "content",
+						type: "string",
+						description: "Content",
+						required: true,
+					},
+				],
+			};
+
+			const result = await executeToolAction(fileTool, action, {
+				path: "/test/file.txt",
+				content: "new content",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Written to /test/file.txt");
+		});
+
+		it("should handle __FILE_EDIT__ action", async () => {
+			vi.mocked(fileOperations.editFileContent).mockReturnValue({
+				success: true,
+				path: "/test/file.txt",
+				replaced: 2,
+			});
+
+			const action: ToolAction = {
+				name: "edit",
+				description: "Edit file",
+				commandTemplate: "__FILE_EDIT__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+					{
+						name: "old_content",
+						type: "string",
+						description: "Old",
+						required: true,
+					},
+					{
+						name: "new_content",
+						type: "string",
+						description: "New",
+						required: true,
+					},
+					{
+						name: "replace_all",
+						type: "boolean",
+						description: "Replace all",
+						required: false,
+					},
+				],
+			};
+
+			const result = await executeToolAction(fileTool, action, {
+				path: "/test/file.txt",
+				old_content: "foo",
+				new_content: "bar",
+				replace_all: true,
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Replaced 2 occurrence(s)");
+		});
+
+		it("should handle __FILE_SEARCH__ action", async () => {
+			vi.mocked(fileOperations.searchInFile).mockReturnValue({
+				success: true,
+				matches: [
+					{ line: 1, column: 5, content: "hello world" },
+					{ line: 3, column: 10, content: "hello again" },
+				],
+			});
+
+			const action: ToolAction = {
+				name: "search",
+				description: "Search file",
+				commandTemplate: "__FILE_SEARCH__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+					{
+						name: "pattern",
+						type: "string",
+						description: "Pattern",
+						required: true,
+					},
+					{
+						name: "regex",
+						type: "boolean",
+						description: "Regex",
+						required: false,
+					},
+				],
+			};
+
+			const result = await executeToolAction(fileTool, action, {
+				path: "/test/file.txt",
+				pattern: "hello",
+				regex: true,
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("1:5: hello world");
+			expect(result.stdout).toContain("3:10: hello again");
+		});
+
+		it("should handle __FILE_SEARCH__ with no matches", async () => {
+			vi.mocked(fileOperations.searchInFile).mockReturnValue({
+				success: true,
+				matches: [],
+			});
+
+			const action: ToolAction = {
+				name: "search",
+				description: "Search file",
+				commandTemplate: "__FILE_SEARCH__",
+				parameters: [
+					{ name: "path", type: "string", description: "Path", required: true },
+					{
+						name: "pattern",
+						type: "string",
+						description: "Pattern",
+						required: true,
+					},
+				],
+			};
+
+			const result = await executeToolAction(fileTool, action, {
+				path: "/test/file.txt",
+				pattern: "notfound",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toBe("(no matches)");
+		});
+	});
+
+	describe("executeToolAction - plan operations", () => {
+		const planTool: DiscoveredTool = {
+			id: "plan",
+			name: "Plan",
+			description: "Plan operations",
+			category: "shell",
+			installed: true,
+			actions: [],
+		};
+
+		beforeEach(() => {
+			vi.clearAllMocks();
+		});
+
+		it("should handle __PLAN_READ__ action", async () => {
+			vi.mocked(fileOperations.readFileContent).mockReturnValue({
+				success: true,
+				content: "# Plan\n- [ ] Task 1",
+			});
+
+			const action: ToolAction = {
+				name: "read",
+				description: "Read plan",
+				commandTemplate: "__PLAN_READ__",
+				parameters: [],
+			};
+
+			const result = await executeToolAction(planTool, action, {});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("# Plan");
+		});
+
+		it("should handle __PLAN_READ__ when file doesn't exist", async () => {
+			vi.mocked(fileOperations.readFileContent).mockReturnValue({
+				success: false,
+				content: undefined,
+			});
+
+			const action: ToolAction = {
+				name: "read",
+				description: "Read plan",
+				commandTemplate: "__PLAN_READ__",
+				parameters: [],
+			};
+
+			const result = await executeToolAction(planTool, action, {});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("[No plan file exists yet]");
+		});
+
+		it("should handle __PLAN_WRITE__ action", async () => {
+			vi.mocked(fileOperations.writeFileContent).mockReturnValue({
+				success: true,
+				path: "/test/.axiomate/plans/plan.md",
+			});
+
+			const action: ToolAction = {
+				name: "write",
+				description: "Write plan",
+				commandTemplate: "__PLAN_WRITE__",
+				parameters: [
+					{
+						name: "content",
+						type: "string",
+						description: "Content",
+						required: true,
+					},
+				],
+			};
+
+			const result = await executeToolAction(planTool, action, {
+				content: "# My Plan",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Plan written to");
+		});
+
+		it("should handle __PLAN_READ_LINES__ action", async () => {
+			vi.mocked(fileOperations.readFileLines).mockReturnValue({
+				success: true,
+				lines: ["line1", "line2"],
+				startLine: 1,
+				endLine: 2,
+				totalLines: 5,
+			});
+
+			const action: ToolAction = {
+				name: "read_lines",
+				description: "Read plan lines",
+				commandTemplate: "__PLAN_READ_LINES__",
+				parameters: [
+					{
+						name: "start_line",
+						type: "number",
+						description: "Start",
+						required: false,
+					},
+					{
+						name: "end_line",
+						type: "number",
+						description: "End",
+						required: false,
+					},
+				],
+			};
+
+			const result = await executeToolAction(planTool, action, {});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("[Lines 1-2 of 5]");
+		});
+
+		it("should handle __PLAN_APPEND__ action", async () => {
+			vi.mocked(fileOperations.writeFileContent).mockReturnValue({
+				success: true,
+				path: "/test/.axiomate/plans/plan.md",
+			});
+
+			const action: ToolAction = {
+				name: "append",
+				description: "Append to plan",
+				commandTemplate: "__PLAN_APPEND__",
+				parameters: [
+					{
+						name: "content",
+						type: "string",
+						description: "Content",
+						required: true,
+					},
+				],
+			};
+
+			const result = await executeToolAction(planTool, action, {
+				content: "- [ ] New task",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Content appended to");
+		});
+
+		it("should handle __PLAN_EDIT__ action", async () => {
+			vi.mocked(fileOperations.editFileContent).mockReturnValue({
+				success: true,
+				path: "/test/.axiomate/plans/plan.md",
+				replaced: 1,
+			});
+
+			const action: ToolAction = {
+				name: "edit",
+				description: "Edit plan",
+				commandTemplate: "__PLAN_EDIT__",
+				parameters: [
+					{
+						name: "old_content",
+						type: "string",
+						description: "Old",
+						required: true,
+					},
+					{
+						name: "new_content",
+						type: "string",
+						description: "New",
+						required: true,
+					},
+				],
+			};
+
+			const result = await executeToolAction(planTool, action, {
+				old_content: "- [ ] Task",
+				new_content: "- [x] Task",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Plan updated");
+		});
+
+		it("should handle __PLAN_SEARCH__ action", async () => {
+			vi.mocked(fileOperations.searchInFile).mockReturnValue({
+				success: true,
+				matches: [{ line: 2, column: 1, content: "- [ ] Task 1" }],
+			});
+
+			const action: ToolAction = {
+				name: "search",
+				description: "Search plan",
+				commandTemplate: "__PLAN_SEARCH__",
+				parameters: [
+					{
+						name: "pattern",
+						type: "string",
+						description: "Pattern",
+						required: true,
+					},
+				],
+			};
+
+			const result = await executeToolAction(planTool, action, {
+				pattern: "Task",
+			});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("2:1: - [ ] Task 1");
+		});
+
+		it("should handle __PLAN_ENTER_MODE__ action", async () => {
+			const action: ToolAction = {
+				name: "enter_mode",
+				description: "Enter plan mode",
+				commandTemplate: "__PLAN_ENTER_MODE__",
+				parameters: [],
+			};
+
+			const result = await executeToolAction(planTool, action, {});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Switched to Plan Mode");
+			expect(config.setPlanModeEnabled).toHaveBeenCalledWith(true);
+		});
+
+		it("should handle __PLAN_EXIT_MODE__ action", async () => {
+			const action: ToolAction = {
+				name: "exit_mode",
+				description: "Exit plan mode",
+				commandTemplate: "__PLAN_EXIT_MODE__",
+				parameters: [],
+			};
+
+			const result = await executeToolAction(planTool, action, {});
+
+			expect(result.success).toBe(true);
+			expect(result.stdout).toContain("Switched to Action Mode");
+			expect(config.setPlanModeEnabled).toHaveBeenCalledWith(false);
 		});
 	});
 });

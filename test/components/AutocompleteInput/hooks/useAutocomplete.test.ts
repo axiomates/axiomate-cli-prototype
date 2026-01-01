@@ -23,6 +23,7 @@ vi.mock("../../../../source/utils/config.js", () => ({
 
 // Mock React hooks
 let effectCallbacks: Array<() => (() => void) | void> = [];
+let effectCleanup: (() => void) | null = null;
 const mockDispatch = vi.fn();
 
 vi.mock("react", () => ({

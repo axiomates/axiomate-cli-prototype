@@ -440,6 +440,211 @@ describe("ToolCallHandler", () => {
 		});
 	});
 
+	describe("handleAskUser", () => {
+		it("should handle askuser tool call with callback", async () => {
+			const onAskUser = vi.fn().mockResolvedValue("user response");
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({
+							question: "What is your name?",
+							options: '["Alice", "Bob"]',
+						}),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			expect(results[0].role).toBe("tool");
+			expect(results[0].tool_call_id).toBe("call_ask");
+			expect(results[0].content).toContain("[Ask User]");
+			expect(results[0].content).toContain("user response");
+			expect(onAskUser).toHaveBeenCalledWith("What is your name?", [
+				"Alice",
+				"Bob",
+			]);
+		});
+
+		it("should handle askuser without callback", async () => {
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({ question: "Test?" }),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls);
+
+			expect(results).toHaveLength(1);
+			expect(results[0].content).toContain(
+				"User interaction not available",
+			);
+		});
+
+		it("should handle user cancellation (empty response)", async () => {
+			const onAskUser = vi.fn().mockResolvedValue("");
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({ question: "Confirm?" }),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			expect(results[0].content).toContain("User cancelled");
+		});
+
+		it("should handle callback error", async () => {
+			const onAskUser = vi.fn().mockRejectedValue(new Error("Callback failed"));
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({ question: "Test?" }),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			expect(results[0].content).toContain("Error:");
+			expect(results[0].content).toContain("Callback failed");
+		});
+
+		it("should handle invalid JSON arguments in askuser", async () => {
+			const onAskUser = vi.fn();
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: "invalid json {",
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			expect(results[0].content).toContain("Failed to parse arguments");
+			expect(onAskUser).not.toHaveBeenCalled();
+		});
+
+		it("should handle missing question with empty string", async () => {
+			const onAskUser = vi.fn().mockResolvedValue("answer");
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({}),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			expect(onAskUser).toHaveBeenCalledWith("", []);
+		});
+
+		it("should handle invalid options JSON", async () => {
+			const onAskUser = vi.fn().mockResolvedValue("answer");
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({
+							question: "Test?",
+							options: "not valid json",
+						}),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			// Should use empty options when parse fails
+			expect(onAskUser).toHaveBeenCalledWith("Test?", []);
+		});
+
+		it("should handle non-array options", async () => {
+			const onAskUser = vi.fn().mockResolvedValue("answer");
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({
+							question: "Test?",
+							options: JSON.stringify({ key: "value" }),
+						}),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			// Should use empty options when not an array
+			expect(onAskUser).toHaveBeenCalledWith("Test?", []);
+		});
+
+		it("should convert options to strings", async () => {
+			const onAskUser = vi.fn().mockResolvedValue("42");
+
+			const toolCalls: ToolCall[] = [
+				{
+					id: "call_ask",
+					type: "function",
+					function: {
+						name: "askuser_ask",
+						arguments: JSON.stringify({
+							question: "Pick a number?",
+							options: JSON.stringify([1, 2, 3]),
+						}),
+					},
+				},
+			];
+
+			const results = await handler.handleToolCalls(toolCalls, onAskUser);
+
+			expect(results).toHaveLength(1);
+			expect(onAskUser).toHaveBeenCalledWith("Pick a number?", ["1", "2", "3"]);
+		});
+	});
+
 	describe("createToolCallHandler", () => {
 		it("should create a ToolCallHandler instance", () => {
 			const result = createToolCallHandler(registry);
