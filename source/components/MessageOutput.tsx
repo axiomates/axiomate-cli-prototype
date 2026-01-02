@@ -122,6 +122,10 @@ type RenderedLine = {
 	// 欢迎消息相关
 	isWelcome?: boolean; // 是否为欢迎消息行
 	welcomeSegments?: WelcomeSegment[]; // 欢迎消息的彩色段落
+	// Spinner 相关（用于延迟渲染，避免频繁重计算）
+	hasStreamingSpinner?: boolean; // 是否需要流式 spinner
+	hasQueuedSpinner?: boolean; // 是否需要队列等待 spinner
+	hasReasoningSpinner?: boolean; // 是否需要思考中 spinner
 };
 
 /**
@@ -202,43 +206,21 @@ export default function MessageOutput({
 		getMarkedInstance(width);
 	}, [width]);
 
-	// 渲染单条消息（统一 Markdown 渲染）
+	// 渲染单条消息（统一 Markdown 渲染，不包含 spinner）
 	const renderContent = useCallback(
-		(msg: Message, isLastMessage: boolean): string => {
+		(msg: Message): string => {
 			// 如果明确设置不渲染 Markdown，直接返回内容
-			let content =
+			const content =
 				msg.markdown === false
 					? msg.content
 					: renderMarkdownSync(msg.content, width - 2);
 
-			// 如果是最后一条消息且正在流式生成，添加动画 spinner（带明黄色）
-			if (msg.streaming && isLastMessage) {
-				// 确保 spinner 在内容后面（同一行或新行）
-				const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
-				// 使用 ANSI 转义码添加明黄色
-				const coloredSpinner = `\x1b[93m${spinnerChar}\x1b[0m`; // 93 = bright yellow
-				if (content.endsWith("\n")) {
-					content = content.slice(0, -1) + " " + coloredSpinner;
-				} else {
-					content += " " + coloredSpinner;
-				}
-			}
-
-			// 如果消息正在队列中等待，添加等待 spinner（带灰色）
-			if (msg.queued) {
-				const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
-				// 使用 ANSI 转义码添加灰色 (90 = bright black/gray)
-				const coloredSpinner = `\x1b[90m${spinnerChar} ${t("common.waiting")}\x1b[0m`;
-				if (content.endsWith("\n")) {
-					content = content.slice(0, -1) + " " + coloredSpinner;
-				} else {
-					content += " " + coloredSpinner;
-				}
-			}
+			// 注意：spinner 不再在这里添加，而是在渲染阶段动态添加
+			// 这样 spinnerIndex 变化不会触发 renderedLines 重新计算
 
 			return content;
 		},
-		[width, spinnerIndex, t],
+		[width],
 	);
 
 	// 去除 ANSI 转义码，计算可见字符宽度
@@ -453,12 +435,17 @@ export default function MessageOutput({
 						}
 					}
 
-					// 思考中的 spinner（最后一条消息且正在流式生成，且还没有正式内容）
-					if (msg.streaming && isLastMessage && !msg.content) {
-						const spinnerChar =
-							SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
+					// 思考中且没有正式内容时，仅当思考内容为空时添加占位行
+					// 注意：如果 reasoning 有内容，split("\n") 可能产生尾部空行，无需额外占位
+					// spinner 在渲染阶段动态添加（根据 isLastVisibleLine 判断）
+					if (
+						msg.streaming &&
+						isLastMessage &&
+						!msg.content &&
+						(!msg.reasoning || msg.reasoning.length === 0)
+					) {
 						lines.push({
-							text: `  \x1b[93m${spinnerChar}\x1b[0m`,
+							text: "", // 占位行，spinner 在渲染阶段添加
 							msgIndex: i,
 							isUser: false,
 							isFirstLine: false,
@@ -471,33 +458,38 @@ export default function MessageOutput({
 				// 2. 渲染正式内容
 				// 注意：检查 content 是否有实际内容（非空字符串），避免在只有 reasoning 时渲染空行
 				if (msg.content && msg.content.trim()) {
-					const content = renderContent(msg, isLastMessage);
+					const content = renderContent(msg);
 					const msgLines = content.split("\n");
 
 					let isFirstLineOfMsg = !msg.reasoning; // 如果有思考内容，正式内容不是第一行
-					for (const line of msgLines) {
+					for (let lineIdx = 0; lineIdx < msgLines.length; lineIdx++) {
+						const line = msgLines[lineIdx]!;
 						// 检查这行是否需要换行
 						const wrappedLines = wrapLine(line, effectiveWidth);
-						for (const wrappedLine of wrappedLines) {
+						for (let wrapIdx = 0; wrapIdx < wrappedLines.length; wrapIdx++) {
+							const wrappedLine = wrappedLines[wrapIdx]!;
 							lines.push({
 								text: wrappedLine,
 								msgIndex: i,
 								isUser,
 								isFirstLine: isFirstLineOfMsg,
 								groupId: group.id,
+								// 注意：spinner 不再通过标记添加，而是在渲染阶段直接判断
 							});
 							isFirstLineOfMsg = false;
 						}
 					}
 				} else if (!msg.reasoning && !msg.askUserQA) {
 					// 没有思考内容也没有正式内容（空消息）
-					const content = renderContent(msg, isLastMessage);
+					const content = renderContent(msg);
 					const msgLines = content.split("\n");
 
 					let isFirstLineOfMsg = true;
-					for (const line of msgLines) {
+					for (let lineIdx = 0; lineIdx < msgLines.length; lineIdx++) {
+						const line = msgLines[lineIdx]!;
 						const wrappedLines = wrapLine(line, effectiveWidth);
-						for (const wrappedLine of wrappedLines) {
+						for (let wrapIdx = 0; wrapIdx < wrappedLines.length; wrapIdx++) {
+							const wrappedLine = wrappedLines[wrapIdx]!;
 							lines.push({
 								text: wrappedLine,
 								msgIndex: i,
@@ -591,7 +583,7 @@ export default function MessageOutput({
 		width,
 		wrapLine,
 		t,
-		spinnerIndex,
+		// 注意：spinnerIndex 不再是依赖项，spinner 在渲染阶段动态添加
 	]);
 
 	// 计算可见范围
@@ -1245,16 +1237,27 @@ export default function MessageOutput({
 				}
 			} else {
 				// 思考内容行（暗色）
+				// 判断是否需要在这行末尾显示 spinner（与普通消息相同的逻辑）
+				const isLastVisibleLine = i === visibleLines.length - 1;
+				let reasoningSpinnerSuffix: React.ReactNode = null;
+
+				if (isLastVisibleLine && !hasMoreBelow && hasStreamingMessage) {
+					const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
+					reasoningSpinnerSuffix = <Text color="yellowBright">{spinnerChar}</Text>;
+				}
+
 				if (isCursorLine) {
 					contentRows.push(
 						<Box key={`reasoning-${line.msgIndex}-${i}`} height={1}>
-							{renderLineWithCursorBg(line.text, "gray")}
+							{renderLineWithCursorBg(line.text || " ", "gray")}
+							{reasoningSpinnerSuffix}
 						</Box>,
 					);
 				} else {
 					contentRows.push(
 						<Box key={`reasoning-${line.msgIndex}-${i}`} height={1}>
 							<Text dimColor>{line.text || " "}</Text>
+							{reasoningSpinnerSuffix}
 						</Box>,
 					);
 				}
@@ -1353,6 +1356,26 @@ export default function MessageOutput({
 		// 非用户消息（AI 回复/系统消息）: 浅黄色 > 前缀
 		const prefixColor = line.isUser ? THEME_PINK : THEME_LIGHT_YELLOW;
 
+		// 判断是否需要在这行末尾显示 spinner
+		// 条件：是可见区域的最后一行 && 用户在底部（没有更多内容在下方） && 有流式/队列消息
+		const isLastVisibleLine = i === visibleLines.length - 1;
+		let spinnerSuffix: React.ReactNode = null;
+
+		if (isLastVisibleLine && !hasMoreBelow && hasStreamingMessage) {
+			// 流式 spinner（明黄色）
+			const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
+			spinnerSuffix = <Text color="yellowBright">{spinnerChar}</Text>;
+		} else if (isLastVisibleLine && !hasMoreBelow && hasQueuedMessage) {
+			// 队列等待 spinner（灰色）
+			const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
+			spinnerSuffix = <Text dimColor>{spinnerChar} {t("common.waiting")}</Text>;
+		}
+
+		// 计算行文本
+		// 当有 spinner 时，空内容直接显示空字符串（spinner 会占据空间）
+		// 当没有 spinner 且内容为空时，使用空格占位以保持行高度
+		const lineText = line.text || (spinnerSuffix ? "" : " ");
+
 		if (isCursorLine) {
 			// 光标行：第一个字符显示背景色
 			if (line.isFirstLine) {
@@ -1363,15 +1386,16 @@ export default function MessageOutput({
 						<Text color={prefixColor} bold>
 							{" "}
 						</Text>
-						<Text>{line.text || " "}</Text>
+						<Text>{lineText}</Text>
+						{spinnerSuffix}
 					</Box>,
 				);
 			} else {
 				// 无前缀的行：内容第一个字符显示背景色
-				const text = line.text || " ";
 				contentRows.push(
 					<Box key={`line-${line.msgIndex}-${i}`} height={1}>
-						{renderLineWithCursorBg(text)}
+						{renderLineWithCursorBg(lineText)}
+						{spinnerSuffix}
 					</Box>,
 				);
 			}
@@ -1385,19 +1409,28 @@ export default function MessageOutput({
 			contentRows.push(
 				<Box key={`line-${line.msgIndex}-${i}`} height={1}>
 					{prefix}
-					<Text>{line.text || " "}</Text>
+					<Text>{lineText}</Text>
+					{spinnerSuffix}
 				</Box>,
 			);
 		}
 	}
 
-	// 3. 底部指示器
+	// 3. 底部指示器（当滚动时显示，并在流式消息时显示 spinner）
 	if (hasMoreBelow) {
+		const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
 		contentRows.push(
 			<Box key="indicator-below" justifyContent="center" height={1}>
 				<Text dimColor>
 					{t("messageOutput.scrollDownHint", { count: linesBelow })}
 				</Text>
+				{/* 当有流式消息且滚动到上方时，在底部指示器显示 spinner */}
+				{hasStreamingMessage && (
+					<Text color="yellowBright"> {spinnerChar}</Text>
+				)}
+				{hasQueuedMessage && !hasStreamingMessage && (
+					<Text dimColor> {spinnerChar}</Text>
+				)}
 			</Box>,
 		);
 	}
