@@ -19,7 +19,11 @@ export type MessageQueueState = {
 	/** Check if queue is processing */
 	isProcessing: () => boolean;
 	/** Enqueue a message */
-	enqueue: (content: string, files: FileReference[], planMode: boolean) => string;
+	enqueue: (
+		content: string,
+		files: FileReference[],
+		planMode: boolean,
+	) => string;
 };
 
 type MessageQueueOptions = {
@@ -32,14 +36,16 @@ type MessageQueueOptions = {
 	askUserReasoningOffsetRef: React.RefObject<number>;
 	updateUsageStatus: () => void;
 	createAskUserCallback: (
-		setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+		setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
 	) => (question: string, options: string[]) => Promise<string>;
 };
 
 /**
  * Hook for managing the message queue and streaming
  */
-export function useMessageQueue(options: MessageQueueOptions): MessageQueueState {
+export function useMessageQueue(
+	options: MessageQueueOptions,
+): MessageQueueState {
 	const {
 		aiServiceRef,
 		setMessages,
@@ -59,7 +65,7 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 	const processMessage = useCallback(
 		async (
 			queuedMessage: QueuedMessage,
-			processorOptions?: ProcessorOptions
+			processorOptions?: ProcessorOptions,
 		): Promise<string> => {
 			const aiService = aiServiceRef.current;
 			if (!aiService) {
@@ -118,7 +124,7 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 				throw new Error(
 					t("ai.contextFull", {
 						percent: compactCheck.projectedPercent.toFixed(0),
-					})
+					}),
 				);
 			}
 
@@ -145,10 +151,10 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 				},
 				{ signal: processorOptions?.signal, planMode: queuedMessage.planMode },
 				onAskUser,
-				displayContent
+				displayContent,
 			);
 		},
-		[aiServiceRef, setMessages, compactRef, createAskUserCallback]
+		[aiServiceRef, setMessages, compactRef, createAskUserCallback],
 	);
 
 	// Initialize message queue
@@ -162,8 +168,8 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 					prev.map((msg) =>
 						msg.queuedMessageId === id
 							? { ...msg, queued: false, queuedMessageId: undefined }
-							: msg
-					)
+							: msg,
+					),
 				);
 			},
 			onMessageComplete: (id) => {
@@ -369,7 +375,7 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 		(content: string, files: FileReference[], planMode: boolean) => {
 			return messageQueueRef.current?.enqueue(content, files, planMode) ?? "";
 		},
-		[]
+		[],
 	);
 
 	return {

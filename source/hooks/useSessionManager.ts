@@ -42,7 +42,7 @@ function parseHistoryToUIMessages(
 		tool_calls?: Array<{
 			function: { name: string; arguments: string };
 		}>;
-	}>
+	}>,
 ): Message[] {
 	const uiMessages: Message[] = [];
 	let pendingAskUserQuestion: {
@@ -53,7 +53,10 @@ function parseHistoryToUIMessages(
 	for (const msg of history) {
 		if (msg.role === "user") {
 			// 使用 displayContent（原始用户输入）而非 content（可能包含文件内容）
-			uiMessages.push({ content: msg.displayContent ?? msg.content, type: "user" });
+			uiMessages.push({
+				content: msg.displayContent ?? msg.content,
+				type: "user",
+			});
 		} else if (msg.role === "assistant") {
 			// Check for ask_user tool calls
 			let hasAskUserToolCall = false;
@@ -93,18 +96,12 @@ function parseHistoryToUIMessages(
 		} else if (msg.role === "tool" && msg.content) {
 			// Parse tool message, extract ask_user answer
 			const content = msg.content;
-			const askUserMatch = content.match(
-				/^\[Ask User\] User answered: (.+)$/s
-			);
+			const askUserMatch = content.match(/^\[Ask User\] User answered: (.+)$/s);
 			if (askUserMatch && pendingAskUserQuestion) {
 				// Attach Q&A to the last assistant message
 				for (let i = uiMessages.length - 1; i >= 0; i--) {
 					const uiMsg = uiMessages[i];
-					if (
-						uiMsg &&
-						uiMsg.type !== "user" &&
-						uiMsg.type !== "user-answer"
-					) {
+					if (uiMsg && uiMsg.type !== "user" && uiMsg.type !== "user-answer") {
 						uiMessages[i] = {
 							...uiMsg,
 							askUserQA: {
@@ -128,7 +125,7 @@ function parseHistoryToUIMessages(
  * Hook for managing session operations
  */
 export function useSessionManager(
-	options: SessionManagerOptions
+	options: SessionManagerOptions,
 ): SessionManagerState {
 	const {
 		aiServiceRef,
@@ -303,7 +300,7 @@ export function useSessionManager(
 			setMessages,
 			resetCollapseState,
 			updateUsageStatus,
-		]
+		],
 	);
 
 	// Delete a session
@@ -353,7 +350,7 @@ export function useSessionManager(
 			// Clear command cache
 			clearCommandCache();
 		},
-		[setMessages]
+		[setMessages],
 	);
 
 	// Clear all sessions and create a new one
@@ -386,12 +383,7 @@ export function useSessionManager(
 
 		// Update usage status
 		updateUsageStatus();
-	}, [
-		aiServiceRef,
-		setMessages,
-		resetCollapseState,
-		updateUsageStatus,
-	]);
+	}, [aiServiceRef, setMessages, resetCollapseState, updateUsageStatus]);
 
 	return {
 		sessionStoreRef,

@@ -69,14 +69,14 @@ describe("MessageOutput", () => {
 
 	describe("message types", () => {
 		it("should handle system messages without throwing", () => {
-			const messages: Message[] = [{ content: "System output", type: "system" }];
+			const messages: Message[] = [
+				{ content: "System output", type: "system" },
+			];
 			expect(() => render(<MessageOutput messages={messages} />)).not.toThrow();
 		});
 
 		it("should handle welcome messages without throwing", () => {
-			const messages: Message[] = [
-				{ content: "Welcome!", type: "welcome" },
-			];
+			const messages: Message[] = [{ content: "Welcome!", type: "welcome" }];
 			expect(() => render(<MessageOutput messages={messages} />)).not.toThrow();
 		});
 
@@ -208,7 +208,10 @@ describe("MessageOutput", () => {
 			const collapsedGroups = new Set(["group-0"]);
 			expect(() =>
 				render(
-					<MessageOutput messages={messages} collapsedGroups={collapsedGroups} />,
+					<MessageOutput
+						messages={messages}
+						collapsedGroups={collapsedGroups}
+					/>,
 				),
 			).not.toThrow();
 		});

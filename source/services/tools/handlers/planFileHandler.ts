@@ -20,10 +20,7 @@ export const planFileHandler: RegisteredHandler = {
 	name: "planFile",
 	matches: (ctx) => {
 		const template = ctx.action.commandTemplate;
-		return (
-			template.startsWith("__PLAN_") &&
-			!template.includes("_MODE__")
-		);
+		return template.startsWith("__PLAN_") && !template.includes("_MODE__");
 	},
 	handle: async (ctx) => {
 		const { action, params, options } = ctx;

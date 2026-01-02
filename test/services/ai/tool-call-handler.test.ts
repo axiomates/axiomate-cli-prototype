@@ -486,9 +486,7 @@ describe("ToolCallHandler", () => {
 			const results = await handler.handleToolCalls(toolCalls);
 
 			expect(results).toHaveLength(1);
-			expect(results[0].content).toContain(
-				"User interaction not available",
-			);
+			expect(results[0].content).toContain("User interaction not available");
 		});
 
 		it("should handle user cancellation (empty response)", async () => {

@@ -112,14 +112,14 @@ export default function App({ initResult }: Props) {
 		(msgIndex: number) => {
 			toggleReasoningCollapseBase(msgIndex, setMessages);
 		},
-		[toggleReasoningCollapseBase]
+		[toggleReasoningCollapseBase],
 	);
 
 	const toggleAskUserCollapse = useCallback(
 		(msgIndex: number) => {
 			toggleAskUserCollapseBase(msgIndex, setMessages);
 		},
-		[toggleAskUserCollapseBase]
+		[toggleAskUserCollapseBase],
 	);
 
 	// AI 服务实例（从初始化结果获取）
@@ -307,6 +307,8 @@ export default function App({ initResult }: Props) {
 				]);
 			}
 		},
+		// messageQueueRef 和 sessionStoreRef 是 ref，不会改变引用
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[],
 	);
 
@@ -444,7 +446,9 @@ export default function App({ initResult }: Props) {
 				},
 			]);
 		}
-	}, []);
+		// sessionStoreRef 是 ref，不会改变引用
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [resetCollapseState]);
 
 	// 设置 compactRef 以便 processMessage 可以调用 compact
 	useEffect(() => {

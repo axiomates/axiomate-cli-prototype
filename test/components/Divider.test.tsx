@@ -26,9 +26,8 @@ describe("Divider", () => {
 	});
 
 	it("should use terminal width from hook", async () => {
-		const useTerminalWidth = await import(
-			"../../source/hooks/useTerminalWidth.js"
-		);
+		const useTerminalWidth =
+			await import("../../source/hooks/useTerminalWidth.js");
 
 		// Test with different width
 		vi.mocked(useTerminalWidth.default).mockReturnValue(40);

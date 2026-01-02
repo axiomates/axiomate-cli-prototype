@@ -302,7 +302,7 @@ export default function MessageOutput({
 	// 使用传入的消息组或自己计算（避免重复计算）
 	const messageGroups = useMemo(
 		() => messageGroupsProp ?? groupMessages(messages),
-		[messageGroupsProp, messages]
+		[messageGroupsProp, messages],
 	);
 
 	// 将所有消息预渲染为行数组（考虑换行和折叠）
@@ -1243,7 +1243,9 @@ export default function MessageOutput({
 
 				if (isLastVisibleLine && !hasMoreBelow && hasStreamingMessage) {
 					const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
-					reasoningSpinnerSuffix = <Text color="yellowBright">{spinnerChar}</Text>;
+					reasoningSpinnerSuffix = (
+						<Text color="yellowBright">{spinnerChar}</Text>
+					);
 				}
 
 				if (isCursorLine) {
@@ -1368,7 +1370,11 @@ export default function MessageOutput({
 		} else if (isLastVisibleLine && !hasMoreBelow && hasQueuedMessage) {
 			// 队列等待 spinner（灰色）
 			const spinnerChar = SPINNER_FRAMES[spinnerIndex] || SPINNER_FRAMES[0];
-			spinnerSuffix = <Text dimColor>{spinnerChar} {t("common.waiting")}</Text>;
+			spinnerSuffix = (
+				<Text dimColor>
+					{spinnerChar} {t("common.waiting")}
+				</Text>
+			);
 		}
 
 		// 计算行文本

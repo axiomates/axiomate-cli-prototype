@@ -100,9 +100,8 @@ describe("AutocompleteInput", () => {
 
 	describe("export types", () => {
 		it("should export required types", async () => {
-			const module = await import(
-				"../../../source/components/AutocompleteInput/index.js"
-			);
+			const module =
+				await import("../../../source/components/AutocompleteInput/index.js");
 			expect(module.isMessageInput).toBeDefined();
 			expect(module.isCommandInput).toBeDefined();
 		});

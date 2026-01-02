@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { Message } from "../components/MessageOutput.js";
-import { groupMessages, canCollapse, type MessageGroup } from "../models/messageGroup.js";
+import {
+	groupMessages,
+	canCollapse,
+	type MessageGroup,
+} from "../models/messageGroup.js";
 
 export type CollapseState = {
 	/** Set of collapsed group IDs */
@@ -10,18 +14,22 @@ export type CollapseState = {
 	/** Toggle collapse state for a group */
 	toggleCollapse: (groupId: string) => void;
 	/** Expand all groups (including reasoning and askUserQA) */
-	expandAll: (setMessages: React.Dispatch<React.SetStateAction<Message[]>>) => void;
+	expandAll: (
+		setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+	) => void;
 	/** Collapse all collapsible groups */
-	collapseAll: (setMessages: React.Dispatch<React.SetStateAction<Message[]>>) => void;
+	collapseAll: (
+		setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
+	) => void;
 	/** Toggle reasoning collapse for a message */
 	toggleReasoningCollapse: (
 		msgIndex: number,
-		setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+		setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
 	) => void;
 	/** Toggle askUser collapse for a message */
 	toggleAskUserCollapse: (
 		msgIndex: number,
-		setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+		setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
 	) => void;
 	/** Reset collapse state (for session switch/clear) */
 	resetCollapseState: () => void;
@@ -31,7 +39,9 @@ export type CollapseState = {
  * Hook for managing collapse state of message groups and message sections
  */
 export function useCollapseState(messages: Message[]): CollapseState {
-	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+		new Set(),
+	);
 
 	// Compute message groups (memoized by React)
 	const messageGroups = groupMessages(messages);
@@ -77,10 +87,10 @@ export function useCollapseState(messages: Message[]): CollapseState {
 					...msg,
 					reasoningCollapsed: false,
 					askUserCollapsed: false,
-				}))
+				})),
 			);
 		},
-		[]
+		[],
 	);
 
 	// Collapse all collapsible groups
@@ -96,17 +106,17 @@ export function useCollapseState(messages: Message[]): CollapseState {
 					...msg,
 					reasoningCollapsed: (msg.reasoning?.length ?? 0) > 0,
 					askUserCollapsed: !!msg.askUserQA,
-				}))
+				})),
 			);
 		},
-		[messageGroups]
+		[messageGroups],
 	);
 
 	// Toggle reasoning collapse for a specific message
 	const toggleReasoningCollapse = useCallback(
 		(
 			msgIndex: number,
-			setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+			setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
 		) => {
 			setMessages((prev) => {
 				const newMessages = [...prev];
@@ -120,14 +130,14 @@ export function useCollapseState(messages: Message[]): CollapseState {
 				return newMessages;
 			});
 		},
-		[]
+		[],
 	);
 
 	// Toggle askUser collapse for a specific message
 	const toggleAskUserCollapse = useCallback(
 		(
 			msgIndex: number,
-			setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+			setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
 		) => {
 			setMessages((prev) => {
 				const newMessages = [...prev];
@@ -141,7 +151,7 @@ export function useCollapseState(messages: Message[]): CollapseState {
 				return newMessages;
 			});
 		},
-		[]
+		[],
 	);
 
 	// Reset collapse state (for session switch/clear)

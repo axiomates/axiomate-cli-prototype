@@ -15,7 +15,6 @@ import type {
 } from "../../../source/services/tools/types.js";
 import * as scriptWriter from "../../../source/services/tools/scriptWriter.js";
 import * as fileOperations from "../../../source/services/tools/fileOperations.js";
-import * as planDiscoverer from "../../../source/services/tools/discoverers/plan.js";
 import * as config from "../../../source/utils/config.js";
 
 // Mock config module

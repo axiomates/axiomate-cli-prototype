@@ -14,7 +14,7 @@ export type AskUserState = {
 	handleAskUserCancel: () => void;
 	/** Create an onAskUser callback for AI service */
 	createAskUserCallback: (
-		setMessages: React.Dispatch<React.SetStateAction<Message[]>>
+		setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
 	) => (question: string, options: string[]) => Promise<string>;
 	/** Content offset ref for resuming stream after askuser */
 	askUserContentOffsetRef: React.RefObject<number>;
@@ -44,7 +44,7 @@ export function useAskUser(): AskUserState {
 				setPendingAskUser(null);
 			}
 		},
-		[pendingAskUser]
+		[pendingAskUser],
 	);
 
 	// Handle user cancellation
@@ -60,7 +60,7 @@ export function useAskUser(): AskUserState {
 		(setMessages: React.Dispatch<React.SetStateAction<Message[]>>) => {
 			return async (
 				question: string,
-				askOptions: string[]
+				askOptions: string[],
 			): Promise<string> => {
 				// When AI calls ask_user, temporarily end the streaming message
 				setMessages((prev) => {
@@ -125,7 +125,7 @@ export function useAskUser(): AskUserState {
 				});
 			};
 		},
-		[]
+		[],
 	);
 
 	return {

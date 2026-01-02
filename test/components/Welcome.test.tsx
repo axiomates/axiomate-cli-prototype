@@ -16,7 +16,11 @@ vi.mock("../../source/constants/colors.js", () => ({
 
 vi.mock("../../source/constants/modelPresets.js", () => ({
 	DEFAULT_MODEL_PRESETS: [
-		{ model: "test-model", apiBase: "https://api.test.com", apiKey: "test-key" },
+		{
+			model: "test-model",
+			apiBase: "https://api.test.com",
+			apiKey: "test-key",
+		},
 	],
 }));
 

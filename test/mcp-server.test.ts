@@ -30,9 +30,8 @@ describe("mcp-server module", () => {
 	});
 
 	it("should have ToolRegistry mocked correctly", async () => {
-		const { ToolRegistry } = await import(
-			"../source/services/tools/registry.js"
-		);
+		const { ToolRegistry } =
+			await import("../source/services/tools/registry.js");
 		expect(ToolRegistry).toBeDefined();
 
 		const registry = new ToolRegistry();
@@ -40,17 +39,15 @@ describe("mcp-server module", () => {
 	});
 
 	it("should have createToolsMcpServer mocked correctly", async () => {
-		const { createToolsMcpServer } = await import(
-			"../source/services/tools/mcp/server.js"
-		);
+		const { createToolsMcpServer } =
+			await import("../source/services/tools/mcp/server.js");
 		expect(createToolsMcpServer).toBeDefined();
 		expect(typeof createToolsMcpServer).toBe("function");
 	});
 
 	it("should have StdioServerTransport mocked correctly", async () => {
-		const { StdioServerTransport } = await import(
-			"@modelcontextprotocol/sdk/server/stdio.js"
-		);
+		const { StdioServerTransport } =
+			await import("@modelcontextprotocol/sdk/server/stdio.js");
 		expect(StdioServerTransport).toBeDefined();
 	});
 

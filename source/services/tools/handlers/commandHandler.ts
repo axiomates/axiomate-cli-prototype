@@ -17,11 +17,7 @@ export const commandHandler: RegisteredHandler = {
 	handle: async (ctx) => {
 		const { tool, action, params, options } = ctx;
 
-		const command = renderCommandTemplate(
-			action.commandTemplate,
-			params,
-			tool,
-		);
+		const command = renderCommandTemplate(action.commandTemplate, params, tool);
 
 		return executeCommand(command, {
 			cwd: options?.cwd,

@@ -74,9 +74,8 @@ describe("cli module", () => {
 		// Verify mocks are set up
 		const { initConfig } = await import("../source/utils/config.js");
 		const { initAppData } = await import("../source/utils/appdata.js");
-		const { initLocalSettings } = await import(
-			"../source/utils/localsettings.js"
-		);
+		const { initLocalSettings } =
+			await import("../source/utils/localsettings.js");
 		const { initPlatform } = await import("../source/utils/platform.js");
 		const { initI18n } = await import("../source/i18n/index.js");
 

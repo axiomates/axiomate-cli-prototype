@@ -23,7 +23,6 @@ vi.mock("../../../../source/utils/config.js", () => ({
 
 // Mock React hooks
 let effectCallbacks: Array<() => (() => void) | void> = [];
-let effectCleanup: (() => void) | null = null;
 const mockDispatch = vi.fn();
 
 vi.mock("react", () => ({
@@ -76,7 +75,6 @@ describe("useAutocomplete", () => {
 		vi.clearAllMocks();
 		vi.useFakeTimers();
 		effectCallbacks = [];
-		effectCleanup = null;
 		mockGetSuggestion.mockResolvedValue({ suggestion: "suggested" });
 		mockIsSuggestionEnabled.mockReturnValue(true);
 	});
@@ -383,8 +381,7 @@ describe("useAutocomplete", () => {
 
 			// Run the effect
 			for (const callback of effectCallbacks) {
-				const cleanup = callback();
-				if (cleanup) effectCleanup = cleanup;
+				callback();
 			}
 
 			// Advance timer past debounce

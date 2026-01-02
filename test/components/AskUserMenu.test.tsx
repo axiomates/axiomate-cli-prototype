@@ -8,7 +8,8 @@ vi.mock("../../source/i18n/index.js", () => ({
 	t: vi.fn((key: string) => {
 		const translations: Record<string, string> = {
 			"askUser.customInput": "Custom input...",
-			"askUser.customInputHint": "Enter: submit | Esc: cancel | Ctrl+Enter: new line",
+			"askUser.customInputHint":
+				"Enter: submit | Esc: cancel | Ctrl+Enter: new line",
 			"askUser.navigationHint": "↑↓: navigate | Enter: select | Esc: cancel",
 		};
 		return translations[key] || key;
@@ -16,8 +17,12 @@ vi.mock("../../source/i18n/index.js", () => ({
 }));
 
 vi.mock("../../source/components/AutocompleteInput/utils/grapheme.js", () => ({
-	getPrevGraphemeBoundary: vi.fn((text: string, pos: number) => Math.max(0, pos - 1)),
-	getNextGraphemeBoundary: vi.fn((text: string, pos: number) => Math.min(text.length, pos + 1)),
+	getPrevGraphemeBoundary: vi.fn((text: string, pos: number) =>
+		Math.max(0, pos - 1),
+	),
+	getNextGraphemeBoundary: vi.fn((text: string, pos: number) =>
+		Math.min(text.length, pos + 1),
+	),
 	splitGraphemes: vi.fn((str: string) => str.split("")),
 }));
 

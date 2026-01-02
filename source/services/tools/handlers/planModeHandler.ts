@@ -14,8 +14,7 @@ export const planModeHandler: RegisteredHandler = {
 	matches: (ctx) => {
 		const template = ctx.action.commandTemplate;
 		return (
-			template === "__PLAN_ENTER_MODE__" ||
-			template === "__PLAN_EXIT_MODE__"
+			template === "__PLAN_ENTER_MODE__" || template === "__PLAN_EXIT_MODE__"
 		);
 	},
 	handle: async (ctx) => {
