@@ -45,7 +45,7 @@ describe("contentBuilder", () => {
 
 			const result = transformUserMessage(message, files);
 
-			expect(result).toBe("看看 文件 src/app.tsx 这个文件");
+			expect(result).toBe("看看 file src/app.tsx 这个文件");
 		});
 
 		it("should transform directory references to text", () => {
@@ -54,7 +54,7 @@ describe("contentBuilder", () => {
 
 			const result = transformUserMessage(message, files);
 
-			expect(result).toBe("检查 目录 src/components 目录");
+			expect(result).toBe("检查 directory src/components 目录");
 		});
 
 		it("should handle multiple file references", () => {
@@ -66,7 +66,7 @@ describe("contentBuilder", () => {
 
 			const result = transformUserMessage(message, files);
 
-			expect(result).toBe("比较 文件 file1.ts 和 文件 file2.ts");
+			expect(result).toBe("比较 file file1.ts 和 file file2.ts");
 		});
 
 		it("should return original message when no files", () => {
@@ -122,7 +122,7 @@ describe("contentBuilder", () => {
 			});
 
 			expect(result.content).toContain("app.ts");
-			expect(result.fileSummary).toContain("1 个文件");
+			expect(result.fileSummary).toContain("1 file");
 		});
 
 		it("should handle file read errors", async () => {
@@ -191,7 +191,7 @@ describe("contentBuilder", () => {
 			});
 
 			expect(result.wasTruncated).toBe(true);
-			expect(result.truncationNotice).toContain("省略");
+			expect(result.truncationNotice).toContain("omitted");
 		});
 
 		it("should indicate when content exceeds available tokens", async () => {
@@ -229,7 +229,7 @@ describe("contentBuilder", () => {
 				availableTokens: 10000,
 			});
 
-			expect(result.fileSummary).toContain("2 个文件");
+			expect(result.fileSummary).toContain("2 file");
 			expect(result.fileSummary).toContain("a.ts");
 			expect(result.fileSummary).toContain("b.ts");
 		});
@@ -254,7 +254,7 @@ describe("contentBuilder", () => {
 			});
 
 			expect(result.wasTruncated).toBe(true);
-			expect(result.truncationNotice).toContain("截断");
+			expect(result.truncationNotice).toContain("truncated");
 		});
 
 		it("should merge truncated files with error files", async () => {
@@ -324,7 +324,7 @@ describe("contentBuilder", () => {
 				availableTokens: 10000,
 			});
 
-			expect(result.fileSummary).toContain("1 个文件");
+			expect(result.fileSummary).toContain("1 file");
 			expect(result.fileSummary).toContain("components");
 		});
 	});

@@ -129,7 +129,7 @@ describe("tokenEstimator", () => {
 
 			expect(result.wasTruncated).toBe(true);
 			expect(result.keptLines).toBeLessThan(result.originalLines);
-			expect(result.content).toContain("内容已截断");
+			expect(result.content).toContain("content truncated");
 		});
 
 		it("should include truncation notice", () => {
@@ -138,7 +138,7 @@ describe("tokenEstimator", () => {
 			const result = truncateToFit(content, 20);
 
 			expect(result.content).toContain("[...");
-			expect(result.content).toContain("仅显示前");
+			expect(result.content).toContain("showing first");
 		});
 
 		it("should keep track of line counts", () => {

@@ -720,7 +720,7 @@ describe("AIService", () => {
 				cwd: "/project",
 			});
 
-			expect(result).toContain("已达到最大工具调用轮数限制");
+			expect(result).toContain("Maximum tool call rounds limit reached");
 			expect(mockClient.chat).toHaveBeenCalledTimes(3);
 		});
 
@@ -792,11 +792,11 @@ describe("AIService", () => {
 				{ onEnd },
 			);
 
-			expect(result).toContain("已达到最大工具调用轮数限制");
+			expect(result).toContain("Maximum tool call rounds limit reached");
 			expect(mockClient.streamChat).toHaveBeenCalledTimes(3);
 			expect(onEnd).toHaveBeenCalledWith(
 				expect.objectContaining({
-					content: expect.stringContaining("已达到最大工具调用轮数限制"),
+					content: expect.stringContaining("Maximum tool call rounds limit reached"),
 				}),
 			);
 		});

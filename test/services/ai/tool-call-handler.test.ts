@@ -86,7 +86,7 @@ describe("ToolCallHandler", () => {
 			expect(results).toHaveLength(1);
 			expect(results[0].role).toBe("tool");
 			expect(results[0].tool_call_id).toBe("call_123");
-			expect(results[0].content).toContain("未找到");
+			expect(results[0].content).toContain("not found");
 		});
 
 		it("should return error when tool not installed", async () => {
@@ -114,7 +114,7 @@ describe("ToolCallHandler", () => {
 			const results = await handler.handleToolCalls(toolCalls);
 
 			expect(results).toHaveLength(1);
-			expect(results[0].content).toContain("未安装");
+			expect(results[0].content).toContain("not installed");
 			expect(results[0].content).toContain("git-scm.com");
 		});
 
@@ -145,7 +145,7 @@ describe("ToolCallHandler", () => {
 			const results = await handler.handleToolCalls(toolCalls);
 
 			expect(results).toHaveLength(1);
-			expect(results[0].content).toContain("没有动作");
+			expect(results[0].content).toContain("has no action");
 		});
 
 		it("should return error when arguments are invalid JSON", async () => {
@@ -178,7 +178,7 @@ describe("ToolCallHandler", () => {
 			const results = await handler.handleToolCalls(toolCalls);
 
 			expect(results).toHaveLength(1);
-			expect(results[0].content).toContain("参数解析失败");
+			expect(results[0].content).toContain("Parameter parsing failed");
 		});
 
 		it("should execute tool successfully", async () => {
@@ -258,7 +258,7 @@ describe("ToolCallHandler", () => {
 			const results = await handler.handleToolCalls(toolCalls);
 
 			expect(results).toHaveLength(1);
-			expect(results[0].content).toContain("执行成功，无输出");
+			expect(results[0].content).toContain("execution succeeded, no output");
 		});
 
 		it("should handle execution failure", async () => {
@@ -436,7 +436,7 @@ describe("ToolCallHandler", () => {
 			const results = await handler.handleToolCalls(toolCalls);
 
 			expect(results[0].content).toContain("Error:");
-			expect(results[0].content).toContain("未知错误");
+			expect(results[0].content).toContain("Unknown error");
 		});
 	});
 

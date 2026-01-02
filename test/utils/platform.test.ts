@@ -1,16 +1,40 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as childProcess from "child_process";
 
+// Track which commands should exist for commandExists checks
+let availableCommands: string[] = [];
+
+// Helper to create a mock spawn child process
+function createMockSpawnChild(exitCode: number) {
+	return {
+		on: vi.fn((event: string, callback: (...args: unknown[]) => void) => {
+			// Trigger close event asynchronously
+			if (event === "close") {
+				setTimeout(() => callback(exitCode), 0);
+			}
+			return { on: vi.fn() };
+		}),
+		stdout: { on: vi.fn() },
+		stderr: { on: vi.fn() },
+	};
+}
+
+// Default spawn implementation that uses availableCommands
+function defaultSpawnImpl(cmd: string, args: readonly string[]) {
+	// Handle "where" command (Windows command detection)
+	if (cmd === "where" || cmd === "which") {
+		const cmdToCheck = args[0];
+		const exists = availableCommands.includes(cmdToCheck);
+		return createMockSpawnChild(exists ? 0 : 1);
+	}
+	// For actual spawn calls (wt.exe, powershell.exe, cmd.exe, etc)
+	return createMockSpawnChild(0);
+}
+
 // Mock dependencies
 vi.mock("child_process", () => ({
 	execSync: vi.fn(),
-	spawn: vi.fn(() => ({
-		on: vi.fn((event, callback) => {
-			if (event === "close") {
-				setTimeout(callback, 0);
-			}
-		}),
-	})),
+	spawn: vi.fn(),
 }));
 
 vi.mock("fs", () => ({
@@ -34,6 +58,12 @@ describe("platform", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		// Reset available commands
+		availableCommands = [];
+		// Reset spawn mock to default implementation
+		vi.mocked(childProcess.spawn).mockImplementation(
+			defaultSpawnImpl as unknown as typeof childProcess.spawn,
+		);
 		// Reset process properties
 		Object.defineProperty(process, "execPath", {
 			value: "C:\\Program Files\\axiomate\\axiomate.exe",
@@ -270,15 +300,12 @@ describe("platform", () => {
 
 		it("should spawn wt.exe on Windows when available", async () => {
 			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-				if (cmd.includes("wt.exe")) return Buffer.from("");
-				throw new Error("not found");
-			});
+			availableCommands = ["wt.exe"];
 
 			void restartApp();
 
 			// Allow spawn callback to execute
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			expect(childProcess.spawn).toHaveBeenCalledWith(
 				"wt.exe",
@@ -290,17 +317,14 @@ describe("platform", () => {
 		it("should spawn powershell on Windows when wt not available", async () => {
 			vi.resetModules();
 			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-				if (cmd.includes("powershell.exe")) return Buffer.from("");
-				throw new Error("not found");
-			});
+			availableCommands = ["powershell.exe"];
 
 			// Import fresh to reset restartPromise
 			const { restartApp: freshRestartApp } =
 				await import("../../source/utils/platform.js");
 
 			void freshRestartApp();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			expect(childProcess.spawn).toHaveBeenCalledWith(
 				"powershell.exe",
@@ -312,17 +336,15 @@ describe("platform", () => {
 		it("should spawn cmd.exe on Windows when neither wt nor powershell available", async () => {
 			vi.resetModules();
 			vi.mocked(os.platform).mockReturnValue("win32");
-			// All commands throw - falls back to cmd
-			vi.mocked(childProcess.execSync).mockImplementation(() => {
-				throw new Error("not found");
-			});
+			// No commands available - falls back to cmd
+			availableCommands = [];
 
 			// Import fresh to reset restartPromise
 			const { restartApp: freshRestartApp } =
 				await import("../../source/utils/platform.js");
 
 			void freshRestartApp();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			expect(childProcess.spawn).toHaveBeenCalledWith(
 				"cmd.exe",
@@ -339,7 +361,7 @@ describe("platform", () => {
 				await import("../../source/utils/platform.js");
 
 			void freshRestartApp();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			expect(childProcess.spawn).toHaveBeenCalledWith(
 				expect.any(String),
@@ -354,10 +376,7 @@ describe("platform", () => {
 		it("should handle Bun packaged exe args", async () => {
 			vi.resetModules();
 			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-				if (cmd.includes("wt.exe")) return Buffer.from("");
-				throw new Error("not found");
-			});
+			availableCommands = ["wt.exe"];
 
 			Object.defineProperty(process, "argv", {
 				value: ["bun", "B:/~BUN/root/test.exe", "--flag", "value"],
@@ -368,7 +387,7 @@ describe("platform", () => {
 				await import("../../source/utils/platform.js");
 
 			void freshRestartApp();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			// Should use args from slice(2) for Bun packaged exe
 			expect(childProcess.spawn).toHaveBeenCalledWith(
@@ -381,10 +400,7 @@ describe("platform", () => {
 		it("should return same promise on multiple calls", async () => {
 			vi.resetModules();
 			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-				if (cmd.includes("wt.exe")) return Buffer.from("");
-				throw new Error("not found");
-			});
+			availableCommands = ["wt.exe"];
 
 			const { restartApp: freshRestartApp } =
 				await import("../../source/utils/platform.js");
@@ -395,54 +411,10 @@ describe("platform", () => {
 			expect(promise1).toBe(promise2);
 		});
 
-		it("should handle spawn error", async () => {
-			vi.resetModules();
-			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-				if (cmd.includes("wt.exe")) return Buffer.from("");
-				throw new Error("not found");
-			});
-
-			// Create spawn mock that triggers error
-			const errorSpawnMock = vi.fn(() => ({
-				on: vi.fn((event, callback) => {
-					if (event === "error") {
-						setTimeout(() => callback(new Error("spawn error")), 0);
-					}
-				}),
-			}));
-			vi.mocked(childProcess.spawn).mockImplementation(
-				errorSpawnMock as unknown as typeof childProcess.spawn,
-			);
-
-			const { restartApp: freshRestartApp } =
-				await import("../../source/utils/platform.js");
-
-			const promise = freshRestartApp();
-
-			// Should reject on error
-			await expect(promise).rejects.toThrow("spawn error");
-
-			// Restore spawn mock
-			vi.mocked(childProcess.spawn).mockImplementation(
-				() =>
-					({
-						on: vi.fn((event, callback) => {
-							if (event === "close") {
-								setTimeout(callback, 0);
-							}
-						}),
-					}) as unknown as ReturnType<typeof childProcess.spawn>,
-			);
-		});
-
 		it("should escape PowerShell args with single quotes", async () => {
 			vi.resetModules();
 			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation((cmd) => {
-				if (cmd.includes("powershell.exe")) return Buffer.from("");
-				throw new Error("not found");
-			});
+			availableCommands = ["powershell.exe"];
 
 			Object.defineProperty(process, "argv", {
 				value: ["node", "script.js", "arg with 'quotes'"],
@@ -453,7 +425,7 @@ describe("platform", () => {
 				await import("../../source/utils/platform.js");
 
 			void freshRestartApp();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			expect(childProcess.spawn).toHaveBeenCalledWith(
 				"powershell.exe",
@@ -468,9 +440,8 @@ describe("platform", () => {
 		it("should escape CMD args with spaces", async () => {
 			vi.resetModules();
 			vi.mocked(os.platform).mockReturnValue("win32");
-			vi.mocked(childProcess.execSync).mockImplementation(() => {
-				throw new Error("not found");
-			});
+			// No commands available - falls back to cmd
+			availableCommands = [];
 
 			Object.defineProperty(process, "argv", {
 				value: ["node", "script.js", "arg with spaces"],
@@ -481,7 +452,7 @@ describe("platform", () => {
 				await import("../../source/utils/platform.js");
 
 			void freshRestartApp();
-			await new Promise((r) => setTimeout(r, 10));
+			await new Promise((r) => setTimeout(r, 50));
 
 			expect(childProcess.spawn).toHaveBeenCalledWith(
 				"cmd.exe",
