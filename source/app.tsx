@@ -7,6 +7,10 @@ import MessageOutput, { type Message } from "./components/MessageOutput.js";
 import { AskUserMenu } from "./components/AskUserMenu.js";
 import useTerminalHeight from "./hooks/useTerminalHeight.js";
 import useTerminalWidth from "./hooks/useTerminalWidth.js";
+import { useCollapseState } from "./hooks/useCollapseState.js";
+import { useSessionManager } from "./hooks/useSessionManager.js";
+import { useAskUser } from "./hooks/useAskUser.js";
+import { useMessageQueue } from "./hooks/useMessageQueue.js";
 import { SLASH_COMMANDS } from "./constants/commands.js";
 import { VERSION, APP_NAME } from "./constants/meta.js";
 import {
@@ -15,7 +19,6 @@ import {
 	isMessageInput,
 	isCommandInput,
 } from "./models/input.js";
-import { groupMessages, canCollapse } from "./models/messageGroup.js";
 import {
 	handleCommand,
 	type CommandCallbacks,
@@ -26,13 +29,6 @@ import {
 	type IAIService,
 	type MatchContext,
 } from "./services/ai/index.js";
-import { buildMessageContent } from "./services/ai/contentBuilder.js";
-import {
-	MessageQueue,
-	type QueuedMessage,
-	type ProcessorOptions,
-	type StreamContent,
-} from "./services/ai/messageQueue.js";
 import type { InitResult } from "./utils/init.js";
 import { resumeInput } from "./utils/stdin.js";
 import { t } from "./i18n/index.js";
@@ -41,7 +37,7 @@ import {
 	currentModelSupportsThinking,
 	isPlanModeEnabled,
 } from "./utils/config.js";
-import { initSessionStore, SessionStore } from "./services/ai/sessionStore.js";
+import { SessionStore } from "./services/ai/sessionStore.js";
 import { clearCommandCache } from "./constants/commands.js";
 
 /**
@@ -69,16 +65,15 @@ export default function App({ initResult }: Props) {
 	const terminalHeight = useTerminalHeight();
 	const terminalWidth = useTerminalWidth();
 
-	// ask_user 工具状态
-	const [pendingAskUser, setPendingAskUser] = useState<{
-		question: string;
-		options: string[];
-		onResolve: (answer: string) => void;
-	} | null>(null);
-
-	// askuser 回答后，需要跳过的内容长度（用于 onStreamChunk 正确显示后续内容）
-	const askUserContentOffsetRef = useRef<number>(0);
-	const askUserReasoningOffsetRef = useRef<number>(0);
+	// Use extracted hooks for better separation of concerns
+	const {
+		pendingAskUser,
+		handleAskUserSelect,
+		handleAskUserCancel,
+		createAskUserCallback,
+		askUserContentOffsetRef,
+		askUserReasoningOffsetRef,
+	} = useAskUser();
 
 	// AI 加载状态（将来用于显示加载指示器）
 	const [, setIsLoading] = useState(false);
@@ -92,112 +87,43 @@ export default function App({ initResult }: Props) {
 		isFull: boolean;
 	} | null>(null);
 
-	// 当前正在流式输出的消息 ID（用于正确更新 UI）
-	const currentStreamingIdRef = useRef<string | null>(null);
+	// Collapse state management (extracted to hook)
+	const {
+		collapsedGroups,
+		messageGroups,
+		toggleCollapse,
+		expandAll: expandAllGroups,
+		collapseAll: collapseAllGroups,
+		toggleReasoningCollapse: toggleReasoningCollapseBase,
+		toggleAskUserCollapse: toggleAskUserCollapseBase,
+		resetCollapseState,
+	} = useCollapseState(messages);
 
-	// 折叠状态管理
-	const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-		new Set(),
+	// Wrap collapse functions to pass setMessages
+	const expandAll = useCallback(() => {
+		expandAllGroups(setMessages);
+	}, [expandAllGroups]);
+
+	const collapseAll = useCallback(() => {
+		collapseAllGroups(setMessages);
+	}, [collapseAllGroups]);
+
+	const toggleReasoningCollapse = useCallback(
+		(msgIndex: number) => {
+			toggleReasoningCollapseBase(msgIndex, setMessages);
+		},
+		[toggleReasoningCollapseBase]
 	);
 
-	// 计算消息组（缓存）
-	const messageGroups = useMemo(() => groupMessages(messages), [messages]);
-
-	// 自动折叠：当新对话组到来时，只折叠前一个对话组
-	const prevGroupCountRef = useRef(0);
-	useEffect(() => {
-		const currentCount = messageGroups.length;
-		if (currentCount > prevGroupCountRef.current && currentCount > 1) {
-			// 新消息组到来，只折叠前一个组（倒数第二个）
-			const prevGroup = messageGroups[currentCount - 2];
-			if (prevGroup && canCollapse(prevGroup)) {
-				setCollapsedGroups((prev) => {
-					const next = new Set(prev);
-					next.add(prevGroup.id);
-					return next;
-				});
-			}
-		}
-		prevGroupCountRef.current = currentCount;
-	}, [messageGroups]);
-
-	// 切换单个组的折叠状态
-	const toggleCollapse = useCallback((groupId: string) => {
-		setCollapsedGroups((prev) => {
-			const next = new Set(prev);
-			if (next.has(groupId)) {
-				next.delete(groupId);
-			} else {
-				next.add(groupId);
-			}
-			return next;
-		});
-	}, []);
-
-	// 展开所有组（包括消息组、reasoning、askuser）
-	const expandAll = useCallback(() => {
-		setCollapsedGroups(new Set());
-		// 展开所有 reasoning 和 askuser
-		setMessages((prev) =>
-			prev.map((msg) => ({
-				...msg,
-				reasoningCollapsed: false,
-				askUserCollapsed: false,
-			})),
-		);
-	}, []);
-
-	// 折叠所有可折叠的组（包括消息组、reasoning、askuser）
-	const collapseAll = useCallback(() => {
-		const toCollapse = messageGroups
-			.filter((g) => canCollapse(g))
-			.map((g) => g.id);
-		setCollapsedGroups(new Set(toCollapse));
-		// 折叠所有 reasoning 和 askuser
-		setMessages((prev) =>
-			prev.map((msg) => ({
-				...msg,
-				reasoningCollapsed: (msg.reasoning?.length ?? 0) > 0,
-				askUserCollapsed: !!msg.askUserQA,
-			})),
-		);
-	}, [messageGroups]);
-
-	// 切换消息思考内容的折叠状态
-	const toggleReasoningCollapse = useCallback((msgIndex: number) => {
-		setMessages((prev) => {
-			const newMessages = [...prev];
-			const msg = newMessages[msgIndex];
-			if (msg) {
-				newMessages[msgIndex] = {
-					...msg,
-					reasoningCollapsed: !msg.reasoningCollapsed,
-				};
-			}
-			return newMessages;
-		});
-	}, []);
-
-	// 切换消息 ask_user 问答的折叠状态
-	const toggleAskUserCollapse = useCallback((msgIndex: number) => {
-		setMessages((prev) => {
-			const newMessages = [...prev];
-			const msg = newMessages[msgIndex];
-			if (msg) {
-				newMessages[msgIndex] = {
-					...msg,
-					askUserCollapsed: !msg.askUserCollapsed,
-				};
-			}
-			return newMessages;
-		});
-	}, []);
+	const toggleAskUserCollapse = useCallback(
+		(msgIndex: number) => {
+			toggleAskUserCollapseBase(msgIndex, setMessages);
+		},
+		[toggleAskUserCollapseBase]
+	);
 
 	// AI 服务实例（从初始化结果获取）
 	const aiServiceRef = useRef<IAIService | null>(initResult.aiService);
-
-	// SessionStore 引用
-	const sessionStoreRef = useRef<SessionStore | null>(null);
 
 	// 是否已显示过欢迎消息（app 生命周期内只显示一次）
 	const hasShownWelcomeRef = useRef(false);
@@ -225,502 +151,39 @@ export default function App({ initResult }: Props) {
 		}
 	}, []);
 
-	// 初始化 SessionStore
-	useEffect(() => {
-		const initStore = async () => {
-			const contextWindow = aiServiceRef.current?.getContextWindow() ?? 32768;
-			const store = await initSessionStore(contextWindow);
-			sessionStoreRef.current = store;
+	// Session manager hook (handles session init, CRUD, and persistence)
+	const {
+		sessionStoreRef,
+		sessionNew,
+		sessionSwitch,
+		sessionDelete,
+		sessionClear,
+		saveCurrentSession,
+	} = useSessionManager({
+		aiServiceRef,
+		setMessages,
+		resetCollapseState,
+		updateUsageStatus,
+		hasShownWelcomeRef,
+	});
 
-			// 加载活跃 session
-			const activeId = store.getActiveSessionId();
-			let sessionIsEmpty = true;
-
-			if (activeId && aiServiceRef.current) {
-				const session = await store.loadSession(activeId);
-				if (session) {
-					// 恢复 session 状态到 AI 服务
-					aiServiceRef.current.restoreSession(session);
-
-					// 将 session 历史转换为 UI 消息
-					const history = session.getHistory();
-					sessionIsEmpty = history.length === 0;
-
-					if (!sessionIsEmpty) {
-						const uiMessages: Message[] = [];
-						// 用于暂存待匹配的 ask_user 问题（来自 tool_calls）
-						let pendingAskUserQuestion: {
-							question: string;
-							options: string[];
-						} | null = null;
-
-						for (const msg of history) {
-							if (msg.role === "user") {
-								uiMessages.push({ content: msg.content, type: "user" });
-							} else if (msg.role === "assistant") {
-								// 检查是否有 ask_user 工具调用
-								let hasAskUserToolCall = false;
-								if (msg.tool_calls) {
-									for (const toolCall of msg.tool_calls) {
-										if (toolCall.function.name === "askuser_ask") {
-											hasAskUserToolCall = true;
-											try {
-												const args = JSON.parse(toolCall.function.arguments);
-												const question = args.question || "";
-												let options: string[] = [];
-												if (args.options) {
-													try {
-														const parsed = JSON.parse(args.options);
-														if (Array.isArray(parsed)) {
-															options = parsed.map(String);
-														}
-													} catch {
-														// 忽略解析错误
-													}
-												}
-												pendingAskUserQuestion = { question, options };
-											} catch {
-												// 忽略解析错误
-											}
-										}
-									}
-								}
-								// 添加 assistant 的文本内容，或者如果有 askuser 调用/reasoning 也添加
-								if (msg.content || msg.reasoning_content || hasAskUserToolCall) {
-									uiMessages.push({
-										content: msg.content || "",
-										reasoning: msg.reasoning_content || "",
-										reasoningCollapsed: true, // 恢复时默认折叠
-									});
-								}
-							} else if (msg.role === "tool" && msg.content) {
-								// 解析 tool 消息，提取 ask_user 回答
-								const content = msg.content;
-								// 格式: "[Ask User] User answered: xxx"
-								const askUserMatch = content.match(
-									/^\[Ask User\] User answered: (.+)$/s,
-								);
-								if (askUserMatch && pendingAskUserQuestion) {
-									// 将问答组附加到最后一条 assistant 消息上
-									for (let i = uiMessages.length - 1; i >= 0; i--) {
-										const uiMsg = uiMessages[i];
-										if (
-											uiMsg &&
-											uiMsg.type !== "user" &&
-											uiMsg.type !== "user-answer"
-										) {
-											uiMessages[i] = {
-												...uiMsg,
-												askUserQA: {
-													question: pendingAskUserQuestion.question,
-													options: pendingAskUserQuestion.options,
-													answer: askUserMatch[1]!,
-												},
-												askUserCollapsed: true, // 恢复时默认折叠
-											};
-											break;
-										}
-									}
-									pendingAskUserQuestion = null;
-								}
-							}
-						}
-						setMessages(uiMessages);
-					}
-				}
-			}
-
-			// 如果 session 为空且尚未显示过欢迎消息，显示欢迎消息
-			if (sessionIsEmpty && !hasShownWelcomeRef.current) {
-				hasShownWelcomeRef.current = true;
-				setMessages([
-					{
-						content: t("app.welcomeMessage"),
-						type: "welcome",
-						markdown: false,
-					},
-				]);
-			}
-
-			// 初始化完成后更新 usage 状态
-			updateUsageStatus();
-		};
-		initStore();
-	}, [updateUsageStatus]);
-
-	// 消息处理函数（用于消息队列）
-	const processMessage = useCallback(
-		async (
-			queuedMessage: QueuedMessage,
-			options?: ProcessorOptions,
-		): Promise<string> => {
-			const aiService = aiServiceRef.current;
-			if (!aiService) {
-				throw new Error(t("ai.notConfigured"));
-			}
-
-			const cwd = process.cwd();
-
-			// 先粗略估算新消息大小，检查是否需要 compact
-			// 这样可以在 compact 后获得更多空间，减少文件截断
-			const roughEstimate = await buildMessageContent({
-				userMessage: queuedMessage.content,
-				files: queuedMessage.files,
-				cwd,
-				availableTokens: Infinity, // 不限制，获取完整大小估算
-			});
-
-			let compactCheck = aiService.shouldCompact(roughEstimate.estimatedTokens);
-			if (compactCheck.shouldCompact && compactRef.current) {
-				setMessages((prev) => [
-					...prev,
-					{
-						content: t("ai.contextWarning", {
-							percent: compactCheck.usagePercent.toFixed(0),
-						}),
-						type: "system" as const,
-						markdown: false,
-					},
-				]);
-				// 执行自动 compact，释放空间
-				await compactRef.current();
-			}
-
-			// compact 后重新获取可用空间，构建消息内容
-			const availableTokens = aiService.getAvailableTokens();
-			const buildResult = await buildMessageContent({
-				userMessage: queuedMessage.content,
-				files: queuedMessage.files,
-				cwd,
-				availableTokens,
-			});
-
-			// 如果有截断提示，显示给用户
-			if (buildResult.wasTruncated) {
-				setMessages((prev) => [
-					...prev,
-					{
-						content: `${buildResult.truncationNotice}`,
-						type: "system" as const,
-						markdown: false,
-					},
-				]);
-			}
-
-			// 再次检查上下文是否已满（消息太大无法发送）
-			compactCheck = aiService.shouldCompact(buildResult.estimatedTokens);
-			if (compactCheck.isContextFull) {
-				throw new Error(
-					t("ai.contextFull", {
-						percent: compactCheck.projectedPercent.toFixed(0),
-					}),
-				);
-			}
-
-			// 构建上下文
-			const context: MatchContext = {
-				cwd,
-				selectedFiles: queuedMessage.files.map((f) => f.path),
-			};
-
-			// 使用流式 API 发送给 AI
-			// Pass planMode from queued message snapshot
-			// 创建 ask_user 回调
-			const onAskUser = async (
-				question: string,
-				askOptions: string[],
-			): Promise<string> => {
-				// 当 AI 调用 ask_user 时，暂时结束当前流式消息（等待用户输入）
-				// 不添加单独的问题消息，问答组会在用户回答后附加到当前消息上
-				setMessages((prev) => {
-					return prev.map((msg) => {
-						if (msg.streaming) {
-							// 暂时结束流式消息（等待用户输入）
-							return { ...msg, streaming: false };
-						}
-						return msg;
-					});
-				});
-
-				return new Promise((resolve) => {
-					setPendingAskUser({
-						question,
-						options: askOptions,
-						onResolve: (answer: string) => {
-							// 用户回答后：
-							// 1. 将问答组附加到当前 AI 消息上（streaming 保持 false）
-							// 2. 创建一条新的 streaming 消息，用于显示 AI 后续回复
-							// 3. 记录当前内容长度作为偏移量，后续 onChunk 只显示新增内容
-							// 这样问答组会显示在"问问题时的内容"和"后续回复"之间
-							setMessages((prev) => {
-								const newMessages = [...prev];
-								// 找到最后一条非 user 类型的消息（应该是 AI 的回复）
-								for (let i = newMessages.length - 1; i >= 0; i--) {
-									const msg = newMessages[i];
-									if (
-										msg &&
-										msg.type !== "user" &&
-										msg.type !== "user-answer"
-									) {
-										// 记录当前内容长度作为偏移量（+1 for newline added in service.ts）
-										const currentContentLen = msg.content?.length ?? 0;
-										const currentReasoningLen = msg.reasoning?.length ?? 0;
-										askUserContentOffsetRef.current = currentContentLen > 0 ? currentContentLen + 1 : 0;
-										askUserReasoningOffsetRef.current = currentReasoningLen;
-										// 附加问答组到这条消息上（不恢复 streaming）
-										newMessages[i] = {
-											...msg,
-											askUserQA: {
-												question,
-												options: askOptions,
-												answer,
-											},
-											askUserCollapsed: false, // 默认展开
-										};
-										break;
-									}
-								}
-								// 添加一条新的 streaming 消息，用于 AI 后续回复
-								newMessages.push({
-									content: "",
-									reasoning: "",
-									streaming: true,
-								});
-								return newMessages;
-							});
-							resolve(answer);
-						},
-					});
-				});
-			};
-
-			return aiService.streamMessage(
-				buildResult.content,
-				context,
-				{
-					onStart: options?.streamCallbacks?.onStart,
-					onChunk: options?.streamCallbacks?.onChunk,
-					onEnd: options?.streamCallbacks?.onEnd,
-				},
-				{ signal: options?.signal, planMode: queuedMessage.planMode },
-				onAskUser,
-			);
-		},
-		[],
-	);
-
-	// 消息队列实例
-	const messageQueueRef = useRef<MessageQueue | null>(null);
-
-	// 初始化消息队列
-	useEffect(() => {
-		messageQueueRef.current = new MessageQueue(processMessage, {
-			onMessageStart: (id) => {
-				setIsLoading(true);
-				currentStreamingIdRef.current = id;
-				// 移除对应用户消息的 queued 标记
-				setMessages((prev) =>
-					prev.map((msg) =>
-						msg.queuedMessageId === id
-							? { ...msg, queued: false, queuedMessageId: undefined }
-							: msg,
-					),
-				);
-			},
-			onMessageComplete: (id) => {
-				// 流式模式下，内容已通过 onStreamEnd 更新，这里只需重置加载状态
-				if (currentStreamingIdRef.current === id) {
-					currentStreamingIdRef.current = null;
-				}
-				setIsLoading(false);
-
-				// 自动保存 session
-				saveSessionRef.current?.();
-			},
-			onMessageError: (id, error) => {
-				// 只处理当前消息的错误
-				if (currentStreamingIdRef.current !== id) {
-					return;
-				}
-				currentStreamingIdRef.current = null;
-
-				// 错误时查找并更新流式消息，或添加新消息
-				setMessages((prev) => {
-					const streamingIndex = prev.findIndex((msg) => msg.streaming);
-					if (streamingIndex !== -1) {
-						// 更新流式消息为错误状态
-						const newMessages = [...prev];
-						newMessages[streamingIndex] = {
-							...newMessages[streamingIndex],
-							content:
-								newMessages[streamingIndex].content +
-								`\n\nError: ${error.message}`,
-							streaming: false,
-						};
-						return newMessages;
-					}
-					return [
-						...prev,
-						{ content: `Error: ${error.message}`, markdown: false },
-					];
-				});
-				setIsLoading(false);
-			},
-			onQueueEmpty: () => {
-				// 队列处理完毕
-			},
-			onStopped: (queuedCount, currentContent) => {
-				currentStreamingIdRef.current = null;
-				const msg =
-					queuedCount > 0 || currentContent?.content
-						? t("commandHandler.stopSuccess", { count: queuedCount })
-						: t("commandHandler.stopNone");
-
-				// 如果有部分内容，保存到 session 中
-				if (currentContent?.content && aiServiceRef.current) {
-					aiServiceRef.current.savePartialResponse(currentContent.content);
-					// 自动保存 session
-					saveSessionRef.current?.();
-				}
-
-				// 查找并标记流式消息为结束
-				setMessages((prev) => {
-					const streamingIndex = prev.findIndex((m) => m.streaming);
-					if (streamingIndex !== -1) {
-						const newMessages = [...prev];
-						newMessages[streamingIndex] = {
-							...newMessages[streamingIndex],
-							streaming: false,
-							// 有思考内容时自动折叠
-							reasoningCollapsed:
-								(newMessages[streamingIndex]?.reasoning?.length ?? 0) > 0,
-						};
-						return [
-							...newMessages,
-							{ content: msg, type: "system", markdown: false },
-						];
-					}
-					return [...prev, { content: msg, type: "system", markdown: false }];
-				});
-				setIsLoading(false);
-
-				// Stop 后更新 usage 状态（使用估算值，下次完整回复时会被精确值覆盖）
-				updateUsageStatus();
-			},
-			// 流式回调
-			onStreamStart: (id) => {
-				// 只处理当前消息
-				if (currentStreamingIdRef.current !== id) {
-					return;
-				}
-				// 重置 askuser 偏移量
-				askUserContentOffsetRef.current = 0;
-				askUserReasoningOffsetRef.current = 0;
-				// 添加一条空的流式消息
-				setMessages((prev) => [
-					...prev,
-					{ content: "", reasoning: "", streaming: true },
-				]);
-			},
-			onStreamChunk: (id, streamContent: StreamContent) => {
-				// 只更新当前消息
-				if (currentStreamingIdRef.current !== id) {
-					return;
-				}
-				// 查找并更新流式消息（可能不是最后一条，因为用户可能发送了新消息）
-				setMessages((prev) => {
-					const streamingIndex = prev.findIndex((msg) => msg.streaming);
-					if (streamingIndex === -1) {
-						return prev;
-					}
-					// 如果有 askuser 偏移量，只显示偏移量之后的内容
-					const contentOffset = askUserContentOffsetRef.current;
-					const reasoningOffset = askUserReasoningOffsetRef.current;
-					const displayContent = contentOffset > 0
-						? streamContent.content.substring(contentOffset)
-						: streamContent.content;
-					const displayReasoning = reasoningOffset > 0
-						? streamContent.reasoning.substring(reasoningOffset)
-						: streamContent.reasoning;
-					const newMessages = [...prev];
-					newMessages[streamingIndex] = {
-						...newMessages[streamingIndex],
-						content: displayContent,
-						reasoning: displayReasoning,
-						reasoningCollapsed: false, // 流式中不折叠
-					};
-					return newMessages;
-				});
-			},
-			onStreamEnd: (id, finalContent: StreamContent) => {
-				// 只更新当前消息
-				if (currentStreamingIdRef.current !== id) {
-					return;
-				}
-				// 查找并标记流式结束（可能不是最后一条，因为用户可能发送了新消息）
-				setMessages((prev) => {
-					const streamingIndex = prev.findIndex((msg) => msg.streaming);
-					if (streamingIndex === -1) {
-						return prev;
-					}
-					// 如果有 askuser 偏移量，只显示偏移量之后的内容
-					const contentOffset = askUserContentOffsetRef.current;
-					const reasoningOffset = askUserReasoningOffsetRef.current;
-					const displayContent = contentOffset > 0
-						? finalContent.content.substring(contentOffset)
-						: finalContent.content;
-					const displayReasoning = reasoningOffset > 0
-						? finalContent.reasoning.substring(reasoningOffset)
-						: finalContent.reasoning;
-					const newMessages = [...prev];
-					newMessages[streamingIndex] = {
-						...newMessages[streamingIndex],
-						content: displayContent,
-						reasoning: displayReasoning,
-						streaming: false,
-						// 有思考内容时自动折叠
-						reasoningCollapsed: displayReasoning.length > 0,
-					};
-					// 流式结束时，自动折叠之前消息的 reasoning 和 askUserQA（如果有）
-					// 这样当对话完成时，所有折叠组会一起折叠
-					for (let i = streamingIndex - 1; i >= 0; i--) {
-						const msg = newMessages[i];
-						if (!msg) continue;
-						// 检查是否需要折叠（有未折叠的 reasoning 或 askUserQA）
-						const needsFoldReasoning =
-							(msg.reasoning?.length ?? 0) > 0 && !msg.reasoningCollapsed;
-						const needsFoldAskUser =
-							msg.askUserQA && msg.askUserCollapsed === false;
-						if (needsFoldReasoning || needsFoldAskUser) {
-							newMessages[i] = {
-								...msg,
-								reasoningCollapsed: needsFoldReasoning
-									? true
-									: msg.reasoningCollapsed,
-								askUserCollapsed: needsFoldAskUser
-									? true
-									: msg.askUserCollapsed,
-							};
-						}
-						// 遇到 user 类型消息时停止（不跨越对话组）
-						if (msg.type === "user") {
-							break;
-						}
-					}
-					return newMessages;
-				});
-				// 重置 askuser 偏移量
-				askUserContentOffsetRef.current = 0;
-				askUserReasoningOffsetRef.current = 0;
-				// 流式结束后更新 usage 状态
-				updateUsageStatus();
-			},
-		});
-
-		return () => {
-			messageQueueRef.current?.clear();
-		};
-	}, [processMessage, updateUsageStatus]);
+	// Message queue hook (handles message processing and streaming)
+	const {
+		messageQueueRef,
+		stopProcessing,
+		isProcessing,
+		enqueue: enqueueMessage,
+	} = useMessageQueue({
+		aiServiceRef,
+		setMessages,
+		setIsLoading,
+		compactRef,
+		saveSessionRef,
+		askUserContentOffsetRef,
+		askUserReasoningOffsetRef,
+		updateUsageStatus,
+		createAskUserCallback,
+	});
 
 	// 组件挂载后恢复 stdin 输入（之前在 cli.tsx 中被暂停）
 	useEffect(() => {
@@ -731,26 +194,6 @@ export default function App({ initResult }: Props) {
 	const toggleFocusMode = useCallback(() => {
 		setFocusMode((prev) => (prev === "input" ? "output" : "input"));
 	}, []);
-
-	// ask_user 选择处理
-	const handleAskUserSelect = useCallback(
-		(answer: string) => {
-			if (pendingAskUser) {
-				// onResolve 内部已经处理了消息添加，这里只需调用它
-				pendingAskUser.onResolve(answer);
-				setPendingAskUser(null);
-			}
-		},
-		[pendingAskUser],
-	);
-
-	// ask_user 取消处理
-	const handleAskUserCancel = useCallback(() => {
-		if (pendingAskUser) {
-			pendingAskUser.onResolve(""); // 返回空字符串表示取消
-			setPendingAskUser(null);
-		}
-	}, [pendingAskUser]);
 
 	// 用于从 View 模式注入文本到输入框
 	const [injectText, setInjectText] = useState<string>("");
@@ -977,8 +420,7 @@ export default function App({ initResult }: Props) {
 						type: "system",
 					},
 				]);
-				setCollapsedGroups(new Set());
-				prevGroupCountRef.current = 0;
+				resetCollapseState();
 
 				// 清除命令缓存以更新 session 列表
 				clearCommandCache();
@@ -1014,280 +456,10 @@ export default function App({ initResult }: Props) {
 		compactRef.current = compact;
 	}, [compact]);
 
-	// 停止当前处理并清空消息队列
-	const stopProcessing = useCallback(() => {
-		messageQueueRef.current?.stop();
-	}, []);
-
-	// 保存当前 session
-	const saveCurrentSession = useCallback(() => {
-		const store = sessionStoreRef.current;
-		const aiService = aiServiceRef.current;
-		if (!store || !aiService) return;
-
-		const activeId = store.getActiveSessionId();
-		if (!activeId) return;
-
-		const session = aiService.getSession();
-		store.saveSession(session, activeId);
-	}, []);
-
 	// 设置 saveSessionRef 以便 MessageQueue 可以调用
 	useEffect(() => {
 		saveSessionRef.current = saveCurrentSession;
 	}, [saveCurrentSession]);
-
-	// Session 命令回调：创建新 session
-	const sessionNew = useCallback(async () => {
-		const store = sessionStoreRef.current;
-		if (!store) return;
-
-		// 保存当前 session
-		saveCurrentSession();
-
-		// 创建新 session
-		const newInfo = store.createSession();
-		store.setActiveSessionId(newInfo.id);
-
-		// 重建 AI 服务（使用新的空 session）
-		const registry = getToolRegistry();
-		aiServiceRef.current = createAIServiceFromConfig(registry);
-
-		// 清空 UI
-		setMessages([]);
-		setCollapsedGroups(new Set());
-		prevGroupCountRef.current = 0;
-
-		// 显示成功消息
-		setMessages([
-			{
-				content: t("session.created", { name: newInfo.name }),
-				type: "system",
-			},
-		]);
-
-		// 清除命令缓存以更新 session 列表
-		clearCommandCache();
-
-		// 新 session 创建后更新 usage 状态
-		updateUsageStatus();
-	}, [saveCurrentSession, updateUsageStatus]);
-
-	// Session 命令回调：切换 session
-	const sessionSwitch = useCallback(
-		async (id: string) => {
-			const store = sessionStoreRef.current;
-			if (!store) return;
-
-			// 保存当前 session
-			saveCurrentSession();
-
-			// 加载目标 session
-			const session = await store.loadSession(id);
-			if (!session) {
-				setMessages((prev) => [
-					...prev,
-					{
-						content: t("session.notFound"),
-						type: "system",
-						markdown: false,
-					},
-				]);
-				return;
-			}
-
-			// 切换活跃 session
-			store.setActiveSessionId(id);
-			const info = store.getSessionById(id);
-
-			// 恢复 session 到 AI 服务
-			if (aiServiceRef.current) {
-				aiServiceRef.current.restoreSession(session);
-			}
-
-			// 清空 UI 并加载历史
-			setMessages([]);
-			setCollapsedGroups(new Set());
-			prevGroupCountRef.current = 0;
-
-			// 将 session 历史转换为 UI 消息
-			const history = session.getHistory();
-			const uiMessages: Message[] = [];
-			// 用于暂存待匹配的 ask_user 问题（来自 tool_calls）
-			let pendingAskUserQuestion: {
-				question: string;
-				options: string[];
-			} | null = null;
-
-			for (const msg of history) {
-				if (msg.role === "user") {
-					uiMessages.push({ content: msg.content, type: "user" });
-				} else if (msg.role === "assistant") {
-					// 检查是否有 ask_user 工具调用
-					let hasAskUserToolCall = false;
-					if (msg.tool_calls) {
-						for (const toolCall of msg.tool_calls) {
-							if (toolCall.function.name === "askuser_ask") {
-								hasAskUserToolCall = true;
-								try {
-									const args = JSON.parse(toolCall.function.arguments);
-									const question = args.question || "";
-									let options: string[] = [];
-									if (args.options) {
-										try {
-											const parsed = JSON.parse(args.options);
-											if (Array.isArray(parsed)) {
-												options = parsed.map(String);
-											}
-										} catch {
-											// 忽略解析错误
-										}
-									}
-									pendingAskUserQuestion = { question, options };
-								} catch {
-									// 忽略解析错误
-								}
-							}
-						}
-					}
-					// 添加 assistant 的文本内容，或者如果有 askuser 调用/reasoning 也添加
-					if (msg.content || msg.reasoning_content || hasAskUserToolCall) {
-						uiMessages.push({
-							content: msg.content || "",
-							reasoning: msg.reasoning_content || "",
-							reasoningCollapsed: true, // 恢复时默认折叠
-						});
-					}
-				} else if (msg.role === "tool" && msg.content) {
-					// 解析 tool 消息，提取 ask_user 回答
-					const content = msg.content;
-					// 格式: "[Ask User] User answered: xxx"
-					const askUserMatch = content.match(
-						/^\[Ask User\] User answered: (.+)$/s,
-					);
-					if (askUserMatch && pendingAskUserQuestion) {
-						// 将问答组附加到最后一条 assistant 消息上
-						for (let i = uiMessages.length - 1; i >= 0; i--) {
-							const uiMsg = uiMessages[i];
-							if (
-								uiMsg &&
-								uiMsg.type !== "user" &&
-								uiMsg.type !== "user-answer"
-							) {
-								uiMessages[i] = {
-									...uiMsg,
-									askUserQA: {
-										question: pendingAskUserQuestion.question,
-										options: pendingAskUserQuestion.options,
-										answer: askUserMatch[1]!,
-									},
-									askUserCollapsed: true, // 恢复时默认折叠
-								};
-								break;
-							}
-						}
-						pendingAskUserQuestion = null;
-					}
-				}
-			}
-			setMessages(uiMessages);
-
-			// 显示切换成功消息
-			setMessages((prev) => [
-				...prev,
-				{
-					content: t("session.switched", { name: info?.name ?? id }),
-					type: "system",
-				},
-			]);
-
-			// 清除命令缓存以更新 session 列表
-			clearCommandCache();
-
-			// Session 切换后更新 usage 状态
-			updateUsageStatus();
-		},
-		[saveCurrentSession, updateUsageStatus],
-	);
-
-	// Session 命令回调：删除 session
-	const sessionDelete = useCallback((id: string) => {
-		const store = sessionStoreRef.current;
-		if (!store) return;
-
-		const info = store.getSessionById(id);
-		if (!info) {
-			setMessages((prev) => [
-				...prev,
-				{
-					content: t("session.notFound"),
-					type: "system",
-					markdown: false,
-				},
-			]);
-			return;
-		}
-
-		// 不能删除活跃 session
-		if (info.id === store.getActiveSessionId()) {
-			setMessages((prev) => [
-				...prev,
-				{
-					content: t("session.cannotDeleteActive"),
-					type: "system",
-					markdown: false,
-				},
-			]);
-			return;
-		}
-
-		// 删除 session
-		store.deleteSession(id);
-
-		// 显示成功消息
-		setMessages((prev) => [
-			...prev,
-			{
-				content: t("session.deleted", { name: info.name }),
-				type: "system",
-			},
-		]);
-
-		// 清除命令缓存以更新 session 列表
-		clearCommandCache();
-	}, []);
-
-	// Session 命令回调：清除所有 session 并创建新的
-	const sessionClear = useCallback(async () => {
-		const store = sessionStoreRef.current;
-		if (!store) return;
-
-		// 清除所有 session 并创建新的
-		const newInfo = store.clearAllSessions();
-
-		// 重建 AI 服务（使用新的空 session）
-		const registry = getToolRegistry();
-		aiServiceRef.current = createAIServiceFromConfig(registry);
-
-		// 清空 UI
-		setMessages([]);
-		setCollapsedGroups(new Set());
-		prevGroupCountRef.current = 0;
-
-		// 显示成功消息
-		setMessages([
-			{
-				content: t("session.allCleared", { name: newInfo.name }),
-				type: "system",
-			},
-		]);
-
-		// 清除命令缓存以更新 session 列表
-		clearCommandCache();
-
-		// 清除 session 后更新 usage 状态
-		updateUsageStatus();
-	}, [updateUsageStatus]);
 
 	// 命令回调集合
 	const commandCallbacks: CommandCallbacks = useMemo(
