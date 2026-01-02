@@ -8,7 +8,7 @@
  * 注意：所有命令检测使用异步 spawn 以避免阻塞事件循环
  */
 
-import { execSync, spawn } from "child_process";
+import { spawn } from "child_process";
 import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs";
 import { platform } from "os";
 import { join } from "path";
@@ -76,28 +76,26 @@ type TerminalSettings = {
 type WindowsTerminal = "wt" | "powershell" | "cmd";
 
 /**
- * 检测命令是否存在（同步版本）
+ * 检测命令是否存在（异步版本，使用 spawn 避免阻塞事件循环）
  */
-function commandExistsSync(cmd: string): boolean {
-	try {
-		execSync(platform() === "win32" ? `where ${cmd}` : `which ${cmd}`, {
-			stdio: "pipe",
-		});
-		return true;
-	} catch {
-		return false;
-	}
+function commandExists(cmd: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		const command = platform() === "win32" ? "where" : "which";
+		const child = spawn(command, [cmd], { stdio: "pipe" });
+		child.on("close", (code) => resolve(code === 0));
+		child.on("error", () => resolve(false));
+	});
 }
 
 /**
- * 检测 Windows 可用的终端（按优先级，同步）
+ * 检测 Windows 可用的终端（按优先级，异步）
  * 优先级：Windows Terminal > PowerShell > CMD
  */
-function detectWindowsTerminalSync(): WindowsTerminal {
-	if (commandExistsSync("wt.exe")) {
+async function detectWindowsTerminal(): Promise<WindowsTerminal> {
+	if (await commandExists("wt.exe")) {
 		return "wt";
 	}
-	if (commandExistsSync("powershell.exe")) {
+	if (await commandExists("powershell.exe")) {
 		return "powershell";
 	}
 	return "cmd";
@@ -176,7 +174,7 @@ async function restartWindows(): Promise<never> {
 	const cwd = process.cwd();
 	const exePath = process.execPath;
 	const args = getRestartArgs();
-	const terminal = detectWindowsTerminalSync();
+	const terminal = await detectWindowsTerminal();
 
 	switch (terminal) {
 		case "wt":
