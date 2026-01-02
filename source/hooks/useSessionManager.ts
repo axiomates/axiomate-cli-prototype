@@ -37,6 +37,7 @@ function parseHistoryToUIMessages(
 	history: Array<{
 		role: string;
 		content: string;
+		displayContent?: string;
 		reasoning_content?: string;
 		tool_calls?: Array<{
 			function: { name: string; arguments: string };
@@ -51,7 +52,8 @@ function parseHistoryToUIMessages(
 
 	for (const msg of history) {
 		if (msg.role === "user") {
-			uiMessages.push({ content: msg.content, type: "user" });
+			// 使用 displayContent（原始用户输入）而非 content（可能包含文件内容）
+			uiMessages.push({ content: msg.displayContent ?? msg.content, type: "user" });
 		} else if (msg.role === "assistant") {
 			// Check for ask_user tool calls
 			let hasAskUserToolCall = false;

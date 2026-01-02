@@ -31,6 +31,9 @@ export type ToolCall = {
 export type ChatMessage = {
 	role: MessageRole;
 	content: string;
+	// 用户消息的原始显示内容（不含文件内容，用于 UI 显示）
+	// 仅 user role 消息有此字段，assistant/tool 消息不需要
+	displayContent?: string;
 	// 工具调用结果的关联 ID
 	tool_call_id?: string;
 	// AI 返回的工具调用请求
@@ -407,11 +410,12 @@ export type IAIService = {
 
 	/**
 	 * 流式发送消息（实时返回生成内容）
-	 * @param userMessage 用户消息
+	 * @param userMessage 用户消息（发送给 AI 的完整内容，可能包含文件内容）
 	 * @param context 上下文信息
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal）
 	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
+	 * @param displayContent 可选，用户原始输入内容（不含文件内容，用于 UI 显示和会话恢复）
 	 * @returns 最终完整响应
 	 */
 	streamMessage(
@@ -420,6 +424,7 @@ export type IAIService = {
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
 		onAskUser?: AskUserCallback,
+		displayContent?: string,
 	): Promise<string>;
 
 	/**

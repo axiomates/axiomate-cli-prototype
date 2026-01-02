@@ -116,10 +116,12 @@ export class Session {
 
 	/**
 	 * 添加用户消息
+	 * @param content 发送给 AI 的完整内容（可能包含文件内容）
+	 * @param displayContent 可选，显示给用户的原始内容（不含文件内容）
 	 */
-	addUserMessage(content: string): void {
+	addUserMessage(content: string, displayContent?: string): void {
 		this.messages.push({
-			message: { role: "user", content },
+			message: { role: "user", content, displayContent },
 			tokens: estimateTokens(content),
 			isActual: false,
 			timestamp: Date.now(),

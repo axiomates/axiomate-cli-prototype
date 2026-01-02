@@ -131,6 +131,10 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 			// Create ask_user callback
 			const onAskUser = createAskUserCallback(setMessages);
 
+			// displayContent 是用户的原始输入（已包含 @文件路径），用于 UI 显示和会话恢复
+			// 注意：queuedMessage.content 已经是用户输入的完整内容，不需要再追加文件引用
+			const displayContent = queuedMessage.content;
+
 			return aiService.streamMessage(
 				buildResult.content,
 				context,
@@ -140,7 +144,8 @@ export function useMessageQueue(options: MessageQueueOptions): MessageQueueState
 					onEnd: processorOptions?.streamCallbacks?.onEnd,
 				},
 				{ signal: processorOptions?.signal, planMode: queuedMessage.planMode },
-				onAskUser
+				onAskUser,
+				displayContent
 			);
 		},
 		[aiServiceRef, setMessages, compactRef, createAskUserCallback]

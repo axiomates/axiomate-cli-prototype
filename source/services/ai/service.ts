@@ -214,11 +214,12 @@ export class AIService implements IAIService {
 
 	/**
 	 * 流式发送消息（实时返回生成内容）
-	 * @param userMessage 用户消息
+	 * @param userMessage 用户消息（发送给 AI 的完整内容，可能包含文件内容）
 	 * @param context 上下文信息
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal 和 planMode）
 	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
+	 * @param displayContent 可选，用户原始输入内容（不含文件内容，用于 UI 显示和会话恢复）
 	 */
 	async streamMessage(
 		userMessage: string,
@@ -226,6 +227,7 @@ export class AIService implements IAIService {
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
 		onAskUser?: AskUserCallback,
+		displayContent?: string,
 	): Promise<string> {
 		// 增强上下文
 		const enhancedContext = this.enhanceContext(context);
@@ -239,8 +241,8 @@ export class AIService implements IAIService {
 		// 创建检查点（在添加用户消息前）
 		const checkpoint = this.session.checkpoint();
 
-		// 添加用户消息到 Session
-		this.session.addUserMessage(userMessage);
+		// 添加用户消息到 Session（传递 displayContent 用于会话恢复时显示）
+		this.session.addUserMessage(userMessage, displayContent);
 
 		// 获取相关工具 (plan mode only gets plan tool)
 		const tools = this.getContextTools(enhancedContext, initialPlanMode);
