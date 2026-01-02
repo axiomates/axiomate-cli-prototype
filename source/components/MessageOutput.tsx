@@ -14,6 +14,7 @@ import {
 	generateGroupHeaderParts,
 	canCollapse,
 	type GroupHeaderParts,
+	type MessageGroup,
 } from "../models/messageGroup.js";
 import { useTranslation } from "../hooks/useTranslation.js";
 
@@ -51,6 +52,7 @@ type Props = {
 	// height 不再从外部传入，使用 measureElement 自动测量
 	focusMode?: FocusMode; // 焦点模式（默认 input）
 	// 消息组折叠相关
+	messageGroups?: MessageGroup[]; // 预计算的消息组（可选，避免重复计算）
 	collapsedGroups?: Set<string>; // 折叠的消息组 ID
 	onToggleCollapse?: (groupId: string) => void; // 切换折叠状态
 	onExpandAll?: () => void; // 展开所有
@@ -133,6 +135,7 @@ type WelcomeSegment = {
 export default function MessageOutput({
 	messages,
 	focusMode = "input",
+	messageGroups: messageGroupsProp,
 	collapsedGroups,
 	onToggleCollapse,
 	onExpandAll,
@@ -314,8 +317,11 @@ export default function MessageOutput({
 		[stripAnsi, getDisplayWidth],
 	);
 
-	// 计算消息组（缓存）
-	const messageGroups = useMemo(() => groupMessages(messages), [messages]);
+	// 使用传入的消息组或自己计算（避免重复计算）
+	const messageGroups = useMemo(
+		() => messageGroupsProp ?? groupMessages(messages),
+		[messageGroupsProp, messages]
+	);
 
 	// 将所有消息预渲染为行数组（考虑换行和折叠）
 	const renderedLines: RenderedLine[] = useMemo(() => {

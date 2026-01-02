@@ -168,12 +168,7 @@ export default function App({ initResult }: Props) {
 	});
 
 	// Message queue hook (handles message processing and streaming)
-	const {
-		messageQueueRef,
-		stopProcessing,
-		isProcessing,
-		enqueue: enqueueMessage,
-	} = useMessageQueue({
+	const { messageQueueRef, stopProcessing } = useMessageQueue({
 		aiServiceRef,
 		setMessages,
 		setIsLoading,
@@ -532,6 +527,7 @@ export default function App({ initResult }: Props) {
 			<MessageOutput
 				messages={messages}
 				focusMode={focusMode}
+				messageGroups={messageGroups}
 				collapsedGroups={collapsedGroups}
 				onToggleCollapse={toggleCollapse}
 				onExpandAll={expandAll}
