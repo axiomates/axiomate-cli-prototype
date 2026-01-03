@@ -41,6 +41,7 @@ function loadEnvFile(filePath: string): Record<string, string> {
 const localEnv = loadEnvFile(".env.local");
 const siliconflowKey = localEnv["SILICONFLOW_API_KEY"] || "";
 const dashscopeKey = localEnv["DASHSCOPE_API_KEY"] || "";
+const anthropicKey = localEnv["ANTHROPIC_API_KEY"] || "";
 
 const presetsContent = `// 此文件由 scripts/gen-meta.ts 自动生成，请勿手动修改
 // API keys 从 .env.local 读取，该文件不会提交到 git
@@ -195,6 +196,30 @@ export const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 		contextWindow: 262144,
 		baseUrl: "https://api.siliconflow.cn/v1",
 		apiKey: "${siliconflowKey}",
+	},
+
+	// Claude Code 系列
+	{
+		model: "claude-opus-4-5-20251101",
+		name: "Claude Opus 4.5",
+		protocol: "anthropic",
+		description: "Claude Opus 4.5",
+		supportsTools: true,
+		supportsThinking: true,
+		contextWindow: 200000,
+		baseUrl: "https://gaccode.com/claudecode/v1",
+		apiKey: "${anthropicKey}",
+	},
+	{
+		model: "claude-sonnet-4-5-20250929",
+		name: "Claude Sonnet 4.5",
+		protocol: "anthropic",
+		description: "Claude Sonnet 4.5",
+		supportsTools: true,
+		supportsThinking: true,
+		contextWindow: 200000,
+		baseUrl: "https://gaccode.com/claudecode/v1",
+		apiKey: "${anthropicKey}",
 	},
 ];
 `;
