@@ -496,8 +496,9 @@ export function useInputHandler({
 				dispatch({
 					type: "SET_TEXT",
 					text: newInput,
-					// 使用 getNextGraphemeBoundary 确保正确处理多字节字符（emoji等）
-					cursor: getNextGraphemeBoundary(newInput, cursor),
+					// inputChar 来自 Ink 的 useInput，已经是完整的 grapheme cluster
+					// 直接使用 inputChar.length 计算新光标位置
+					cursor: cursor + inputChar.length,
 				});
 			}
 		},
