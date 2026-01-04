@@ -155,7 +155,7 @@
 		"suggestionModelSwitched": "建议模型已切换至：{{model}}",
 		"thinkingEnabled": "AI 思考模式已启用",
 		"thinkingDisabled": "AI 思考模式已禁用",
-		"thinkingAutoDisabled": "⚠️ 由于该模型不支持思考模式，已自动关闭思考模式。",
+		"thinkingAutoDisabled": "⚠️ 由于该模型不直接支持思考模式，已启用兼容模式。",
 		"planEnabled": "规划模式已启用 - AI 将只进行探索和规划，不会进行任何更改",
 		"planDisabled": "规划模式已禁用 - AI 现在可以执行操作"
 	},

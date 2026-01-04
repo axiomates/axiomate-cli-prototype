@@ -216,6 +216,9 @@ export const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 		description: "MiniMax M2 230B",
 		supportsTools: true,
 		supportsThinking: false,
+		thinkingParams: {
+			disabled: { enable_thinking: false },
+		},
 		contextWindow: 196608,
 		baseUrl: "https://api.siliconflow.cn/v1",
 		apiKey: "${siliconflowKey}",
@@ -228,9 +231,8 @@ export const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 		protocol: "openai",
 		description: "Kimi K2 Thinking 1T",
 		supportsTools: true,
-		supportsThinking: true,
+		supportsThinking: false,
 		thinkingParams: {
-			enabled: { enable_thinking: true },
 			disabled: { enable_thinking: false },
 		},
 		contextWindow: 262144,

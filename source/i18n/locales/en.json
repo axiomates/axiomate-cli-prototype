@@ -155,7 +155,7 @@
 		"suggestionModelSwitched": "Suggestion model switched to: {{model}}",
 		"thinkingEnabled": "AI thinking mode enabled",
 		"thinkingDisabled": "AI thinking mode disabled",
-		"thinkingAutoDisabled": "⚠️ Thinking mode has been automatically disabled as this model does not support it.",
+		"thinkingAutoDisabled": "⚠️ This model doesn't directly support the thinking mode, compatibility mode has been enabled.",
 		"planEnabled": "Plan mode enabled - AI will explore and plan without making changes",
 		"planDisabled": "Plan mode disabled - AI can now execute actions"
 	},

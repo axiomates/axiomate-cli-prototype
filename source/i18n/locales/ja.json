@@ -155,7 +155,7 @@
 		"suggestionModelSwitched": "提案モデルを切り替えました: {{model}}",
 		"thinkingEnabled": "AI思考モードが有効になりました",
 		"thinkingDisabled": "AI思考モードが無効になりました",
-		"thinkingAutoDisabled": "⚠️ このモデルは思考モードをサポートしていないため、思考モードが自動的に無効になりました。",
+		"thinkingAutoDisabled": "⚠️ このモデルは直接的に思考モードをサポートしていないため、互換モードが有効になりました。",
 		"planEnabled": "プランモードが有効になりました - AIは探索と計画のみを行い、変更は行いません",
 		"planDisabled": "プランモードが無効になりました - AIはアクションを実行できます"
 	},
