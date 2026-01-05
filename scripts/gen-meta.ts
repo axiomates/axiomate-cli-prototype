@@ -268,5 +268,5 @@ export const DEFAULT_MODEL_PRESETS: ModelConfig[] = [
 
 writeFileSync("source/constants/modelPresets.ts", presetsContent);
 console.log(
-	`Generated modelPresets.ts with ${siliconflowKey ? "SiliconFlow" : "no"} and ${dashscopeKey ? "DashScope" : "no"} API keys`,
+	`Generated modelPresets.ts with ${siliconflowKey ? "SiliconFlow" : "no"}, ${anthropicKey ? "Anthropic" : "no"}, and ${dashscopeKey ? "DashScope" : "no"} API keys`,
 );
