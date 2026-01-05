@@ -36,10 +36,10 @@ export function getCurrentModel(): ModelConfig | null {
  * 获取当前 API 配置
  * 如果没有配置模型，返回空值
  */
-export function getApiConfig(): { baseUrl: string; apiKey: string } {
+export function getApiConfig(): { baseUrl: string; apiKey?: string } {
 	const model = getCurrentModel();
 	if (!model) {
-		return { baseUrl: "", apiKey: "" };
+		return { baseUrl: "" };
 	}
 
 	const apiConfig = getModelApiConfigFromConfig(model.model);
@@ -52,7 +52,6 @@ export function getApiConfig(): { baseUrl: string; apiKey: string } {
 	// 没有配置，返回空值
 	return {
 		baseUrl: "",
-		apiKey: "",
 	};
 }
 
@@ -63,7 +62,7 @@ export function getApiConfig(): { baseUrl: string; apiKey: string } {
  */
 export function getModelApiConfig(model: ModelConfig): {
 	baseUrl: string;
-	apiKey: string;
+	apiKey?: string;
 	apiModel: string;
 	protocol: "openai" | "anthropic";
 } | null {

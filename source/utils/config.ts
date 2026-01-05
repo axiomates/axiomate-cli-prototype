@@ -40,8 +40,8 @@ export type ModelConfig = {
 	contextWindow: number;
 	/** API Base URL */
 	baseUrl: string;
-	/** API Key */
-	apiKey: string;
+	/** API Key（可选，本地 API 如 Ollama 可不填） */
+	apiKey?: string;
 };
 
 /**
@@ -277,7 +277,7 @@ export function getModelById(modelId: string): ModelConfig | undefined {
  */
 export function getModelApiConfig(modelId: string): {
 	baseUrl: string;
-	apiKey: string;
+	apiKey?: string;
 	model: string;
 	protocol: ApiProtocol;
 } | null {

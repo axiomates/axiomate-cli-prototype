@@ -129,7 +129,7 @@ export class AnthropicClient implements IAIClient {
 				const response = await fetch(url, {
 					method: "POST",
 					headers: {
-						"x-api-key": this.config.apiKey,
+						"x-api-key": this.config.apiKey ?? "",
 						"anthropic-version": "2023-06-01",
 						"anthropic-beta": "interleaved-thinking-2025-05-14",
 						"Content-Type": "application/json",
@@ -341,7 +341,7 @@ export class AnthropicClient implements IAIClient {
 			const response = await fetch(url, {
 				method: "POST",
 				headers: {
-					"x-api-key": this.config.apiKey,
+					"x-api-key": this.config.apiKey ?? "",
 					"anthropic-version": "2023-06-01",
 					"anthropic-beta": "interleaved-thinking-2025-05-14",
 					"Content-Type": "application/json",

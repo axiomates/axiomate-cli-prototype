@@ -172,7 +172,7 @@ export type AnthropicTool = {
  * AI 客户端配置
  */
 export type AIClientConfig = {
-	apiKey: string;
+	apiKey?: string;
 	model: string;
 	baseUrl?: string;
 	// 超时时间（毫秒）
