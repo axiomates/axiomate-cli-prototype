@@ -1,95 +1,280 @@
 # axiomate
 
-终端 AI 助手，支持流式响应、多文件上下文、会话管理。
+Terminal AI assistant with streaming responses, multi-file context, and session management.
 
-## 快速开始
+## Tech Stack
+
+React 19, Ink 6, TypeScript, Node.js >= 20
+
+## Quick Start
 
 ```bash
-cp .env.local.example .env.local  # 配置 API
+cp .env.local.example .env.local  # Configure API
 npm install
 npm run build
 npm start
 ```
 
-首次启动会显示欢迎界面，可直接使用内置测试 API。
+On first launch, a welcome screen will appear. You can use the built-in test API directly.
 
-### 打包可执行文件
+### Build Executables
 
 ```bash
-npm run package              # 当前平台 (需要 Bun)
-npm run package -- --all     # 所有平台 (交叉编译)
+npm run package              # Current platform (requires Bun)
+npm run package -- --all     # All platforms (cross-compile)
 npm run package -- --mac     # macOS (Intel + Apple Silicon)
 npm run package -- --windows # Windows x64
 npm run package -- --linux   # Linux (x64 + ARM64)
 ```
 
-输出文件在 `bundle/` 目录。
+Output files are in the `bundle/` directory.
 
-## 主要功能
+## Features
 
-- **流式响应** - 实时显示 AI 回复
-- **多文件选择** - `@` 选择文件附加到消息
-- **会话管理** - 多会话、自动保存
-- **自动压缩** - 上下文满时自动总结
-- **思考模式** - 支持 DeepSeek-R1、QwQ 等推理模型
-- **工具调用** - AI 可使用本地工具（Git、Node.js 等）
-- **多语言** - 英文、中文、日文
+- **Streaming Responses** - Real-time AI reply display
+- **Multi-file Selection** - Use `@` to select and attach files to messages
+- **Session Management** - Multiple sessions with auto-save
+- **Auto Compaction** - Automatic summarization when context is full
+- **Thinking Mode** - Support for reasoning models (DeepSeek-R1, QwQ, etc.)
+- **Tool Calling** - AI can use local tools (Git, Node.js, etc.)
+- **i18n** - English, Chinese, Japanese
 
-## 基本操作
+## Keyboard Shortcuts
 
-| 按键         | 功能               |
-| ------------ | ------------------ |
-| `/`          | 打开命令菜单       |
-| `@`          | 选择文件           |
-| `?`          | 帮助（输入为空时） |
-| `Tab`        | 接受建议           |
-| `Shift+↑/↓`  | 切换输入/浏览模式  |
-| `Ctrl+Enter` | 换行               |
+### Basic Navigation
 
-## 斜杠命令
+| Key | Function |
+|-----|----------|
+| `Enter` | Submit message |
+| `Ctrl+Enter` | Insert newline |
+| `Ctrl+C` | Exit application |
+| `Escape` | Exit current mode / Clear suggestion |
 
-| 命令          | 功能         |
-| ------------- | ------------ |
-| `/model`      | 切换模型     |
-| `/thinking`   | 开关思考模式 |
-| `/plan`       | 开关规划模式 |
-| `/session`    | 会话管理     |
-| `/compact`    | 压缩上下文   |
-| `/tools`      | 工具管理     |
-| `/suggestion` | 输入建议设置 |
-| `/language`   | 切换语言     |
+### Cursor Movement
+
+| Key | Function |
+|-----|----------|
+| `Left/Right Arrow` | Move cursor by character |
+| `Ctrl+A` | Move to beginning of line |
+| `Ctrl+E` | Move to end of line |
+
+### Text Editing
+
+| Key | Function |
+|-----|----------|
+| `Backspace` | Delete character before cursor |
+| `Delete` | Delete character after cursor |
+| `Ctrl+U` | Delete all text before cursor |
+| `Ctrl+K` | Delete all text after cursor |
+
+### Special Modes
+
+| Key | Function |
+|-----|----------|
+| `/` | Open slash command menu |
+| `@` | Open file selector |
+| `?` | Show help (when input is empty) |
+| `Tab` | Accept suggestion |
+| `Right Arrow` | Accept one character from suggestion |
+| `Up/Down Arrow` | Navigate history / Navigate menu |
+
+### Slash Command Mode
+
+| Key | Function |
+|-----|----------|
+| `Up/Down Arrow` | Navigate command list |
+| `Enter` | Select command / Enter submenu |
+| `Escape` | Go back / Exit menu |
+
+### File Selection Mode
+
+| Key | Function |
+|-----|----------|
+| `Up/Down Arrow` | Navigate file list |
+| `Enter` | Select file / Enter directory |
+| `Backspace` | Go to parent directory |
+| `Escape` | Exit file selection |
+
+## Slash Commands
+
+### Model & AI Settings
+
+| Command | Description |
+|---------|-------------|
+| `/model` | Switch AI model |
+| `/model <name>` | Select specific model |
+| `/thinking` | Toggle thinking mode |
+| `/thinking on` | Enable thinking mode |
+| `/thinking off` | Disable thinking mode |
+
+### Plan Mode
+
+| Command | Description |
+|---------|-------------|
+| `/plan` | Toggle plan mode |
+| `/plan on` | Enable plan mode |
+| `/plan off` | Disable plan mode |
+
+### Session Management
+
+| Command | Description |
+|---------|-------------|
+| `/session` | Session management menu |
+| `/session list` | List all sessions |
+| `/session new` | Create new session |
+| `/session switch` | Switch to another session |
+| `/session delete` | Delete a session |
+| `/session clear` | Clear current session |
+
+### Context Management
+
+| Command | Description |
+|---------|-------------|
+| `/compact` | Compress context (summarize conversation) |
+| `/stop` | Stop current AI response |
+
+### Tools
+
+| Command | Description |
+|---------|-------------|
+| `/tools` | Tool management menu |
+| `/tools list` | List available tools |
+| `/tools refresh` | Refresh tool discovery |
+| `/tools stats` | Show tool usage statistics |
+
+### Input Suggestions
+
+| Command | Description |
+|---------|-------------|
+| `/suggestion` | Toggle input suggestions |
+| `/suggestion on` | Enable suggestions |
+| `/suggestion off` | Disable suggestions |
+| `/suggestion model` | Select model for suggestions |
+
+### Interface
+
+| Command | Description |
+|---------|-------------|
+| `/language` | Switch interface language |
+| `/language en` | English |
+| `/language zh-CN` | Simplified Chinese |
+| `/language ja` | Japanese |
+| `/exit` | Exit application |
 
 ## Plan Mode
 
-规划模式用于复杂任务的分步执行。
+Plan Mode is designed for complex tasks that require step-by-step planning and execution. It provides a structured workflow where the AI first creates a detailed plan, then executes it systematically.
 
-- **Plan Mode** - 只读规划，AI 只能使用 plan 工具创建/编辑计划
-- **Action Mode** - 完整执行，AI 可使用所有工具
+### Concept
 
-### 使用方式
+Plan Mode operates in two distinct modes:
 
-1. 用户手动：`/plan on` / `/plan off`
-2. AI 自动：请求 AI "创建计划并执行"，AI 会自动切换模式
+| Mode | Description | Available Tools |
+|------|-------------|-----------------|
+| **Plan Mode** | Read-only planning phase | Only `plan` tool (read, write, edit, search) |
+| **Action Mode** | Full execution phase | All tools (file operations, shell, git, etc.) |
 
-### 工作流程
+### How to Use
 
-1. AI 进入 Plan Mode，创建计划到 `.axiomate/plans/plan.md`
-2. AI 退出 Plan Mode，执行计划中的每个步骤
-3. AI 标记已完成步骤：`- [ ]` → `- [x]`
+#### Manual Control
 
-## 配置
+Use slash commands to manually toggle Plan Mode:
 
-- `~/.axiomate.json` - 模型和 API 配置
-- `~/.axiomate/` - 日志和会话数据
-
-## 开发
-
-```bash
-npm run dev        # 开发模式
-npm run test           # 测试
-npm run lint:fix   # 修复代码风格
+```
+/plan on   # Enter Plan Mode
+/plan off  # Exit to Action Mode
 ```
 
-## 技术栈
+#### AI-Controlled
 
-React 19, Ink 6, TypeScript, Node.js >= 20
+Ask the AI to create and execute a plan:
+
+```
+"Create a plan to refactor the authentication module, then execute it"
+```
+
+The AI will automatically:
+1. Enter Plan Mode
+2. Create a detailed plan
+3. Exit Plan Mode
+4. Execute each step
+
+### Workflow
+
+1. **Enter Plan Mode**
+   - AI calls `plan_enter_mode` tool
+   - Only planning tools become available
+   - AI can read files but cannot modify them
+
+2. **Create Plan**
+   - AI uses `plan_write` to create plan at `.axiomate/plans/plan.md`
+   - Plan typically includes:
+     - Overview and objectives
+     - Step-by-step tasks with checkboxes `- [ ]`
+     - Dependencies and considerations
+
+3. **Exit Plan Mode**
+   - AI calls `plan_exit_mode` tool
+   - Full tool access is restored
+   - AI begins executing the plan
+
+4. **Execute Plan**
+   - AI works through each step
+   - Uses `plan_edit` to mark completed steps: `- [ ]` to `- [x]`
+   - Can read plan to check remaining tasks
+
+### Plan Tool Actions
+
+| Action | Description |
+|--------|-------------|
+| `plan_read` | Read the entire plan file |
+| `plan_read_lines` | Read specific lines from plan |
+| `plan_write` | Create or replace entire plan |
+| `plan_append` | Append content to plan |
+| `plan_edit` | Find and replace content in plan |
+| `plan_search` | Search for patterns in plan |
+| `plan_enter_mode` | Switch to Plan Mode |
+| `plan_exit_mode` | Switch to Action Mode |
+
+### Example Plan Structure
+
+```markdown
+# Refactor Authentication Module
+
+## Objectives
+- Improve code organization
+- Add proper error handling
+- Implement token refresh
+
+## Tasks
+- [ ] Review current auth implementation
+- [ ] Create new auth service structure
+- [ ] Migrate login functionality
+- [ ] Migrate logout functionality
+- [ ] Add token refresh logic
+- [ ] Update error handling
+- [ ] Write unit tests
+- [ ] Update documentation
+```
+
+### Best Practices
+
+1. **Use for complex tasks** - Plan Mode is most useful for multi-step tasks
+2. **Let AI manage mode** - Allow AI to enter/exit automatically for best results
+3. **Review plans** - Check the generated plan before AI executes it
+4. **Incremental execution** - AI marks progress, making it easy to resume
+
+## Configuration
+
+- `~/.axiomate.json` - Model and API configuration
+- `~/.axiomate/` - Logs and session data
+
+## Development
+
+```bash
+npm run dev        # Development mode
+npm run test       # Run tests
+npm run coverage   # Run tests coverage
+npm run lint       # Lint code
+npm run lint:fix   # Fix code style
+```
