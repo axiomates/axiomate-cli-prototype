@@ -151,9 +151,14 @@ export function editorReducer(
 					filePath: currentFilePath,
 					selectedFiles: state.instance.selectedFiles,
 				};
+				// 当过滤文本变化时，重置选中索引为 0
 				return {
 					...state,
 					instance: newInstance,
+					uiMode: {
+						...state.uiMode,
+						selectedIndex: 0,
+					},
 				};
 			}
 
