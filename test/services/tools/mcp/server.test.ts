@@ -15,9 +15,9 @@ beforeAll(() => {
 // Mock MCP SDK
 const mockRegisterTool = vi.fn();
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
-	McpServer: vi.fn().mockImplementation(() => ({
-		registerTool: mockRegisterTool,
-	})),
+	McpServer: class {
+		registerTool = mockRegisterTool;
+	},
 }));
 
 // Mock executor module

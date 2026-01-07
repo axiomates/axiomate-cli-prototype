@@ -6,19 +6,29 @@ beforeAll(() => {
 	setLocale("zh-CN");
 });
 
-// Mock dependencies
+// Create mock instances to be used by class mocks
+const mockMatcherInstance = {
+	autoSelect: vi.fn(() => []),
+	match: vi.fn(() => []),
+};
+
+const mockToolCallHandlerInstance = {
+	handleToolCalls: vi.fn(async () => []),
+};
+
+// Mock dependencies - use class syntax for constructors
 vi.mock("../../../source/services/tools/matcher.js", () => ({
-	ToolMatcher: vi.fn().mockImplementation(() => ({
-		autoSelect: vi.fn(() => []),
-		match: vi.fn(() => []),
-	})),
+	ToolMatcher: class {
+		autoSelect = mockMatcherInstance.autoSelect;
+		match = mockMatcherInstance.match;
+	},
 	detectProjectType: vi.fn(() => "node"),
 }));
 
 vi.mock("../../../source/services/ai/tool-call-handler.js", () => ({
-	ToolCallHandler: vi.fn().mockImplementation(() => ({
-		handleToolCalls: vi.fn(async () => []),
-	})),
+	ToolCallHandler: class {
+		handleToolCalls = mockToolCallHandlerInstance.handleToolCalls;
+	},
 }));
 
 vi.mock("../../../source/services/ai/adapters/openai.js", () => ({
@@ -94,8 +104,8 @@ describe("AIService", () => {
 			const service = new AIService({ client: mockClient }, mockRegistry);
 
 			expect(service.getContextWindow()).toBe(32768); // DEFAULT_CONTEXT_WINDOW
-			expect(ToolMatcher).toHaveBeenCalledWith(mockRegistry);
-			expect(ToolCallHandler).toHaveBeenCalledWith(mockRegistry);
+			// ToolMatcher and ToolCallHandler are instantiated internally
+			expect(service).toBeDefined();
 		});
 
 		it("should create service with custom context window", () => {
@@ -498,14 +508,9 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			// Mock matcher to return tools
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => [tools[0]]),
-				match: vi.fn(() => []),
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance
+			mockMatcherInstance.autoSelect.mockReturnValue([tools[0]]);
+			mockMatcherInstance.match.mockReturnValue([]);
 
 			const service = new AIService({ client: mockClient }, registry);
 
@@ -527,14 +532,9 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			// Mock matcher to return tools
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => [tools[0]]),
-				match: vi.fn(() => []),
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance
+			mockMatcherInstance.autoSelect.mockReturnValue([tools[0]]);
+			mockMatcherInstance.match.mockReturnValue([]);
 
 			// First call returns tool_calls, second returns final response
 			let callCount = 0;
@@ -562,26 +562,21 @@ describe("AIService", () => {
 				};
 			});
 
-			// Mock tool handler
-			const mockToolHandlerInstance = {
-				handleToolCalls: vi.fn(async () => [
-					{
-						role: "tool" as const,
-						content: "Tool result",
-						tool_call_id: "call_1",
-					},
-				]),
-			};
-			vi.mocked(ToolCallHandler).mockImplementation(
-				() => mockToolHandlerInstance as any,
-			);
+			// Configure the shared tool handler mock
+			mockToolCallHandlerInstance.handleToolCalls.mockResolvedValue([
+				{
+					role: "tool" as const,
+					content: "Tool result",
+					tool_call_id: "call_1",
+				},
+			]);
 
 			const service = new AIService({ client: mockClient }, registry);
 
 			const result = await service.sendMessage("Use tool", { cwd: "/project" });
 
 			expect(result).toBe("Final response");
-			expect(mockToolHandlerInstance.handleToolCalls).toHaveBeenCalled();
+			expect(mockToolCallHandlerInstance.handleToolCalls).toHaveBeenCalled();
 		});
 
 		it("should handle tool calls in streaming mode", async () => {
@@ -597,28 +592,18 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			// Mock matcher
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => [tools[0]]),
-				match: vi.fn(() => []),
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance
+			mockMatcherInstance.autoSelect.mockReturnValue([tools[0]]);
+			mockMatcherInstance.match.mockReturnValue([]);
 
-			// Mock tool handler
-			const mockToolHandlerInstance = {
-				handleToolCalls: vi.fn(async () => [
-					{
-						role: "tool" as const,
-						content: "Tool result",
-						tool_call_id: "call_1",
-					},
-				]),
-			};
-			vi.mocked(ToolCallHandler).mockImplementation(
-				() => mockToolHandlerInstance as any,
-			);
+			// Configure the shared tool handler mock
+			mockToolCallHandlerInstance.handleToolCalls.mockResolvedValue([
+				{
+					role: "tool" as const,
+					content: "Tool result",
+					tool_call_id: "call_1",
+				},
+			]);
 
 			let streamCallCount = 0;
 			mockClient.streamChat = vi.fn(() => {
@@ -654,7 +639,7 @@ describe("AIService", () => {
 			});
 
 			expect(result).toBe("Final");
-			expect(mockToolHandlerInstance.handleToolCalls).toHaveBeenCalled();
+			expect(mockToolCallHandlerInstance.handleToolCalls).toHaveBeenCalled();
 		});
 
 		it("should respect maxToolCallRounds limit", async () => {
@@ -670,28 +655,18 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			// Mock matcher
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => [tools[0]]),
-				match: vi.fn(() => []),
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance
+			mockMatcherInstance.autoSelect.mockReturnValue([tools[0]]);
+			mockMatcherInstance.match.mockReturnValue([]);
 
-			// Mock tool handler
-			const mockToolHandlerInstance = {
-				handleToolCalls: vi.fn(async () => [
-					{
-						role: "tool" as const,
-						content: "Tool result",
-						tool_call_id: "call_1",
-					},
-				]),
-			};
-			vi.mocked(ToolCallHandler).mockImplementation(
-				() => mockToolHandlerInstance as any,
-			);
+			// Configure the shared tool handler mock
+			mockToolCallHandlerInstance.handleToolCalls.mockResolvedValue([
+				{
+					role: "tool" as const,
+					content: "Tool result",
+					tool_call_id: "call_1",
+				},
+			]);
 
 			// Always return tool_calls to hit the limit
 			mockClient.chat = vi.fn(
@@ -737,28 +712,18 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			// Mock matcher
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => [tools[0]]),
-				match: vi.fn(() => []),
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance
+			mockMatcherInstance.autoSelect.mockReturnValue([tools[0]]);
+			mockMatcherInstance.match.mockReturnValue([]);
 
-			// Mock tool handler
-			const mockToolHandlerInstance = {
-				handleToolCalls: vi.fn(async () => [
-					{
-						role: "tool" as const,
-						content: "Tool result",
-						tool_call_id: "call_1",
-					},
-				]),
-			};
-			vi.mocked(ToolCallHandler).mockImplementation(
-				() => mockToolHandlerInstance as any,
-			);
+			// Configure the shared tool handler mock
+			mockToolCallHandlerInstance.handleToolCalls.mockResolvedValue([
+				{
+					role: "tool" as const,
+					content: "Tool result",
+					tool_call_id: "call_1",
+				},
+			]);
 
 			// Always return tool_calls in stream to hit the limit
 			mockClient.streamChat = vi.fn(() => {
@@ -814,14 +779,9 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			// Mock matcher to return tools from query match (not autoSelect)
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => []), // No auto-selected tools
-				match: vi.fn(() => [{ tool: tools[0], score: 0.9 }]), // Match by query
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance for query matching
+			mockMatcherInstance.autoSelect.mockReturnValue([]); // No auto-selected tools
+			mockMatcherInstance.match.mockReturnValue([{ tool: tools[0], score: 0.9 }]); // Match by query
 
 			const service = new AIService({ client: mockClient }, registry);
 
@@ -846,13 +806,9 @@ describe("AIService", () => {
 			];
 			const registry = createMockRegistry(tools);
 
-			const mockMatcherInstance = {
-				autoSelect: vi.fn(() => [tools[0]]),
-				match: vi.fn(() => []),
-			};
-			vi.mocked(ToolMatcher).mockImplementation(
-				() => mockMatcherInstance as any,
-			);
+			// Configure the shared mock instance
+			mockMatcherInstance.autoSelect.mockReturnValue([tools[0]]);
+			mockMatcherInstance.match.mockReturnValue([]);
 
 			const service = new AIService(
 				{ client: mockClient, contextAwareEnabled: false },

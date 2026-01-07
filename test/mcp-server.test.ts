@@ -8,10 +8,10 @@ vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({
 }));
 
 vi.mock("../source/services/tools/registry.js", () => ({
-	ToolRegistry: vi.fn(() => ({
-		discover: vi.fn(() => Promise.resolve()),
-		getDiscoveredTools: vi.fn(() => []),
-	})),
+	ToolRegistry: class {
+		discover = vi.fn(() => Promise.resolve());
+		getDiscoveredTools = vi.fn(() => []);
+	},
 }));
 
 vi.mock("../source/services/tools/mcp/server.js", () => ({

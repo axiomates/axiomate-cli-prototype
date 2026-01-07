@@ -102,7 +102,7 @@ describe("ai/config", () => {
 
 			const result = getApiConfig();
 
-			expect(result).toEqual({ baseUrl: "", apiKey: "" });
+			expect(result).toEqual({ baseUrl: "" });
 		});
 
 		it("should return empty values when api config not found", () => {
@@ -112,7 +112,7 @@ describe("ai/config", () => {
 
 			const result = getApiConfig();
 
-			expect(result).toEqual({ baseUrl: "", apiKey: "" });
+			expect(result).toEqual({ baseUrl: "" });
 		});
 	});
 
