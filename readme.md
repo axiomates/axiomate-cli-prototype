@@ -32,6 +32,7 @@ Output files are in the `bundle/` directory.
 ## Features
 
 - **Streaming Responses** - Real-time AI reply display
+- **Native Terminal Scrolling** - Messages flow into terminal's native scrollback
 - **Multi-file Selection** - Use `@` to select and attach files to messages
 - **Session Management** - Multiple sessions with auto-save
 - **Auto Compaction** - Automatic summarization when context is full
@@ -77,23 +78,6 @@ Output files are in the `bundle/` directory.
 | `Tab` | Accept suggestion |
 | `Right Arrow` | Accept one character from suggestion |
 | `Up/Down Arrow` | Navigate history / Navigate menu |
-
-### Slash Command Mode
-
-| Key | Function |
-|-----|----------|
-| `Up/Down Arrow` | Navigate command list |
-| `Enter` | Select command / Enter submenu |
-| `Escape` | Go back / Exit menu |
-
-### File Selection Mode
-
-| Key | Function |
-|-----|----------|
-| `Up/Down Arrow` | Navigate file list |
-| `Enter` | Select file / Enter directory |
-| `Backspace` | Go to parent directory |
-| `Escape` | Exit file selection |
 
 ## Slash Commands
 

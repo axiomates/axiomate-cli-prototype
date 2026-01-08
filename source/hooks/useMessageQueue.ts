@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from "react";
-import type { Message } from "../components/MessageOutput.js";
+import type { Message } from "../components/StaticMessage.js";
 import type { IAIService, MatchContext } from "../services/ai/index.js";
 import type { FileReference } from "../models/input.js";
 import { buildMessageContent } from "../services/ai/contentBuilder.js";

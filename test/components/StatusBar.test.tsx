@@ -8,10 +8,9 @@ vi.mock("../../source/hooks/useTranslation.js", () => ({
 	useTranslation: () => ({
 		t: (key: string) => {
 			const translations: Record<string, string> = {
-				"app.browseMode": "Browse",
-				"app.inputMode": "Input",
-				"app.modeSwitchHint": "Shift+Up/Down",
 				"statusBar.notConfigured": "N/A",
+				"statusBar.planMode": "Plan",
+				"statusBar.actionMode": "Action",
 			};
 			return translations[key] || key;
 		},
@@ -19,22 +18,20 @@ vi.mock("../../source/hooks/useTranslation.js", () => ({
 }));
 
 describe("StatusBar", () => {
-	describe("focus mode", () => {
-		it("should show input mode by default", () => {
+	describe("plan mode", () => {
+		it("should show action mode by default", () => {
 			const { lastFrame } = render(<StatusBar />);
-			expect(lastFrame()).toContain("[Input]");
-			expect(lastFrame()).toContain("Shift+Up/Down");
+			expect(lastFrame()).toContain("[Action]");
 		});
 
-		it("should show input mode when focusMode is input", () => {
-			const { lastFrame } = render(<StatusBar focusMode="input" />);
-			expect(lastFrame()).toContain("[Input]");
+		it("should show plan mode when planMode is true", () => {
+			const { lastFrame } = render(<StatusBar planMode={true} />);
+			expect(lastFrame()).toContain("[Plan]");
 		});
 
-		it("should show browse mode when focusMode is output", () => {
-			const { lastFrame } = render(<StatusBar focusMode="output" />);
-			expect(lastFrame()).toContain("[Browse]");
-			expect(lastFrame()).toContain("Shift+Up/Down");
+		it("should show action mode when planMode is false", () => {
+			const { lastFrame } = render(<StatusBar planMode={false} />);
+			expect(lastFrame()).toContain("[Action]");
 		});
 	});
 

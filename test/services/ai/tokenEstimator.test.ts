@@ -26,10 +26,10 @@ describe("tokenEstimator", () => {
 		});
 
 		it("should estimate more tokens for CJK text", () => {
-			// CJK ~1.5 chars/token, so "你好" (2 chars) ≈ 1.34 tokens → ceil = 2
-			const cjkTokens = estimateTokens("你好");
-			// ASCII "ab" (2 chars) ≈ 0.5 tokens → ceil = 1
-			const asciiTokens = estimateTokens("ab");
+			// CJK ~1.5 chars/token, so "你好世界" (4 chars) ≈ 2.67 tokens → ceil = 3
+			const cjkTokens = estimateTokens("你好世界");
+			// ASCII "abcd" (4 chars) ≈ 1 token → ceil = 1
+			const asciiTokens = estimateTokens("abcd");
 			expect(cjkTokens).toBeGreaterThan(asciiTokens);
 		});
 

@@ -8,13 +8,16 @@ import { initAppData } from "./utils/appdata.js";
 import { initConfig, isFirstTimeUser } from "./utils/config.js";
 import { setFlags } from "./utils/flags.js";
 import { initLocalSettings } from "./utils/localsettings.js";
-import { initPlatform } from "./utils/platform.js";
+import { initPlatform, clearScreen } from "./utils/platform.js";
 import { initApp, type InitResult } from "./utils/init.js";
 import { pauseInput } from "./utils/stdin.js";
 import { initI18n, t } from "./i18n/index.js";
 
 // 暂停 stdin，Splash 阶段不接受任何输入
 pauseInput();
+
+// 清屏（跨平台）
+clearScreen();
 
 // 同步初始化（配置文件等）
 initConfig();
@@ -82,6 +85,9 @@ async function main() {
 	// 阶段 2: 卸载 Splash
 	splashInstance.unmount();
 
+	// 清屏，清除 Splash 残留
+	clearScreen();
+
 	// 阶段 3: 根据配置状态决定渲染 Welcome 或 App
 	if (isFirstTimeUser()) {
 		// 首次使用 → 欢迎页面
@@ -106,12 +112,19 @@ async function main() {
 		} catch {
 			// 忽略错误，继续启动（可能 AI 服务不可用）
 		}
+
+		// 清屏，清除 Welcome 残留
+		clearScreen();
 	}
 
 	// 正常启动 App
-	const { waitUntilExit } = render(<App initResult={initResult} />);
+	// 使用 incrementalRendering 减少滚动时的条纹问题
+	const { waitUntilExit } = render(<App initResult={initResult} />, {
+		patchConsole: true,
+		incrementalRendering: true,
+	});
 	await waitUntilExit();
-	process.stdout.write("\x1b[2J\x1b[H");
+	clearScreen();
 }
 
 main();

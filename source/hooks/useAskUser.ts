@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import type { Message } from "../components/MessageOutput.js";
+import type { Message } from "../components/StaticMessage.js";
 
 export type AskUserState = {
 	/** Current pending ask_user request, or null if none */

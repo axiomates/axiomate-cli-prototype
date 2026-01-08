@@ -11,15 +11,15 @@ const mockInitResult: InitResult = {
 };
 
 describe("App", () => {
-	it("shows input mode indicator by default", () => {
+	it("shows action mode indicator by default", () => {
 		const { lastFrame } = render(<App initResult={mockInitResult} />);
-		// Default mode is input mode
-		expect(lastFrame()).toContain("[Input]");
+		// Default mode is action mode (plan mode disabled)
+		expect(lastFrame()).toContain("[Action]");
 	});
 
-	it("shows mode switch hint in status bar", () => {
+	it("shows usage N/A when AI not configured", () => {
 		const { lastFrame } = render(<App initResult={mockInitResult} />);
-		// StatusBar shows mode switch hint
-		expect(lastFrame()).toContain("Shift+↑↓");
+		// StatusBar shows N/A when AI not configured
+		expect(lastFrame()).toContain("N/A");
 	});
 });

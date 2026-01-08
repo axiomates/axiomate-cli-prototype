@@ -1,10 +1,11 @@
 import { useRef, useCallback, useEffect } from "react";
-import type { Message } from "../components/MessageOutput.js";
+import type { Message } from "../components/StaticMessage.js";
 import type { IAIService } from "../services/ai/index.js";
 import { createAIServiceFromConfig } from "../services/ai/index.js";
 import { getToolRegistry } from "../services/tools/registry.js";
 import { initSessionStore, SessionStore } from "../services/ai/sessionStore.js";
 import { clearCommandCache } from "../constants/commands.js";
+import { clearScreen } from "../utils/platform.js";
 import { t } from "../i18n/index.js";
 
 export type SessionManagerState = {
@@ -213,7 +214,8 @@ export function useSessionManager(
 		(aiServiceRef as React.MutableRefObject<IAIService | null>).current =
 			createAIServiceFromConfig(registry);
 
-		// Clear UI
+		// Clear terminal screen and UI
+		clearScreen();
 		setMessages([]);
 		resetCollapseState();
 
@@ -270,7 +272,8 @@ export function useSessionManager(
 				aiServiceRef.current.restoreSession(session);
 			}
 
-			// Clear UI and load history
+			// Clear terminal screen and UI, then load history
+			clearScreen();
 			setMessages([]);
 			resetCollapseState();
 
@@ -366,7 +369,8 @@ export function useSessionManager(
 		(aiServiceRef as React.MutableRefObject<IAIService | null>).current =
 			createAIServiceFromConfig(registry);
 
-		// Clear UI
+		// Clear terminal screen and UI
+		clearScreen();
 		setMessages([]);
 		resetCollapseState();
 

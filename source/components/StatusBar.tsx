@@ -1,10 +1,7 @@
 import { Box, Text } from "ink";
 import { useTranslation } from "../hooks/useTranslation.js";
 
-type FocusMode = "input" | "output";
-
 type Props = {
-	focusMode?: FocusMode;
 	planMode?: boolean;
 	usedTokens?: number;
 	contextWindow?: number;
@@ -30,7 +27,6 @@ function formatTokens(tokens: number): string {
 }
 
 export default function StatusBar({
-	focusMode = "input",
 	planMode = false,
 	usedTokens,
 	contextWindow,
@@ -39,7 +35,6 @@ export default function StatusBar({
 	isFull,
 }: Props) {
 	const { t } = useTranslation();
-	const isOutputMode = focusMode === "output";
 
 	// Determine usage display color
 	const getUsageColor = (): string => {
@@ -80,18 +75,6 @@ export default function StatusBar({
 			{renderPlanMode()}
 			{/* Usage 指示器 */}
 			{renderUsage()}
-			{/* 焦点模式指示器 */}
-			<Text>
-				{isOutputMode ? (
-					<Text color="cyan" bold>
-						[{t("app.browseMode")}] {t("app.modeSwitchHint")}
-					</Text>
-				) : (
-					<Text color="gray">
-						[{t("app.inputMode")}] {t("app.modeSwitchHint")}
-					</Text>
-				)}
-			</Text>
 		</Box>
 	);
 }

@@ -27,7 +27,8 @@ source/
 ├── components/
 │   ├── AutocompleteInput/     # 输入组件（模式、键盘、菜单）
 │   ├── AskUserMenu.tsx        # AI 询问用户 UI
-│   ├── MessageOutput.tsx      # 消息显示
+│   ├── StaticMessage.tsx      # 已完成消息显示（进入终端原生滚动区）
+│   ├── StreamingMessage.tsx   # 流式消息显示（带 Spinner）
 │   └── StatusBar.tsx          # 状态栏
 ├── models/                    # 数据模型（InputInstance, UserInput）
 ├── constants/
@@ -54,6 +55,26 @@ source/
 | AI 会话 | `services/ai/service.ts` |
 | 工具发现 | `services/tools/discoverers/index.ts` |
 | 配置加载 | `utils/config.ts` |
+| 消息渲染 | `components/StaticMessage.tsx` + `components/StreamingMessage.tsx` |
+
+## 消息渲染架构
+
+使用 Ink 的 `<Static>` 组件实现原生终端滚动：
+
+- **已完成消息** → `StaticMessage` → 进入终端原生滚动区域
+- **流式消息** → `StreamingMessage` → 显示在交互区域（带 Spinner）
+
+布局结构：
+```
+<Static> 已完成消息（终端原生滚动）
+<Box>
+  StreamingMessage（当前流式消息）
+  Divider
+  AutocompleteInput（输入框）
+  Divider
+  StatusBar（状态栏）
+</Box>
+```
 
 ## 配置文件
 
