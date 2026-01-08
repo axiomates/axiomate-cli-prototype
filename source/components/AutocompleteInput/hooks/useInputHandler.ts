@@ -4,7 +4,6 @@
 
 import { useCallback } from "react";
 import { useInput, useApp } from "ink";
-import { logger } from "../../../utils/logger.js";
 import type {
 	EditorState,
 	EditorAction,
@@ -85,12 +84,6 @@ export function useInputHandler({
 
 	useInput(
 		(inputChar, key) => {
-			// DEBUG: 调试粘贴问题
-			if (inputChar.length > 1 || inputChar.includes("\n") || inputChar.includes("\r")) {
-				logger.warn(`[PASTE] len=${inputChar.length}, \\n=${inputChar.includes("\n")}, \\r=${inputChar.includes("\r")}, key.return=${key.return}`);
-				logger.warn(`[PASTE] escaped: ${JSON.stringify(inputChar)}`);
-			}
-
 			// Help 模式优先处理
 			if (inHelpMode) {
 				// 先退出 help 模式
