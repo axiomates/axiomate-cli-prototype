@@ -44,106 +44,106 @@ Output files are in the `bundle/` directory.
 
 ### Basic Navigation
 
-| Key | Function |
-|-----|----------|
-| `Enter` | Submit message |
-| `Ctrl+Enter` | Insert newline |
-| `Ctrl+C` | Exit application |
-| `Escape` | Exit current mode / Clear suggestion |
+| Key          | Function                             |
+| ------------ | ------------------------------------ |
+| `Enter`      | Submit message                       |
+| `Ctrl+Enter` | Insert newline                       |
+| `Ctrl+C`     | Exit application                     |
+| `Escape`     | Exit current mode / Clear suggestion |
 
 ### Cursor Movement
 
-| Key | Function |
-|-----|----------|
-| `Left/Right Arrow` | Move cursor by character |
-| `Ctrl+A` | Move to beginning of line |
-| `Ctrl+E` | Move to end of line |
+| Key                | Function                  |
+| ------------------ | ------------------------- |
+| `Left/Right Arrow` | Move cursor by character  |
+| `Ctrl+A`           | Move to beginning of line |
+| `Ctrl+E`           | Move to end of line       |
 
 ### Text Editing
 
-| Key | Function |
-|-----|----------|
+| Key         | Function                       |
+| ----------- | ------------------------------ |
 | `Backspace` | Delete character before cursor |
-| `Delete` | Delete character after cursor |
-| `Ctrl+U` | Delete all text before cursor |
-| `Ctrl+K` | Delete all text after cursor |
+| `Delete`    | Delete character after cursor  |
+| `Ctrl+U`    | Delete all text before cursor  |
+| `Ctrl+K`    | Delete all text after cursor   |
 
 ### Special Modes
 
-| Key | Function |
-|-----|----------|
-| `/` | Open slash command menu |
-| `@` | Open file selector |
-| `?` | Show help (when input is empty) |
-| `Tab` | Accept suggestion |
-| `Right Arrow` | Accept one character from suggestion |
-| `Up/Down Arrow` | Navigate history / Navigate menu |
+| Key             | Function                             |
+| --------------- | ------------------------------------ |
+| `/`             | Open slash command menu              |
+| `@`             | Open file selector                   |
+| `?`             | Show help (when input is empty)      |
+| `Tab`           | Accept suggestion                    |
+| `Right Arrow`   | Accept one character from suggestion |
+| `Up/Down Arrow` | Navigate history / Navigate menu     |
 
 ## Slash Commands
 
 ### Model & AI Settings
 
-| Command | Description |
-|---------|-------------|
-| `/model` | Switch AI model |
+| Command         | Description           |
+| --------------- | --------------------- |
+| `/model`        | Switch AI model       |
 | `/model <name>` | Select specific model |
-| `/thinking` | Toggle thinking mode |
-| `/thinking on` | Enable thinking mode |
+| `/thinking`     | Toggle thinking mode  |
+| `/thinking on`  | Enable thinking mode  |
 | `/thinking off` | Disable thinking mode |
 
 ### Plan Mode
 
-| Command | Description |
-|---------|-------------|
-| `/plan` | Toggle plan mode |
-| `/plan on` | Enable plan mode |
+| Command     | Description       |
+| ----------- | ----------------- |
+| `/plan`     | Toggle plan mode  |
+| `/plan on`  | Enable plan mode  |
 | `/plan off` | Disable plan mode |
 
 ### Session Management
 
-| Command | Description |
-|---------|-------------|
-| `/session` | Session management menu |
-| `/session list` | List all sessions |
-| `/session new` | Create new session |
+| Command           | Description               |
+| ----------------- | ------------------------- |
+| `/session`        | Session management menu   |
+| `/session list`   | List all sessions         |
+| `/session new`    | Create new session        |
 | `/session switch` | Switch to another session |
-| `/session delete` | Delete a session |
-| `/session clear` | Clear current session |
+| `/session delete` | Delete a session          |
+| `/session clear`  | Clear current session     |
 
 ### Context Management
 
-| Command | Description |
-|---------|-------------|
+| Command    | Description                               |
+| ---------- | ----------------------------------------- |
 | `/compact` | Compress context (summarize conversation) |
-| `/stop` | Stop current AI response |
+| `/stop`    | Stop current AI response                  |
 
 ### Tools
 
-| Command | Description |
-|---------|-------------|
-| `/tools` | Tool management menu |
-| `/tools list` | List available tools |
-| `/tools refresh` | Refresh tool discovery |
-| `/tools stats` | Show tool usage statistics |
+| Command          | Description                |
+| ---------------- | -------------------------- |
+| `/tools`         | Tool management menu       |
+| `/tools list`    | List available tools       |
+| `/tools refresh` | Refresh tool discovery     |
+| `/tools stats`   | Show tool usage statistics |
 
 ### Input Suggestions
 
-| Command | Description |
-|---------|-------------|
-| `/suggestion` | Toggle input suggestions |
-| `/suggestion on` | Enable suggestions |
-| `/suggestion off` | Disable suggestions |
+| Command             | Description                  |
+| ------------------- | ---------------------------- |
+| `/suggestion`       | Toggle input suggestions     |
+| `/suggestion on`    | Enable suggestions           |
+| `/suggestion off`   | Disable suggestions          |
 | `/suggestion model` | Select model for suggestions |
 
 ### Interface
 
-| Command | Description |
-|---------|-------------|
-| `/language` | Switch interface language |
-| `/language en` | English |
-| `/language zh-CN` | Simplified Chinese |
-| `/language ja` | Japanese |
-| `/exit` | Exit application |
+| Command           | Description               |
+| ----------------- | ------------------------- |
+| `/language`       | Switch interface language |
+| `/language en`    | English                   |
+| `/language zh-CN` | Simplified Chinese        |
+| `/language ja`    | Japanese                  |
+| `/exit`           | Exit application          |
 
 ## Plan Mode
 
@@ -153,10 +153,10 @@ Plan Mode is designed for complex tasks that require step-by-step planning and e
 
 Plan Mode operates in two distinct modes:
 
-| Mode | Description | Available Tools |
-|------|-------------|-----------------|
-| **Plan Mode** | Read-only planning phase | Only `plan` tool (read, write, edit, search) |
-| **Action Mode** | Full execution phase | All tools (file operations, shell, git, etc.) |
+| Mode            | Description              | Available Tools                               |
+| --------------- | ------------------------ | --------------------------------------------- |
+| **Plan Mode**   | Read-only planning phase | Only `plan` tool (read, write, edit, search)  |
+| **Action Mode** | Full execution phase     | All tools (file operations, shell, git, etc.) |
 
 ### How to Use
 
@@ -178,6 +178,7 @@ Ask the AI to create and execute a plan:
 ```
 
 The AI will automatically:
+
 1. Enter Plan Mode
 2. Create a detailed plan
 3. Exit Plan Mode
@@ -209,16 +210,16 @@ The AI will automatically:
 
 ### Plan Tool Actions
 
-| Action | Description |
-|--------|-------------|
-| `plan_read` | Read the entire plan file |
-| `plan_read_lines` | Read specific lines from plan |
-| `plan_write` | Create or replace entire plan |
-| `plan_append` | Append content to plan |
-| `plan_edit` | Find and replace content in plan |
-| `plan_search` | Search for patterns in plan |
-| `plan_enter_mode` | Switch to Plan Mode |
-| `plan_exit_mode` | Switch to Action Mode |
+| Action            | Description                      |
+| ----------------- | -------------------------------- |
+| `plan_read`       | Read the entire plan file        |
+| `plan_read_lines` | Read specific lines from plan    |
+| `plan_write`      | Create or replace entire plan    |
+| `plan_append`     | Append content to plan           |
+| `plan_edit`       | Find and replace content in plan |
+| `plan_search`     | Search for patterns in plan      |
+| `plan_enter_mode` | Switch to Plan Mode              |
+| `plan_exit_mode`  | Switch to Action Mode            |
 
 ### Example Plan Structure
 
@@ -226,11 +227,13 @@ The AI will automatically:
 # Refactor Authentication Module
 
 ## Objectives
+
 - Improve code organization
 - Add proper error handling
 - Implement token refresh
 
 ## Tasks
+
 - [ ] Review current auth implementation
 - [ ] Create new auth service structure
 - [ ] Migrate login functionality

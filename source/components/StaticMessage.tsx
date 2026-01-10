@@ -1,5 +1,5 @@
 import { Box, Text } from "ink";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { THEME_PINK, THEME_LIGHT_YELLOW } from "../constants/colors.js";
 import { useTranslation } from "../hooks/useTranslation.js";
 

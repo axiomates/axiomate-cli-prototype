@@ -465,7 +465,10 @@ export default function App({ initResult }: Props) {
 	// 将消息分为已完成和流式消息
 	const { completedMessages, streamingMessage } = useMemo(() => {
 		if (messages.length === 0) {
-			return { completedMessages: [] as MessageWithId[], streamingMessage: null };
+			return {
+				completedMessages: [] as MessageWithId[],
+				streamingMessage: null,
+			};
 		}
 
 		const last = messages[messages.length - 1];
@@ -510,10 +513,7 @@ export default function App({ initResult }: Props) {
 			<Box flexDirection="column">
 				{/* 当前流式消息（如果有） */}
 				{streamingMessage && (
-					<StreamingMessage
-						message={streamingMessage}
-						width={terminalWidth}
-					/>
+					<StreamingMessage message={streamingMessage} width={terminalWidth} />
 				)}
 
 				{/* 输出区域与输入框分隔线（无 ask_user 菜单时显示） */}

@@ -1,5 +1,5 @@
 import { Box, Text } from "ink";
-import { useCallback, useEffect, useState, memo, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { THEME_PINK, THEME_LIGHT_YELLOW } from "../constants/colors.js";
 import { useTranslation } from "../hooks/useTranslation.js";
 import type { Message } from "./StaticMessage.js";
@@ -8,7 +8,6 @@ type Props = {
 	message: Message;
 	width: number;
 };
-
 
 // 延迟加载 marked 和 marked-terminal
 let markedInstance: {
@@ -37,7 +36,6 @@ function renderMarkdownSync(content: string, width: number): string {
 	}
 	return content;
 }
-
 
 /**
  * StreamingMessage - 渲染当前流式消息
@@ -73,7 +71,6 @@ export default function StreamingMessage({ message, width }: Props) {
 		);
 		const reasoningLines = message.reasoning.split("\n");
 		reasoningLines.forEach((line, idx) => {
-			const isLastLine = idx === reasoningLines.length - 1;
 			rows.push(
 				<Box key={`reasoning-${idx}`}>
 					<Text dimColor>{"  " + line}</Text>
@@ -88,7 +85,6 @@ export default function StreamingMessage({ message, width }: Props) {
 
 		msgLines.forEach((line, idx) => {
 			const isFirstLine = idx === 0 && !message.reasoning;
-			const isLastLine = idx === msgLines.length - 1;
 
 			if (isFirstLine) {
 				rows.push(
@@ -115,9 +111,7 @@ export default function StreamingMessage({ message, width }: Props) {
 					<Text color={prefixColor} bold>
 						{">"}{" "}
 					</Text>
-					<Text dimColor>
-						{" " + t("common.waiting")}
-					</Text>
+					<Text dimColor>{" " + t("common.waiting")}</Text>
 				</Box>,
 			);
 		} else if (message.streaming) {

@@ -494,7 +494,9 @@ export function useInputHandler({
 				// 终端粘贴时可能使用 \r（Windows 风格）作为换行符
 				let normalizedInput = inputChar;
 				if (inputChar.includes("\r")) {
-					normalizedInput = inputChar.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+					normalizedInput = inputChar
+						.replace(/\r\n/g, "\n")
+						.replace(/\r/g, "\n");
 				}
 
 				// 插入字符

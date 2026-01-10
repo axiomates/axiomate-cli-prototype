@@ -55,11 +55,7 @@ import type {
 	IToolRegistry,
 	ToolDefinition,
 } from "../../../source/services/tools/types.js";
-import {
-	ToolMatcher,
-	detectProjectType,
-} from "../../../source/services/tools/matcher.js";
-import { ToolCallHandler } from "../../../source/services/ai/tool-call-handler.js";
+import { detectProjectType } from "../../../source/services/tools/matcher.js";
 import { buildSystemPrompt } from "../../../source/constants/prompts.js";
 
 // Helper to create mock client
@@ -761,7 +757,9 @@ describe("AIService", () => {
 			expect(mockClient.streamChat).toHaveBeenCalledTimes(3);
 			expect(onEnd).toHaveBeenCalledWith(
 				expect.objectContaining({
-					content: expect.stringContaining("Maximum tool call rounds limit reached"),
+					content: expect.stringContaining(
+						"Maximum tool call rounds limit reached",
+					),
 				}),
 			);
 		});
@@ -781,7 +779,9 @@ describe("AIService", () => {
 
 			// Configure the shared mock instance for query matching
 			mockMatcherInstance.autoSelect.mockReturnValue([]); // No auto-selected tools
-			mockMatcherInstance.match.mockReturnValue([{ tool: tools[0], score: 0.9 }]); // Match by query
+			mockMatcherInstance.match.mockReturnValue([
+				{ tool: tools[0], score: 0.9 },
+			]); // Match by query
 
 			const service = new AIService({ client: mockClient }, registry);
 

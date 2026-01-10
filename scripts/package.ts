@@ -107,10 +107,7 @@ function parseArgs(): TargetInfo[] {
 }
 
 // 编译单个目标
-function compileTarget(
-	bunEntryPath: string,
-	targetInfo: TargetInfo,
-): boolean {
+function compileTarget(bunEntryPath: string, targetInfo: TargetInfo): boolean {
 	const outputPath = join("bundle", targetInfo.filename);
 	console.log(`  → ${targetInfo.description} (${targetInfo.filename})...`);
 

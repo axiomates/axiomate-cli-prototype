@@ -191,11 +191,11 @@ export class Session {
 			return;
 		}
 
-		const deviation = Math.abs(estimatedTotal - actualTotal) / actualTotal;
-		if (deviation > 0.2) {
+		// const deviation = Math.abs(estimatedTotal - actualTotal) / actualTotal;
+		// if (deviation > 0.2) {
 			// 计算不含工具的消息估算（用于更精细的调试）
-			const estimatedMessages = estimatedTotal - this.toolsTokenEstimate;
-		}
+			// const estimatedMessages = estimatedTotal - this.toolsTokenEstimate;
+		// }
 	}
 
 	/**
