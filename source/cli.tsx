@@ -2,7 +2,6 @@
 import { render } from "ink";
 import meow from "meow";
 import App from "./app.js";
-import Splash from "./components/Splash.js";
 import Welcome from "./components/Welcome.js";
 import { initAppData } from "./utils/appdata.js";
 import { initConfig, isFirstTimeUser } from "./utils/config.js";
@@ -10,11 +9,7 @@ import { setFlags } from "./utils/flags.js";
 import { initLocalSettings } from "./utils/localsettings.js";
 import { initPlatform, clearScreen } from "./utils/platform.js";
 import { initApp, type InitResult } from "./utils/init.js";
-import { pauseInput } from "./utils/stdin.js";
-import { initI18n, t } from "./i18n/index.js";
-
-// 暂停 stdin，Splash 阶段不接受任何输入
-pauseInput();
+import { initI18n } from "./i18n/index.js";
 
 // 清屏（跨平台）
 clearScreen();
@@ -60,37 +55,19 @@ Options:
 	process.exit(0);
 }
 
-// 两阶段渲染：先显示 Splash，初始化完成后切换到 App
 async function main() {
-	// 阶段 1: 渲染 Splash
-	let currentMessage = t("splash.loading");
-	const splashInstance = render(<Splash message={currentMessage} />);
-
-	// 异步初始化，更新进度
+	// 快速初始化（内置工具 + AI 服务）
 	let initResult: InitResult;
 	try {
-		initResult = await initApp((progress) => {
-			currentMessage = progress.message;
-			splashInstance.rerender(<Splash message={currentMessage} />);
-		});
+		initResult = await initApp();
 	} catch (error) {
-		// 初始化失败时显示错误并退出
 		const errorMsg = error instanceof Error ? error.message : String(error);
-		splashInstance.rerender(<Splash message={`Error: ${errorMsg}`} />);
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-		splashInstance.unmount();
+		console.error(`Initialization failed: ${errorMsg}`);
 		process.exit(1);
 	}
 
-	// 阶段 2: 卸载 Splash
-	splashInstance.unmount();
-
-	// 清屏，清除 Splash 残留
-	clearScreen();
-
-	// 阶段 3: 根据配置状态决定渲染 Welcome 或 App
+	// 首次使用 → 欢迎页面
 	if (isFirstTimeUser()) {
-		// 首次使用 → 欢迎页面
 		// 等待 Welcome 完成配置后卸载
 		await new Promise<void>((resolve) => {
 			const welcomeInstance = render(
