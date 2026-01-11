@@ -141,6 +141,11 @@ export type ToolMaskState = {
 	 * 共同前缀，如 "plan_"，让模型在同类工具中选择
 	 */
 	toolPrefix?: string;
+	/**
+	 * 是否使用动态工具列表 fallback
+	 * 当模型不支持 tool_choice 和 prefill 时，回退到动态过滤工具列表
+	 */
+	useDynamicFallback?: boolean;
 };
 
 /**

@@ -19,6 +19,7 @@ import { toOpenAIMessages, parseOpenAIToolCalls } from "../adapters/openai.js";
 import {
 	getThinkingParams,
 	currentModelSupportsToolChoice,
+	currentModelSupportsPrefill,
 } from "../../../utils/config.js";
 import { stableStringify } from "../../../utils/json.js";
 
@@ -234,6 +235,11 @@ export class OpenAIClient implements IAIClient {
 	): ChatMessage[] {
 		// 如果支持 tool_choice，不需要 prefill
 		if (currentModelSupportsToolChoice()) {
+			return messages;
+		}
+
+		// 如果模型不支持 prefill，不应用
+		if (!currentModelSupportsPrefill()) {
 			return messages;
 		}
 

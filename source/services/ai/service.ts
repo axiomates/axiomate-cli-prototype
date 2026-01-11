@@ -18,7 +18,7 @@ import type {
 	ToolMaskState,
 } from "./types.js";
 import type { IToolRegistry } from "../tools/types.js";
-import type { IToolMatcher } from "./types.js";
+import type { IToolMatcher, ToolMaskState } from "./types.js";
 import { toOpenAITools } from "./adapters/openai.js";
 import { ToolCallHandler } from "./tool-call-handler.js";
 import { ToolMatcher, detectProjectType } from "../tools/matcher.js";
@@ -253,16 +253,16 @@ export class AIService implements IAIService {
 		// 添加用户消息到 Session（传递 displayContent 用于会话恢复时显示）
 		this.session.addUserMessage(messageWithReminder, displayContent);
 
-		// 获取相关工具（冻结后始终返回完整列表）
-		const tools = this.getContextTools(enhancedContext);
-
-		// 构建工具遮蔽状态
+		// 构建工具遮蔽状态（需要先构建，因为可能影响工具列表）
 		const toolMask = buildToolMask(
 			userMessage,
 			enhancedContext,
 			initialPlanMode,
 			this.registry.isFrozen() ? this.registry.getFrozenTools() : [],
 		);
+
+		// 获取相关工具（根据 toolMask 决定是冻结列表还是动态过滤）
+		const tools = this.getContextTools(enhancedContext, toolMask);
 
 		// 将 toolMask 添加到 options 中
 		const optionsWithMask: StreamOptions = {
@@ -315,9 +315,24 @@ export class AIService implements IAIService {
 	 * 获取上下文相关工具
 	 * 当工具已冻结时，始终返回完整的冻结工具列表（优化 KV cache）
 	 * 未冻结时（加载中），使用原有的 context-aware 选择逻辑
+	 * @param context 上下文信息
+	 * @param toolMask 工具遮蔽状态（可选，用于 fallback 模式）
 	 */
-	private getContextTools(context: MatchContext): OpenAITool[] {
-		// 使用冻结的工具列表（如果可用）
+	private getContextTools(
+		context: MatchContext,
+		toolMask?: ToolMaskState,
+	): OpenAITool[] {
+		// 如果需要动态 fallback（模型不支持 tool_choice 和 prefill）
+		// 则根据 allowedTools 过滤工具列表
+		if (toolMask?.useDynamicFallback && this.registry.isFrozen()) {
+			const allowedIds = toolMask.allowedTools;
+			const filteredTools = this.registry
+				.getFrozenTools()
+				.filter((t) => allowedIds.has(t.id));
+			return toOpenAITools(filteredTools);
+		}
+
+		// 正常情况：使用冻结的完整工具列表（如果可用）
 		if (this.registry.isFrozen()) {
 			return toOpenAITools(this.registry.getFrozenTools());
 		}

@@ -9,6 +9,10 @@ import type { ToolMaskState, MatchContext } from "./types.js";
 import type { DiscoveredTool } from "../tools/types.js";
 import { platform } from "node:os";
 import { tArray } from "../../i18n/index.js";
+import {
+	currentModelSupportsToolChoice,
+	currentModelSupportsPrefill,
+} from "../../utils/config.js";
 
 /**
  * 关键词到工具 ID 的映射
@@ -200,13 +204,30 @@ export function buildToolMask(
 
 	// Plan 模式：只允许 plan 工具
 	if (planMode) {
-		return {
-			mode: "plan",
-			allowedTools: new Set(["plan"]),
-			// 使用前缀让模型在 plan_read/plan_write/plan_edit 中选择
-			// tool_choice 用于支持的模型，toolPrefix 用于 prefill
-			toolPrefix: "plan_",
-		};
+		const supportsToolChoice = currentModelSupportsToolChoice();
+		const supportsPrefill = currentModelSupportsPrefill();
+
+		if (supportsToolChoice) {
+			// 模型支持 tool_choice，使用冻结工具列表 + tool_choice 限制
+			return {
+				mode: "plan",
+				allowedTools: new Set(["plan"]),
+			};
+		} else if (supportsPrefill) {
+			// 模型支持 prefill，使用冻结工具列表 + prefill 引导
+			return {
+				mode: "plan",
+				allowedTools: new Set(["plan"]),
+				toolPrefix: "plan_",
+			};
+		} else {
+			// Fallback: 动态过滤工具列表（不支持 tool_choice 和 prefill）
+			return {
+				mode: "plan",
+				allowedTools: new Set(["plan"]),
+				useDynamicFallback: true,
+			};
+		}
 	}
 
 	// Action 模式：构建允许的工具列表

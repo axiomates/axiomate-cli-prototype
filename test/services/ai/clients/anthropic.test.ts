@@ -5,6 +5,7 @@ vi.mock("../../../../source/utils/config.js", () => ({
 	isThinkingEnabled: vi.fn(() => false),
 	currentModelSupportsThinking: vi.fn(() => false),
 	currentModelSupportsToolChoice: vi.fn(() => false),
+	currentModelSupportsPrefill: vi.fn(() => true),
 }));
 
 // Mock adapters

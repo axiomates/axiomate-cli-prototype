@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { initI18n, setLocale } from "../../../source/i18n/index.js";
 
+// Mock config module for model capability checks
+vi.mock("../../../source/utils/config.js", () => ({
+	currentModelSupportsToolChoice: vi.fn(() => false),
+	currentModelSupportsPrefill: vi.fn(() => true), // Default to prefill support for tests
+}));
+
 beforeAll(() => {
 	initI18n();
 	setLocale("en");
@@ -12,6 +18,10 @@ import {
 	getToolNotAllowedError,
 } from "../../../source/services/ai/toolMask.js";
 import type { DiscoveredTool } from "../../../source/services/tools/types.js";
+import {
+	currentModelSupportsToolChoice,
+	currentModelSupportsPrefill,
+} from "../../../source/utils/config.js";
 
 // Mock frozen tools
 const mockFrozenTools: DiscoveredTool[] = [
