@@ -562,6 +562,7 @@ export default function App({ initResult }: Props) {
 						usagePercent={usageStatus?.usagePercent}
 						isNearLimit={usageStatus?.isNearLimit}
 						isFull={usageStatus?.isFull}
+						isWorking={!!streamingMessage}
 					/>
 				</Box>
 			</Box>

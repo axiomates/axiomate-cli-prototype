@@ -1,4 +1,5 @@
 import { Box, Text } from "ink";
+import { useState, useEffect } from "react";
 import { useTranslation } from "../hooks/useTranslation.js";
 
 type Props = {
@@ -8,7 +9,13 @@ type Props = {
 	usagePercent?: number;
 	isNearLimit?: boolean;
 	isFull?: boolean;
+	isWorking?: boolean;
 };
+
+// 脉动点的不同大小状态
+const PULSE_DOTS = ["·", "•", "●", "•"];
+const IDLE_DOT = "·";
+const PULSE_INTERVAL = 200; // ms
 
 /**
  * Format token number with k suffix for thousands
@@ -26,6 +33,31 @@ function formatTokens(tokens: number): string {
 	return `${Math.round(k)}k`;
 }
 
+/**
+ * 脉动点组件 - 显示工作状态
+ */
+function PulseDot({ isWorking }: { isWorking: boolean }) {
+	const [dotIndex, setDotIndex] = useState(0);
+
+	useEffect(() => {
+		if (!isWorking) {
+			setDotIndex(0);
+			return;
+		}
+
+		const timer = setInterval(() => {
+			setDotIndex((prev) => (prev + 1) % PULSE_DOTS.length);
+		}, PULSE_INTERVAL);
+
+		return () => clearInterval(timer);
+	}, [isWorking]);
+
+	const dot = isWorking ? PULSE_DOTS[dotIndex] : IDLE_DOT;
+	const color = isWorking ? "green" : "gray";
+
+	return <Text color={color}>{dot} </Text>;
+}
+
 export default function StatusBar({
 	planMode = false,
 	usedTokens,
@@ -33,6 +65,7 @@ export default function StatusBar({
 	usagePercent,
 	isNearLimit,
 	isFull,
+	isWorking = false,
 }: Props) {
 	const { t } = useTranslation();
 
@@ -71,6 +104,8 @@ export default function StatusBar({
 
 	return (
 		<Box flexShrink={0} justifyContent="flex-end" width="100%">
+			{/* 脉动点 - 工作状态指示器 */}
+			<PulseDot isWorking={isWorking} />
 			{/* Plan/Action 模式指示器 */}
 			{renderPlanMode()}
 			{/* Usage 指示器 */}
