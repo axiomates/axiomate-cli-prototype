@@ -132,25 +132,5 @@ Use \`plan_enter_mode\` to switch to Plan Mode for exploration and planning.
 `;
 }
 
-/**
- * Build mode switch notification
- * Injected after AI calls plan_enter_mode or plan_exit_mode
- * @param enteredPlanMode true if entering plan mode, false if exiting
- */
-export function buildModeSwitchNotification(enteredPlanMode: boolean): string {
-	if (enteredPlanMode) {
-		return `<system-reminder>
-## Entered Plan Mode
-You are now in Plan Mode (read-only). You can only use plan tools.
-Use \`plan_exit_mode\` when ready to implement.
-</system-reminder>`;
-	}
-
-	return `<system-reminder>
-## Exited Plan Mode
-You are now in Action Mode. You can modify files, execute commands, and use all tools.
-</system-reminder>`;
-}
-
 // Re-export for backward compatibility
 export { SYSTEM_PROMPT };
