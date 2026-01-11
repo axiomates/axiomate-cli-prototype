@@ -282,7 +282,7 @@ export default function AutocompleteInput({
 			)}
 
 			{/* 快捷键帮助 */}
-			{inHelpMode && <HelpPanel columns={columns} />}
+			{inHelpMode && <HelpPanel />}
 		</Box>
 	);
 }

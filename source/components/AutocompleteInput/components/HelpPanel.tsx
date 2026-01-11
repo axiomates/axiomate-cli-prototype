@@ -6,17 +6,11 @@ import { Box, Text } from "ink";
 import { THEME_LIGHT_YELLOW } from "../../../constants/colors.js";
 import { useTranslation } from "../../../hooks/useTranslation.js";
 
-type HelpPanelProps = {
-	/** 终端宽度 */
-	columns: number;
-};
-
-export function HelpPanel({ columns }: HelpPanelProps) {
+export function HelpPanel() {
 	const { t } = useTranslation();
 
 	return (
 		<Box flexDirection="column">
-			<Text color="gray">{"─".repeat(columns)}</Text>
 			<Box flexDirection="row" flexWrap="wrap">
 				<Box width="50%">
 					<Text color={THEME_LIGHT_YELLOW}>/ </Text>
