@@ -123,18 +123,32 @@ const planDefinition: ToolDefinition = {
 			commandTemplate: "__PLAN_SEARCH__",
 		},
 		{
-			name: "enter_mode",
+			name: "leave",
 			description:
-				"Switch to Plan Mode (read-only exploration and planning). Takes effect immediately.",
-			parameters: [],
-			commandTemplate: "__PLAN_ENTER_MODE__",
-		},
-		{
-			name: "exit_mode",
-			description:
-				"Exit Plan Mode and switch to Action Mode. Takes effect immediately.",
+				"Leave Plan Mode and switch to Action Mode. Takes effect immediately.",
 			parameters: [],
 			commandTemplate: "__PLAN_EXIT_MODE__",
+		},
+	],
+};
+
+/**
+ * Mode switching tool definition
+ * Separate from plan tool so it's not restricted by plan_ prefix in Plan mode
+ */
+const enterPlanDefinition: ToolDefinition = {
+	id: "enterplan",
+	name: "Enter Plan Mode",
+	description: "Switch to Plan Mode for exploration and planning",
+	category: "utility",
+	capabilities: ["execute"],
+	actions: [
+		{
+			name: "enter",
+			description:
+				"Switch to Plan Mode (read-only exploration and planning). In Plan Mode you can only use plan tools (plan_read, plan_write, plan_edit). Takes effect immediately.",
+			parameters: [],
+			commandTemplate: "__PLAN_ENTER_MODE__",
 		},
 	],
 };
@@ -142,6 +156,11 @@ const planDefinition: ToolDefinition = {
 export async function detectPlan(): Promise<DiscoveredTool> {
 	// Plan tool is always available (builtin)
 	return createInstalledTool(planDefinition, "builtin", "1.0.0");
+}
+
+export async function detectEnterPlan(): Promise<DiscoveredTool> {
+	// Enter plan mode tool is always available (builtin)
+	return createInstalledTool(enterPlanDefinition, "builtin", "1.0.0");
 }
 
 /**

@@ -12,7 +12,7 @@ import type { DiscoveredTool } from "../types.js";
 // 导入内置工具发现器（实际上是同步的，只是接口统一用 async）
 import { detectWebFetch } from "./web.js";
 import { detectFile } from "./file.js";
-import { detectPlan } from "./plan.js";
+import { detectPlan, detectEnterPlan } from "./plan.js";
 import { detectAskUser } from "./ask_user.js";
 
 // 导入可发现工具发现器（需要检测外部命令）
@@ -44,6 +44,7 @@ export const builtinDiscoverers: DiscoverFunction[] = [
 	detectWebFetch,
 	detectFile,
 	detectPlan,
+	detectEnterPlan,
 	detectAskUser,
 ];
 

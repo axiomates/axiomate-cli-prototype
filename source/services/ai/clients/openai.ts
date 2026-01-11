@@ -223,6 +223,10 @@ export class OpenAIClient implements IAIClient {
 	/**
 	 * 如果不支持 tool_choice 但需要强制工具，使用 Prefill Response 技术
 	 * 在消息末尾添加预填充的 assistant 消息
+	 *
+	 * tool_choice vs prefill 的区别：
+	 * - tool_choice: 需要完整工具名，强制调用特定工具
+	 * - prefill: 使用共同前缀，让模型在同类工具中选择
 	 */
 	private applyPrefillIfNeeded(
 		messages: ChatMessage[],
@@ -233,18 +237,18 @@ export class OpenAIClient implements IAIClient {
 			return messages;
 		}
 
-		// 如果没有强制工具，不需要 prefill
-		if (!toolMask?.requiredTool) {
+		// 如果没有工具前缀，不需要 prefill
+		if (!toolMask?.toolPrefix) {
 			return messages;
 		}
 
-		// 使用 ChatML 格式的 prefill
-		// 添加预填充的 assistant 消息，开始工具调用
+		// 使用 prefill 引导模型调用指定前缀的工具
+		// 例如 toolPrefix = "plan_" 会引导模型调用 plan_read/plan_write/plan_edit
 		return [
 			...messages,
 			{
 				role: "assistant",
-				content: `<tool_call>{"name": "${toolMask.requiredTool}"`,
+				content: `<tool_call>{"name": "${toolMask.toolPrefix}`,
 			},
 		];
 	}

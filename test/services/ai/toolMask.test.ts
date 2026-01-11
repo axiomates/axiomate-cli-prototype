@@ -48,7 +48,7 @@ const mockFrozenTools: DiscoveredTool[] = [
 		keywords: ["git"],
 	},
 	{
-		id: "web_fetch",
+		id: "web",
 		name: "Web Fetch",
 		category: "web",
 		installed: true,
@@ -56,7 +56,7 @@ const mockFrozenTools: DiscoveredTool[] = [
 		keywords: ["web", "http"],
 	},
 	{
-		id: "ask_user",
+		id: "askuser",
 		name: "Ask User",
 		category: "builtin",
 		installed: true,
@@ -92,19 +92,22 @@ const mockFrozenTools: DiscoveredTool[] = [
 describe("toolMask", () => {
 	describe("buildToolMask", () => {
 		describe("Plan mode", () => {
-			it("should only allow plan tool in plan mode", () => {
-				const mask = buildToolMask(
-					"Create a plan for this project",
-					{ cwd: "/project" },
-					true, // planMode
-					mockFrozenTools,
-				);
+		it("should only allow plan tool in plan mode", () => {
+			const mask = buildToolMask(
+				"Create a plan for this project",
+				{ cwd: "/project" },
+				true, // planMode
+				mockFrozenTools,
+			);
 
-				expect(mask.mode).toBe("plan");
-				expect(mask.allowedTools.has("plan")).toBe(true);
-				expect(mask.allowedTools.size).toBe(1);
-				expect(mask.requiredTool).toBe("plan_create");
-			});
+			expect(mask.mode).toBe("plan");
+			expect(mask.allowedTools.has("plan")).toBe(true);
+			expect(mask.allowedTools.size).toBe(1);
+			// toolPrefix 用于 prefill，引导模型在 plan_ 前缀的工具中选择
+			expect(mask.toolPrefix).toBe("plan_");
+			// requiredTool 不再使用（改用 toolPrefix）
+			expect(mask.requiredTool).toBeUndefined();
+		});
 		});
 
 		describe("Action mode", () => {
@@ -117,7 +120,7 @@ describe("toolMask", () => {
 				);
 
 				expect(mask.mode).toBe("action");
-				expect(mask.allowedTools.has("ask_user")).toBe(true);
+				expect(mask.allowedTools.has("askuser")).toBe(true);
 				expect(mask.allowedTools.has("file")).toBe(true);
 			});
 
@@ -140,7 +143,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("web_fetch")).toBe(true);
+				expect(mask.allowedTools.has("web")).toBe(true);
 			});
 
 			it("should match git tool from git keywords", () => {
@@ -212,7 +215,7 @@ describe("toolMask", () => {
 			);
 
 			expect(isToolAllowed("file", mask)).toBe(true);
-			expect(isToolAllowed("ask_user", mask)).toBe(true);
+			expect(isToolAllowed("askuser", mask)).toBe(true);
 		});
 
 		it("should return false if tool is not in allowedTools", () => {

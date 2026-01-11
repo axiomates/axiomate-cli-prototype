@@ -16,7 +16,7 @@ import { tArray } from "../../i18n/index.js";
  */
 const KEYWORD_TO_TOOL: Record<string, string[]> = {
 	// Web 相关
-	web_fetch: [
+	web: [
 		"http",
 		"https",
 		"url",
@@ -85,7 +85,7 @@ const KEYWORD_TO_TOOL: Record<string, string[]> = {
 /**
  * 基础工具列表（始终可用）
  */
-const BASE_TOOLS = new Set(["ask_user", "file", "plan"]);
+const BASE_TOOLS = new Set(["askuser", "file", "plan"]);
 
 /**
  * 获取当前平台的 shell 工具 ID
@@ -101,7 +101,7 @@ function getPlatformShellTool(): string {
  * 获取 web 关键词（包含 i18n）
  */
 function getWebKeywords(): string[] {
-	const staticKeywords = KEYWORD_TO_TOOL.web_fetch || [];
+	const staticKeywords = KEYWORD_TO_TOOL.web || [];
 	const i18nKeywords = tArray("tools.webKeywords");
 	if (i18nKeywords.length > 0) {
 		return [...staticKeywords, ...i18nKeywords];
@@ -120,14 +120,14 @@ function matchToolsByInput(input: string): Set<string> {
 	const webKeywords = getWebKeywords();
 	for (const keyword of webKeywords) {
 		if (lowerInput.includes(keyword.toLowerCase())) {
-			matched.add("web_fetch");
+			matched.add("web");
 			break;
 		}
 	}
 
 	// 匹配其他工具
 	for (const [toolId, keywords] of Object.entries(KEYWORD_TO_TOOL)) {
-		if (toolId === "web_fetch") continue; // 已处理
+		if (toolId === "web") continue; // 已处理
 
 		for (const keyword of keywords) {
 			if (lowerInput.includes(keyword.toLowerCase())) {
@@ -203,7 +203,9 @@ export function buildToolMask(
 		return {
 			mode: "plan",
 			allowedTools: new Set(["plan"]),
-			requiredTool: availableToolIds.has("plan") ? "plan_create" : undefined,
+			// 使用前缀让模型在 plan_read/plan_write/plan_edit 中选择
+			// tool_choice 用于支持的模型，toolPrefix 用于 prefill
+			toolPrefix: "plan_",
 		};
 	}
 

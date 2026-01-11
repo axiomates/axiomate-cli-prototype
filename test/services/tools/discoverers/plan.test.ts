@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
 	detectPlan,
+	detectEnterPlan,
 	getPlanFilePath,
 } from "../../../../source/services/tools/discoverers/plan.js";
 
@@ -150,32 +151,19 @@ describe("plan discoverer", () => {
 			expect(maxMatchesParam?.default).toBe(100);
 		});
 
-		it("should have enter_mode action with no parameters", async () => {
+		it("should have leave action with no parameters", async () => {
 			const result = await detectPlan();
 
-			const enterModeAction = result.actions?.find(
-				(a) => a.name === "enter_mode",
-			);
-			expect(enterModeAction).toBeDefined();
-			expect(enterModeAction?.commandTemplate).toBe("__PLAN_ENTER_MODE__");
-			expect(enterModeAction?.parameters?.length).toBe(0);
+			const leaveAction = result.actions?.find((a) => a.name === "leave");
+			expect(leaveAction).toBeDefined();
+			expect(leaveAction?.commandTemplate).toBe("__PLAN_EXIT_MODE__");
+			expect(leaveAction?.parameters?.length).toBe(0);
 		});
 
-		it("should have exit_mode action with no parameters", async () => {
+		it("should have all 7 actions", async () => {
 			const result = await detectPlan();
 
-			const exitModeAction = result.actions?.find(
-				(a) => a.name === "exit_mode",
-			);
-			expect(exitModeAction).toBeDefined();
-			expect(exitModeAction?.commandTemplate).toBe("__PLAN_EXIT_MODE__");
-			expect(exitModeAction?.parameters?.length).toBe(0);
-		});
-
-		it("should have all 8 actions", async () => {
-			const result = await detectPlan();
-
-			expect(result.actions?.length).toBe(8);
+			expect(result.actions?.length).toBe(7);
 			const actionNames = result.actions?.map((a) => a.name);
 			expect(actionNames).toContain("read");
 			expect(actionNames).toContain("read_lines");
@@ -183,8 +171,7 @@ describe("plan discoverer", () => {
 			expect(actionNames).toContain("append");
 			expect(actionNames).toContain("edit");
 			expect(actionNames).toContain("search");
-			expect(actionNames).toContain("enter_mode");
-			expect(actionNames).toContain("exit_mode");
+			expect(actionNames).toContain("leave");
 		});
 
 		it("should call createInstalledTool with correct arguments", async () => {
@@ -224,6 +211,39 @@ describe("plan discoverer", () => {
 
 			expect(result).toContain(".axiomate");
 			expect(result).toContain("plan.md");
+		});
+	});
+
+	describe("detectEnterPlan", () => {
+		it("should return an installed tool (always available)", async () => {
+			const result = await detectEnterPlan();
+
+			expect(result.installed).toBe(true);
+			expect(result.id).toBe("enterplan");
+		});
+
+		it("should have correct tool properties", async () => {
+			const result = await detectEnterPlan();
+
+			expect(result.name).toBe("Enter Plan Mode");
+			expect(result.category).toBe("utility");
+			expect(result.capabilities).toContain("execute");
+		});
+
+		it("should have enter action with no parameters", async () => {
+			const result = await detectEnterPlan();
+
+			const enterAction = result.actions?.find((a) => a.name === "enter");
+			expect(enterAction).toBeDefined();
+			expect(enterAction?.commandTemplate).toBe("__PLAN_ENTER_MODE__");
+			expect(enterAction?.parameters?.length).toBe(0);
+		});
+
+		it("should have only 1 action", async () => {
+			const result = await detectEnterPlan();
+
+			expect(result.actions?.length).toBe(1);
+			expect(result.actions?.[0].name).toBe("enter");
 		});
 	});
 });
