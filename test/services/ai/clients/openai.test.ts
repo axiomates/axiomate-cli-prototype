@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // Mock config module
 vi.mock("../../../../source/utils/config.js", () => ({
 	getThinkingParams: vi.fn(() => null),
+	currentModelSupportsToolChoice: vi.fn(() => false),
 }));
 
 // Mock adapters

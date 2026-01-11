@@ -23,6 +23,12 @@ export type ModelConfig = {
 	description?: string;
 	/** 是否支持 function calling / tools */
 	supportsTools: boolean;
+	/**
+	 * 是否支持 tool_choice 参数（用于动态遮蔽工具）
+	 * - true: 支持 tool_choice 参数，可用于强制/禁用特定工具
+	 * - false/undefined: 不支持，使用 Prefill Response 技术实现遮蔽
+	 */
+	supportsToolChoice?: boolean;
 	/** 模型是否具有 thinking/reasoning 能力（默认 false） */
 	supportsThinking?: boolean;
 	/**
@@ -352,6 +358,16 @@ export function currentModelSupportsThinking(): boolean {
 	if (!modelId) return false;
 	const model = getModelById(modelId);
 	return model?.supportsThinking === true;
+}
+
+/**
+ * 检查当前模型是否支持 tool_choice 参数（用于动态遮蔽工具）
+ */
+export function currentModelSupportsToolChoice(): boolean {
+	const modelId = getCurrentModelId();
+	if (!modelId) return false;
+	const model = getModelById(modelId);
+	return model?.supportsToolChoice === true;
 }
 
 /**

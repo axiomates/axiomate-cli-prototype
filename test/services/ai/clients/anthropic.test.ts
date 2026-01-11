@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("../../../../source/utils/config.js", () => ({
 	isThinkingEnabled: vi.fn(() => false),
 	currentModelSupportsThinking: vi.fn(() => false),
+	currentModelSupportsToolChoice: vi.fn(() => false),
 }));
 
 // Mock adapters

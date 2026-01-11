@@ -15,6 +15,7 @@ import type {
 	StreamCallbacks,
 	StreamOptions,
 	AskUserCallback,
+	ToolMaskState,
 } from "./types.js";
 import type { IToolRegistry } from "../tools/types.js";
 import type { IToolMatcher } from "./types.js";
@@ -31,6 +32,7 @@ import {
 	buildModeReminder,
 } from "../../constants/prompts.js";
 import { estimateTokens } from "./tokenEstimator.js";
+import { buildToolMask } from "./toolMask.js";
 
 /**
  * 默认上下文窗口大小
@@ -254,17 +256,30 @@ export class AIService implements IAIService {
 		// 获取相关工具（冻结后始终返回完整列表）
 		const tools = this.getContextTools(enhancedContext);
 
+		// 构建工具遮蔽状态
+		const toolMask = buildToolMask(
+			userMessage,
+			enhancedContext,
+			initialPlanMode,
+			this.registry.isFrozen() ? this.registry.getFrozenTools() : [],
+		);
+
+		// 将 toolMask 添加到 options 中
+		const optionsWithMask: StreamOptions = {
+			...options,
+			toolMask,
+		};
+
 		// 通知流式开始
 		callbacks?.onStart?.();
 
 		try {
 			// 使用流式 API
-			// 传入 context 以支持动态工具刷新（当 plan mode 切换时）
 			const result = await this.streamChatWithTools(
 				tools,
 				enhancedContext,
 				callbacks,
-				options,
+				optionsWithMask,
 				onAskUser,
 			);
 
@@ -458,10 +473,11 @@ export class AIService implements IAIService {
 					// 重置 usage，为下一轮工具调用准备
 					lastChunkUsage = undefined;
 
-					// 执行工具调用（传递 onAskUser 回调）
+					// 执行工具调用（传递 onAskUser 回调和 toolMask）
 					const toolResults = await this.toolCallHandler.handleToolCalls(
 						chunk.delta.tool_calls,
 						onAskUser,
+						options?.toolMask,
 					);
 
 					// 添加工具结果到 Session 和消息

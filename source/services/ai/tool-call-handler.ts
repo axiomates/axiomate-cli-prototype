@@ -9,6 +9,7 @@ import type {
 	ChatMessage,
 	ToolExecutionResult,
 	AskUserCallback,
+	ToolMaskState,
 } from "./types.js";
 import type {
 	IToolRegistry,
@@ -16,6 +17,7 @@ import type {
 	ToolAction,
 } from "../tools/types.js";
 import { executeToolAction, getToolAction } from "../tools/executor.js";
+import { isToolAllowed, getToolNotAllowedError } from "./toolMask.js";
 
 /**
  * 工具调用处理器实现
@@ -134,15 +136,27 @@ export class ToolCallHandler implements IToolCallHandler {
 	 * 处理 AI 返回的工具调用
 	 * @param toolCalls 工具调用列表
 	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
+	 * @param toolMask 可选的工具遮蔽状态，用于验证工具是否被允许
 	 */
 	async handleToolCalls(
 		toolCalls: ToolCall[],
 		onAskUser?: AskUserCallback,
+		toolMask?: ToolMaskState,
 	): Promise<ChatMessage[]> {
 		const results: ChatMessage[] = [];
 
 		for (const call of toolCalls) {
 			const { toolId, actionName } = this.parseToolCallName(call.function.name);
+
+			// 验证工具是否在允许列表中
+			if (toolMask && !isToolAllowed(toolId, toolMask)) {
+				results.push({
+					role: "tool",
+					tool_call_id: call.id,
+					content: getToolNotAllowedError(toolId, toolMask),
+				});
+				continue;
+			}
 
 			// Special handling for askuser tool
 			if (toolId === "askuser" && actionName === "ask") {

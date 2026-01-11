@@ -13,9 +13,13 @@ import type {
 	FinishReason,
 	ToolCall,
 	StreamOptions,
+	ToolMaskState,
 } from "../types.js";
 import { toOpenAIMessages, parseOpenAIToolCalls } from "../adapters/openai.js";
-import { getThinkingParams } from "../../../utils/config.js";
+import {
+	getThinkingParams,
+	currentModelSupportsToolChoice,
+} from "../../../utils/config.js";
 import { stableStringify } from "../../../utils/json.js";
 
 /**
@@ -71,20 +75,25 @@ export class OpenAIClient implements IAIClient {
 	async chat(
 		messages: ChatMessage[],
 		tools?: OpenAITool[],
+		options?: StreamOptions,
 	): Promise<AIResponse> {
 		// 构建 URL：baseUrl 应该已经包含 /v1，只需添加 /chat/completions
 		const baseUrl =
 			this.config.baseUrl?.replace(/\/$/, "") || "https://api.openai.com/v1";
 		const url = `${baseUrl}/chat/completions`;
 
+		// 如果不支持 tool_choice 且有 requiredTool，使用 prefill
+		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
+
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toOpenAIMessages(messages),
+			messages: toOpenAIMessages(processedMessages),
 		};
 
 		if (tools && tools.length > 0) {
 			body.tools = tools;
-			body.tool_choice = "auto";
+			// 根据 toolMask 设置 tool_choice
+			body.tool_choice = this.buildToolChoice(options?.toolMask);
 		}
 
 		// 根据模型配置动态附加 thinking 参数
@@ -189,6 +198,58 @@ export class OpenAIClient implements IAIClient {
 	}
 
 	/**
+	 * 根据 toolMask 构建 tool_choice 参数
+	 * 如果模型支持 tool_choice 且有 requiredTool，则强制使用该工具
+	 */
+	private buildToolChoice(
+		toolMask?: ToolMaskState,
+	): "auto" | "none" | { type: "function"; function: { name: string } } {
+		// 如果没有 toolMask 或不支持 tool_choice，使用 auto
+		if (!toolMask || !currentModelSupportsToolChoice()) {
+			return "auto";
+		}
+
+		// 如果有强制工具，使用 tool_choice 指定
+		if (toolMask.requiredTool) {
+			return {
+				type: "function",
+				function: { name: toolMask.requiredTool },
+			};
+		}
+
+		return "auto";
+	}
+
+	/**
+	 * 如果不支持 tool_choice 但需要强制工具，使用 Prefill Response 技术
+	 * 在消息末尾添加预填充的 assistant 消息
+	 */
+	private applyPrefillIfNeeded(
+		messages: ChatMessage[],
+		toolMask?: ToolMaskState,
+	): ChatMessage[] {
+		// 如果支持 tool_choice，不需要 prefill
+		if (currentModelSupportsToolChoice()) {
+			return messages;
+		}
+
+		// 如果没有强制工具，不需要 prefill
+		if (!toolMask?.requiredTool) {
+			return messages;
+		}
+
+		// 使用 ChatML 格式的 prefill
+		// 添加预填充的 assistant 消息，开始工具调用
+		return [
+			...messages,
+			{
+				role: "assistant",
+				content: `<tool_call>{"name": "${toolMask.requiredTool}"`,
+			},
+		];
+	}
+
+	/**
 	 * 流式聊天请求
 	 * 使用 SSE (Server-Sent Events) 格式解析流式响应
 	 * @param messages 消息列表
@@ -204,16 +265,20 @@ export class OpenAIClient implements IAIClient {
 			this.config.baseUrl?.replace(/\/$/, "") || "https://api.openai.com/v1";
 		const url = `${baseUrl}/chat/completions`;
 
+		// 如果不支持 tool_choice 且有 requiredTool，使用 prefill
+		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
+
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toOpenAIMessages(messages),
+			messages: toOpenAIMessages(processedMessages),
 			stream: true, // 启用流式响应
 			stream_options: { include_usage: true }, // 请求在流结束时返回 usage
 		};
 
 		if (tools && tools.length > 0) {
 			body.tools = tools;
-			body.tool_choice = "auto";
+			// 根据 toolMask 设置 tool_choice
+			body.tool_choice = this.buildToolChoice(options?.toolMask);
 		}
 
 		// 根据模型配置动态附加 thinking 参数

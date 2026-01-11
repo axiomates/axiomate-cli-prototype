@@ -14,6 +14,7 @@ import type {
 	AnthropicTool,
 	ToolCall,
 	StreamOptions,
+	ToolMaskState,
 } from "../types.js";
 import {
 	toAnthropicMessages,
@@ -23,6 +24,7 @@ import {
 import {
 	isThinkingEnabled,
 	currentModelSupportsThinking,
+	currentModelSupportsToolChoice,
 } from "../../../utils/config.js";
 import { stableStringify } from "../../../utils/json.js";
 
@@ -85,6 +87,7 @@ export class AnthropicClient implements IAIClient {
 	async chat(
 		messages: ChatMessage[],
 		tools?: OpenAITool[],
+		options?: StreamOptions,
 	): Promise<AIResponse> {
 		// 构建 URL：baseUrl 应该已经包含 /v1，只需添加 /messages
 		const baseUrl =
@@ -94,9 +97,12 @@ export class AnthropicClient implements IAIClient {
 		// 提取 system 消息
 		const systemPrompt = extractSystemMessage(messages);
 
+		// 如果不支持 tool_choice 但需要强制工具，使用 prefill
+		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
+
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toAnthropicMessages(messages),
+			messages: toAnthropicMessages(processedMessages),
 			max_tokens: 4096,
 		};
 
@@ -106,6 +112,11 @@ export class AnthropicClient implements IAIClient {
 
 		if (tools && tools.length > 0) {
 			body.tools = openAIToolsToAnthropic(tools);
+			// 根据 toolMask 设置 tool_choice
+			const toolChoice = this.buildToolChoice(options?.toolMask);
+			if (toolChoice) {
+				body.tool_choice = toolChoice;
+			}
 		}
 
 		// 如果启用思考模式且当前模型支持，添加 thinking 参数
@@ -256,6 +267,64 @@ export class AnthropicClient implements IAIClient {
 	}
 
 	/**
+	 * 根据 toolMask 构建 Anthropic tool_choice 参数
+	 * Anthropic 使用不同的格式：{ type: "auto" | "any" | "tool", name?: string }
+	 */
+	private buildToolChoice(
+		toolMask?: ToolMaskState,
+	): { type: "auto" | "any" | "tool"; name?: string } | undefined {
+		// 如果没有 toolMask 或不支持 tool_choice
+		if (!toolMask || !currentModelSupportsToolChoice()) {
+			return undefined; // 使用默认行为
+		}
+
+		// 如果有强制工具，使用 tool_choice 指定
+		if (toolMask.requiredTool) {
+			return {
+				type: "tool",
+				name: toolMask.requiredTool,
+			};
+		}
+
+		return { type: "auto" };
+	}
+
+	/**
+	 * 如果不支持 tool_choice 但需要强制工具，使用 Prefill Response 技术
+	 * 在消息末尾添加预填充的 assistant 消息
+	 * 注意：Anthropic 扩展思考模式不支持预填充
+	 */
+	private applyPrefillIfNeeded(
+		messages: ChatMessage[],
+		toolMask?: ToolMaskState,
+	): ChatMessage[] {
+		// 如果支持 tool_choice，不需要 prefill
+		if (currentModelSupportsToolChoice()) {
+			return messages;
+		}
+
+		// 如果没有强制工具，不需要 prefill
+		if (!toolMask?.requiredTool) {
+			return messages;
+		}
+
+		// 如果启用了扩展思考模式，不能使用 prefill
+		if (isThinkingEnabled() && currentModelSupportsThinking()) {
+			return messages;
+		}
+
+		// 添加预填充的 assistant 消息
+		// Anthropic 的格式略有不同，使用函数调用格式
+		return [
+			...messages,
+			{
+				role: "assistant",
+				content: `I'll use the ${toolMask.requiredTool} tool to help with this.`,
+			},
+		];
+	}
+
+	/**
 	 * 流式聊天请求
 	 * 使用 SSE (Server-Sent Events) 格式解析 Anthropic 流式响应
 	 * @param messages 消息列表
@@ -274,9 +343,12 @@ export class AnthropicClient implements IAIClient {
 		// 提取 system 消息
 		const systemPrompt = extractSystemMessage(messages);
 
+		// 如果不支持 tool_choice 但需要强制工具，使用 prefill
+		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
+
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toAnthropicMessages(messages),
+			messages: toAnthropicMessages(processedMessages),
 			max_tokens: 4096,
 			stream: true, // 启用流式响应
 		};
@@ -287,6 +359,11 @@ export class AnthropicClient implements IAIClient {
 
 		if (tools && tools.length > 0) {
 			body.tools = openAIToolsToAnthropic(tools);
+			// 根据 toolMask 设置 tool_choice
+			const toolChoice = this.buildToolChoice(options?.toolMask);
+			if (toolChoice) {
+				body.tool_choice = toolChoice;
+			}
 		}
 
 		// 如果启用思考模式且当前模型支持，添加 thinking 参数

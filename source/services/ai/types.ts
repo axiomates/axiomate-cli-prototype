@@ -110,7 +110,36 @@ export type StreamOptions = {
 	signal?: AbortSignal;
 	/** Whether plan mode is enabled (affects tool selection and system prompt) */
 	planMode?: boolean;
+	/** 工具遮蔽状态 */
+	toolMask?: ToolMaskState;
 };
+
+// ============================================================================
+// Tool Masking Types (用于动态遮蔽工具)
+// ============================================================================
+
+/**
+ * 工具遮蔽状态
+ * 用于在保持工具列表稳定的同时，动态控制可用工具子集
+ */
+export type ToolMaskState = {
+	/** 当前模式 */
+	mode: "plan" | "action";
+	/** 允许的工具 ID 列表 */
+	allowedTools: Set<string>;
+	/** 强制使用的工具（可选，用于 plan 模式） */
+	requiredTool?: string;
+};
+
+/**
+ * tool_choice 选项类型（OpenAI/Anthropic 兼容）
+ */
+export type ToolChoiceOption =
+	| "auto" // 自动选择
+	| "none" // 禁用工具
+	| "any" // 必须调用某个工具（Anthropic）
+	| { type: "function"; function: { name: string } } // OpenAI 强制指定
+	| { type: "tool"; name: string }; // Anthropic 强制指定
 
 // ============================================================================
 // Tool Format Types (用于 AI API)
@@ -309,11 +338,13 @@ export type IToolCallHandler = {
 	 * 处理 AI 返回的工具调用
 	 * @param toolCalls 工具调用列表
 	 * @param onAskUser 可选的 ask_user 回调，用于暂停执行等待用户输入
+	 * @param toolMask 可选的工具遮蔽状态，用于验证工具是否被允许
 	 * @returns 工具结果消息列表
 	 */
 	handleToolCalls(
 		toolCalls: ToolCall[],
 		onAskUser?: AskUserCallback,
+		toolMask?: ToolMaskState,
 	): Promise<ChatMessage[]>;
 
 	/**
