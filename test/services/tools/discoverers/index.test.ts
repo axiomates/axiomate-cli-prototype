@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
-	allDiscoverers,
+	builtinDiscoverers,
+	discoverableDiscoverers,
 	discoverAllTools,
 } from "../../../../source/services/tools/discoverers/index.js";
 
@@ -101,6 +102,9 @@ vi.mock("../../../../source/services/tools/discoverers/file.js", () => ({
 
 vi.mock("../../../../source/services/tools/discoverers/plan.js", () => ({
 	detectPlan: vi.fn(() => Promise.resolve({ id: "plan", installed: true })),
+	detectEnterPlan: vi.fn(() =>
+		Promise.resolve({ id: "enterplan", installed: true }),
+	),
 }));
 
 vi.mock("../../../../source/services/tools/discoverers/ask_user.js", () => ({
@@ -114,19 +118,26 @@ describe("discoverers index", () => {
 		vi.clearAllMocks();
 	});
 
-	describe("allDiscoverers", () => {
-		it("should export an array of discover functions", () => {
-			expect(Array.isArray(allDiscoverers)).toBe(true);
-			expect(allDiscoverers.length).toBeGreaterThan(0);
+	describe("builtinDiscoverers and discoverableDiscoverers", () => {
+		it("should export arrays of discover functions", () => {
+			expect(Array.isArray(builtinDiscoverers)).toBe(true);
+			expect(Array.isArray(discoverableDiscoverers)).toBe(true);
+			expect(builtinDiscoverers.length).toBeGreaterThan(0);
+			expect(discoverableDiscoverers.length).toBeGreaterThan(0);
 		});
 
-		it("should contain all expected discoverers", () => {
-			// Should have all the discoverers we've mocked (27 total: 24 original + file + plan + ask_user)
-			expect(allDiscoverers.length).toBe(27);
+		it("should contain expected number of discoverers", () => {
+			// builtinDiscoverers: web, file, plan, enterplan, ask_user = 5
+			expect(builtinDiscoverers.length).toBe(5);
+			// discoverableDiscoverers: 23 external tools
+			expect(discoverableDiscoverers.length).toBe(23);
 		});
 
 		it("should have all functions be callable", () => {
-			for (const discoverer of allDiscoverers) {
+			for (const discoverer of builtinDiscoverers) {
+				expect(typeof discoverer).toBe("function");
+			}
+			for (const discoverer of discoverableDiscoverers) {
 				expect(typeof discoverer).toBe("function");
 			}
 		});
@@ -135,9 +146,11 @@ describe("discoverers index", () => {
 	describe("discoverAllTools", () => {
 		it("should call all discoverers and return results", async () => {
 			const results = await discoverAllTools();
+			const totalDiscoverers =
+				builtinDiscoverers.length + discoverableDiscoverers.length;
 
 			expect(Array.isArray(results)).toBe(true);
-			expect(results.length).toBe(allDiscoverers.length);
+			expect(results.length).toBe(totalDiscoverers);
 		});
 
 		it("should return tools with correct ids", async () => {

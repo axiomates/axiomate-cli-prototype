@@ -504,8 +504,12 @@ describe("commandHandler", () => {
 				await import("../../source/services/tools/registry.js");
 			vi.mocked(getToolRegistry).mockReturnValue({
 				isDiscovered: false,
-				discover: vi.fn().mockRejectedValue(new Error("Discovery failed")),
-				formatToolList: vi.fn(),
+				discover: vi.fn(),
+				formatToolList: vi
+					.fn()
+					.mockImplementation(() => {
+						throw new Error("Format failed");
+					}),
 				getStats: vi.fn(),
 			} as any);
 

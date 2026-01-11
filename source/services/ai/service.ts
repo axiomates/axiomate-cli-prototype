@@ -16,9 +16,9 @@ import type {
 	StreamOptions,
 	AskUserCallback,
 	ToolMaskState,
+	IToolMatcher,
 } from "./types.js";
 import type { IToolRegistry } from "../tools/types.js";
-import type { IToolMatcher, ToolMaskState } from "./types.js";
 import { toOpenAITools } from "./adapters/openai.js";
 import { ToolCallHandler } from "./tool-call-handler.js";
 import { ToolMatcher, detectProjectType } from "../tools/matcher.js";

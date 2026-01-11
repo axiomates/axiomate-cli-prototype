@@ -75,7 +75,7 @@ describe("suggestion", () => {
 		});
 
 		it("should contain rules", () => {
-			expect(SUGGESTION_SYSTEM_PROMPT).toContain("Rules:");
+			expect(SUGGESTION_SYSTEM_PROMPT).toContain("CRITICAL RULES:");
 		});
 	});
 
