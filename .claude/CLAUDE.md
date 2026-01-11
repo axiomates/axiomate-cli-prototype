@@ -21,6 +21,10 @@ npm run package    # 打包可执行文件 (需要 Bun)
 ## 目录结构
 
 ```
+assets/
+└── model-presets.json         # 模型配置模板（构建时生成 TS）
+scripts/
+└── gen-meta.ts                # 构建脚本（生成 meta.ts 和 modelPresets.ts）
 source/
 ├── cli.tsx                    # 入口
 ├── app.tsx                    # 主组件，状态管理中心
@@ -29,11 +33,13 @@ source/
 │   ├── AskUserMenu.tsx        # AI 询问用户 UI
 │   ├── StaticMessage.tsx      # 已完成消息显示（进入终端原生滚动区）
 │   ├── StreamingMessage.tsx   # 流式消息显示
-│   └── StatusBar.tsx          # 状态栏
+│   └── StatusBar.tsx          # 状态栏（含脉动点工作指示器）
 ├── models/                    # 数据模型（InputInstance, UserInput）
 ├── constants/
 │   ├── commands.ts            # 斜杠命令定义
-│   └── models.ts              # 默认模型配置
+│   ├── models.ts              # 默认模型配置
+│   ├── meta.ts                # 自动生成（版本信息）
+│   └── modelPresets.ts        # 自动生成（从 assets/model-presets.json）
 ├── services/
 │   ├── commandHandler.ts      # 命令处理
 │   ├── ai/                    # AI 服务（会话、流式、工具调用）
@@ -81,8 +87,17 @@ source/
 | 文件 | 用途 |
 |------|------|
 | `~/.axiomate.json` | 用户配置（模型、API） |
-| `.env.local` | 开发环境变量（不提交） |
+| `.env.local` | 开发环境变量（API keys，不提交） |
 | `.env.local.example` | 环境变量模板 |
+| `assets/model-presets.json` | 模型配置 JSON 模板（使用 `{{API_KEY}}` 占位符） |
+
+## 构建流程
+
+`npm run build` → prebuild 钩子 → `scripts/gen-meta.ts`：
+1. 读取 `assets/model-presets.json`
+2. 从 `.env.local` 读取 API keys
+3. 替换占位符 `{{SILICONFLOW_API_KEY}}` 等
+4. 生成 `source/constants/modelPresets.ts`
 
 ## 添加新功能
 
@@ -95,6 +110,16 @@ source/
 
 1. `services/tools/discoverers/` - 创建发现器
 2. `services/tools/discoverers/index.ts` - 注册
+
+### 添加模型
+
+编辑 `assets/model-presets.json`，使用占位符格式：
+```json
+{
+  "model": "provider/model-name",
+  "apiKey": "{{YOUR_API_KEY_NAME}}"
+}
+```
 
 ### 添加 i18n 文本
 
