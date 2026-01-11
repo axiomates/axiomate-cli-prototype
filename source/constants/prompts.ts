@@ -97,39 +97,31 @@ export function buildSystemPrompt(cwd?: string, projectType?: string): string {
 	return SYSTEM_PROMPT + contextLine;
 }
 
-/**
- * Build mode reminder to inject into user messages
- * This is how we communicate current mode without changing system prompt
- * Both modes need reminders for KV cache consistency
- * @param planMode Whether plan mode is enabled
- * @param planFilePath Optional path to the plan file
- */
-export function buildModeReminder(
-	planMode: boolean,
-	planFilePath?: string,
-): string {
-	if (planMode) {
-		const planFileInfo = planFilePath
-			? `Plan file: ${planFilePath}`
-			: "Plan file: .axiomate/plans/plan.md";
-		return `<system-reminder>
+// Pre-built mode reminder strings (cached to avoid repeated string construction)
+const PLAN_MODE_REMINDER = `<system-reminder>
 Plan mode is active. You are in read-only exploration and planning mode.
 - You can ONLY use plan tools (plan_read, plan_write, plan_edit)
 - You CANNOT modify code files, execute commands, or use other tools
 - Use \`plan_exit_mode\` to switch back to Action Mode when ready to implement
-${planFileInfo}
+Plan file: .axiomate/plans/plan.md
 </system-reminder>
 
 `;
-	}
 
-	// Action mode
-	return `<system-reminder>
+const ACTION_MODE_REMINDER = `<system-reminder>
 Action mode is active. You can modify files, execute commands, and use all tools.
 Use \`plan_enter_mode\` to switch to Plan Mode for exploration and planning.
 </system-reminder>
 
 `;
+
+/**
+ * Get mode reminder to inject into user messages
+ * Returns pre-built constant strings for better KV cache and token efficiency
+ * @param planMode Whether plan mode is enabled
+ */
+export function buildModeReminder(planMode: boolean): string {
+	return planMode ? PLAN_MODE_REMINDER : ACTION_MODE_REMINDER;
 }
 
 // Re-export for backward compatibility
