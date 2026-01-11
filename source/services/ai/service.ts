@@ -32,6 +32,7 @@ import {
 	buildModeReminder,
 } from "../../constants/prompts.js";
 import { estimateTokens } from "./tokenEstimator.js";
+import { stableStringify } from "../../utils/json.js";
 import { buildToolMask } from "./toolMask.js";
 
 /**
@@ -418,7 +419,7 @@ export class AIService implements IAIService {
 		// 设置工具定义的 token 估算（用于更准确的 token 统计）
 		const updateToolsTokenEstimate = (toolList: OpenAITool[]) => {
 			if (toolList.length > 0) {
-				const toolsJson = JSON.stringify(toolList);
+				const toolsJson = stableStringify(toolList);
 				this.session.setToolsTokenEstimate(estimateTokens(toolsJson));
 			} else {
 				this.session.setToolsTokenEstimate(0);
