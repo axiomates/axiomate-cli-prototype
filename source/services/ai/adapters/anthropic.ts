@@ -6,6 +6,7 @@
 import type { DiscoveredTool } from "../../tools/types.js";
 import type { AnthropicTool, ToolCall, ChatMessage } from "../types.js";
 import { paramsToJsonSchema } from "./openai.js";
+import { stableStringify } from "../../../utils/json.js";
 
 /**
  * 将单个 DiscoveredTool 转换为 Anthropic 工具格式
@@ -54,7 +55,8 @@ export function parseAnthropicToolUse(
 			type: "function" as const,
 			function: {
 				name: block.name,
-				arguments: JSON.stringify(block.input),
+				// 使用 stableStringify 确保键顺序一致，提高 KV 缓存命中率
+				arguments: stableStringify(block.input),
 			},
 		}));
 }

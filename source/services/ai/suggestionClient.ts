@@ -15,6 +15,7 @@ import {
 	getSuggestionModel,
 } from "../../constants/suggestion.js";
 import { getModelApiConfig } from "../../utils/config.js";
+import { stableStringify } from "../../utils/json.js";
 
 
 /**
@@ -221,7 +222,8 @@ export class SuggestionClient {
 					Authorization: `Bearer ${apiKey}`,
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(body),
+				// 使用 stableStringify 确保键顺序一致，提高 KV 缓存命中率
+				body: stableStringify(body),
 				signal,
 			});
 

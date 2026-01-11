@@ -24,6 +24,7 @@ import {
 	isThinkingEnabled,
 	currentModelSupportsThinking,
 } from "../../../utils/config.js";
+import { stableStringify } from "../../../utils/json.js";
 
 /**
  * Anthropic API 响应类型
@@ -134,7 +135,8 @@ export class AnthropicClient implements IAIClient {
 						"anthropic-beta": "interleaved-thinking-2025-05-14",
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify(body),
+					// 使用 stableStringify 确保键顺序一致，提高 KV 缓存命中率
+					body: stableStringify(body),
 					signal: controller.signal,
 				});
 
@@ -346,7 +348,8 @@ export class AnthropicClient implements IAIClient {
 					"anthropic-beta": "interleaved-thinking-2025-05-14",
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(body),
+				// 使用 stableStringify 确保键顺序一致，提高 KV 缓存命中率
+				body: stableStringify(body),
 				signal: timeoutController.signal,
 			});
 
