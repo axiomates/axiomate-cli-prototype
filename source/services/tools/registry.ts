@@ -31,6 +31,7 @@ export class ToolRegistry implements IToolRegistry {
 	private _externalDiscovered = false;
 	private _discoveryStatus: DiscoveryStatus = "pending";
 	private _discoveryCallbacks: DiscoveryCallback[] = [];
+	private _frozenTools: DiscoveredTool[] | null = null;
 
 	/**
 	 * 同步注册内置工具（瞬间完成）
@@ -188,6 +189,33 @@ export class ToolRegistry implements IToolRegistry {
 			notInstalled: all.length - installed.length,
 			byCategory,
 		};
+	}
+
+	/**
+	 * 冻结工具列表（加载完成后调用）
+	 * 冻结后工具列表不再变化，用于优化 KV cache
+	 */
+	freezeTools(): void {
+		if (this._frozenTools) return; // 已冻结
+
+		// 只保留已安装的工具，按 ID 排序确保稳定
+		this._frozenTools = Array.from(this.tools.values())
+			.filter((tool) => tool.installed)
+			.sort((a, b) => a.id.localeCompare(b.id));
+	}
+
+	/**
+	 * 获取冻结的工具列表
+	 */
+	getFrozenTools(): DiscoveredTool[] {
+		return this._frozenTools ?? [];
+	}
+
+	/**
+	 * 检查是否已冻结
+	 */
+	isFrozen(): boolean {
+		return this._frozenTools !== null;
 	}
 
 	/**

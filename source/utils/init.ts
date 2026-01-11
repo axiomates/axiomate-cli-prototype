@@ -56,10 +56,10 @@ export async function initApp(
 	// 阶段 3: 后台发现外部工具（不阻塞）
 	registry.discoverExternalAsync();
 
-	// 注册回调：外部工具发现完成后刷新 AI 服务的工具列表
+	// 注册回调：外部工具发现完成后冻结工具列表
 	registry.onDiscoveryComplete(() => {
-		// 工具发现完成，AI 服务会在下次调用时自动获取最新工具列表
-		// 因为 AIService 通过 registry.getInstalled() 动态获取工具
+		// 冻结工具列表，之后不再变化，优化 KV cache
+		registry.freezeTools();
 	});
 
 	// 完成

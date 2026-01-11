@@ -1,11 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { initApp } from "../../source/utils/init.js";
 
+// Mock registry instance shared across calls
+const mockRegistry = {
+	loadBuiltinTools: vi.fn().mockResolvedValue(undefined),
+	discoverExternalAsync: vi.fn(),
+	onDiscoveryComplete: vi.fn((callback: (tools: unknown[]) => void) => {
+		// 模拟立即调用回调
+		callback([]);
+	}),
+	freezeTools: vi.fn(),
+};
+
 // Mock dependencies
 vi.mock("../../source/services/tools/registry.js", () => ({
-	getToolRegistry: vi.fn(() => ({
-		discover: vi.fn().mockResolvedValue([]),
-	})),
+	getToolRegistry: vi.fn(() => mockRegistry),
 }));
 
 vi.mock("../../source/services/ai/index.js", () => ({
@@ -42,10 +51,13 @@ describe("init", () => {
 			expect(result.currentModel?.name).toBe("Test Model");
 		});
 
-		it("should call tool registry discover", async () => {
+		it("should call tool registry loadBuiltinTools and discoverExternalAsync", async () => {
 			await initApp();
 
 			expect(getToolRegistry).toHaveBeenCalled();
+			const registry = getToolRegistry();
+			expect(registry.loadBuiltinTools).toHaveBeenCalled();
+			expect(registry.discoverExternalAsync).toHaveBeenCalled();
 		});
 
 		it("should call createAIServiceFromConfig with registry", async () => {

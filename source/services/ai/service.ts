@@ -30,7 +30,6 @@ import {
 	buildSystemPrompt,
 	buildModeReminder,
 } from "../../constants/prompts.js";
-import { isPlanModeEnabled } from "../../utils/config.js";
 import { estimateTokens } from "./tokenEstimator.js";
 
 /**
@@ -252,8 +251,8 @@ export class AIService implements IAIService {
 		// 添加用户消息到 Session（传递 displayContent 用于会话恢复时显示）
 		this.session.addUserMessage(messageWithReminder, displayContent);
 
-		// 获取相关工具 (plan mode only gets plan tool)
-		const tools = this.getContextTools(enhancedContext, initialPlanMode);
+		// 获取相关工具（冻结后始终返回完整列表）
+		const tools = this.getContextTools(enhancedContext);
 
 		// 通知流式开始
 		callbacks?.onStart?.();
@@ -299,21 +298,16 @@ export class AIService implements IAIService {
 
 	/**
 	 * 获取上下文相关工具
-	 * @param planMode Whether plan mode is enabled (from snapshot)
+	 * 当工具已冻结时，始终返回完整的冻结工具列表（优化 KV cache）
+	 * 未冻结时（加载中），使用原有的 context-aware 选择逻辑
 	 */
-	private getContextTools(
-		context: MatchContext,
-		planMode: boolean = false,
-	): OpenAITool[] {
-		// Plan mode: only plan tool is available
-		if (planMode) {
-			const planTool = this.registry.getTool("plan");
-			if (planTool && planTool.installed) {
-				return toOpenAITools([planTool]);
-			}
-			return [];
+	private getContextTools(context: MatchContext): OpenAITool[] {
+		// 使用冻结的工具列表（如果可用）
+		if (this.registry.isFrozen()) {
+			return toOpenAITools(this.registry.getFrozenTools());
 		}
 
+		// 未冻结时（加载中）使用原有逻辑
 		if (!this.contextAwareEnabled) {
 			return [];
 		}
@@ -350,24 +344,20 @@ export class AIService implements IAIService {
 	}
 
 	/**
-	 * 流式对话（支持工具调用和动态工具刷新）
-	 * @param initialTools 初始工具列表
-	 * @param context 上下文信息（用于动态刷新工具）
+	 * 流式对话（支持工具调用）
+	 * @param tools 工具列表（冻结后不再变化）
+	 * @param context 上下文信息
 	 * @param callbacks 流式回调
 	 * @param options 流式选项（包含 AbortSignal）
 	 * @param onAskUser 可选的 ask_user 回调
 	 */
 	private async streamChatWithTools(
-		initialTools: OpenAITool[],
+		tools: OpenAITool[],
 		context: MatchContext,
 		callbacks?: StreamCallbacks,
 		options?: StreamOptions,
 		onAskUser?: AskUserCallback,
 	): Promise<string> {
-		// 当前使用的工具列表（可能会动态更新）
-		let tools = initialTools;
-		// 跟踪当前 plan mode 状态
-		let currentPlanMode = options?.planMode ?? false;
 
 		// 检查客户端是否支持流式
 		if (!this.client.streamChat) {
@@ -478,18 +468,6 @@ export class AIService implements IAIService {
 					for (const result of toolResults) {
 						this.session.addToolMessage(result);
 						messages.push(result);
-					}
-
-					// 检查 plan mode 是否发生变化，如果变化则刷新工具列表
-					// Note: System prompt 不再修改，保持稳定以优化 KV cache
-					// 模式信息通过 <system-reminder> 在用户消息中传递
-					const newPlanMode = isPlanModeEnabled();
-					if (newPlanMode !== currentPlanMode) {
-						currentPlanMode = newPlanMode;
-						// 动态刷新工具列表
-						tools = this.getContextTools(context, currentPlanMode);
-						// 更新工具 token 估算
-						updateToolsTokenEstimate(tools);
 					}
 
 					rounds++;

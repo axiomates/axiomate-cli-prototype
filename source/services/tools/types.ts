@@ -97,4 +97,10 @@ export type IToolRegistry = {
 	getTool: (id: string) => DiscoveredTool | undefined;
 	// 发现/刷新工具列表
 	discover: () => Promise<void>;
+	// 冻结工具列表（加载完成后调用）
+	freezeTools: () => void;
+	// 获取冻结的工具列表
+	getFrozenTools: () => DiscoveredTool[];
+	// 检查是否已冻结
+	isFrozen: () => boolean;
 };

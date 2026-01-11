@@ -40,6 +40,7 @@ vi.mock("../../../source/services/ai/adapters/openai.js", () => ({
 vi.mock("../../../source/constants/prompts.js", () => ({
 	SYSTEM_PROMPT: "Test system prompt",
 	buildSystemPrompt: vi.fn(() => "Built system prompt"),
+	buildModeReminder: vi.fn(() => ""),
 }));
 
 import {
@@ -82,6 +83,9 @@ function createMockRegistry(tools: ToolDefinition[] = []): IToolRegistry {
 		addTool: vi.fn(),
 		updateTool: vi.fn(),
 		removeTool: vi.fn(),
+		freezeTools: vi.fn(),
+		getFrozenTools: vi.fn(() => tools.filter((t) => t.installed)),
+		isFrozen: vi.fn(() => false),
 	};
 }
 
@@ -281,7 +285,7 @@ describe("AIService", () => {
 
 			await service.sendMessage("Hello", { cwd: "/project" });
 
-			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node", false);
+			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node");
 		});
 
 		it("should not re-inject context on subsequent messages", async () => {

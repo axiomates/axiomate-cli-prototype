@@ -6,48 +6,51 @@ beforeAll(() => {
 	setLocale("zh-CN");
 });
 
+// Mock tools data
+const mockTools = [
+	{
+		id: "git",
+		name: "Git",
+		category: "vcs",
+		installed: true,
+		version: "2.43.0",
+		capabilities: ["version_control", "diff"],
+		keywords: ["git", "commit", "branch"],
+	},
+	{
+		id: "node",
+		name: "Node.js",
+		category: "runtime",
+		installed: true,
+		version: "20.10.0",
+		capabilities: ["run_code"],
+		keywords: ["node", "npm"],
+	},
+	{
+		id: "docker",
+		name: "Docker",
+		category: "container",
+		installed: false,
+		capabilities: ["container"],
+		keywords: ["docker"],
+		installHint: "Download from docker.com\nMore instructions here",
+	},
+	{
+		id: "vscode",
+		name: "VS Code",
+		category: "ide",
+		installed: true,
+		version: "1.85.0",
+		capabilities: ["edit_code"],
+		keywords: ["code", "vscode"],
+	},
+];
+
 // Mock the discoverers module
 vi.mock("../../../source/services/tools/discoverers/index.js", () => ({
-	discoverAllTools: vi.fn(() =>
-		Promise.resolve([
-			{
-				id: "git",
-				name: "Git",
-				category: "vcs",
-				installed: true,
-				version: "2.43.0",
-				capabilities: ["version_control", "diff"],
-				keywords: ["git", "commit", "branch"],
-			},
-			{
-				id: "node",
-				name: "Node.js",
-				category: "runtime",
-				installed: true,
-				version: "20.10.0",
-				capabilities: ["run_code"],
-				keywords: ["node", "npm"],
-			},
-			{
-				id: "docker",
-				name: "Docker",
-				category: "container",
-				installed: false,
-				capabilities: ["container"],
-				keywords: ["docker"],
-				installHint: "Download from docker.com\nMore instructions here",
-			},
-			{
-				id: "vscode",
-				name: "VS Code",
-				category: "ide",
-				installed: true,
-				version: "1.85.0",
-				capabilities: ["edit_code"],
-				keywords: ["code", "vscode"],
-			},
-		]),
-	),
+	discoverAllTools: vi.fn(() => Promise.resolve(mockTools)),
+	getBuiltinTools: vi.fn(() => Promise.resolve(mockTools.slice(0, 2))),
+	discoverExternalTools: vi.fn(() => Promise.resolve(mockTools.slice(2))),
 }));
 
 import { ToolRegistry } from "../../../source/services/tools/registry.js";
@@ -70,11 +73,11 @@ describe("ToolRegistry", () => {
 			expect(registry.getAll().length).toBe(4);
 		});
 
-		it("should clear existing tools on re-discover", async () => {
+		it("should merge tools on re-discover (not clear)", async () => {
 			await registry.discover();
 			expect(registry.getAll().length).toBe(4);
 
-			// Add a tool manually to verify it gets cleared
+			// Add a tool manually
 			registry.tools.set("manual", {
 				id: "manual",
 				name: "Manual Tool",
@@ -85,8 +88,10 @@ describe("ToolRegistry", () => {
 			});
 			expect(registry.getAll().length).toBe(5);
 
+			// Re-discover will merge (overwrite existing, keep new)
 			await registry.discover();
-			expect(registry.getAll().length).toBe(4);
+			// Manual tool is kept, plus 4 discovered tools = 5
+			expect(registry.getAll().length).toBe(5);
 		});
 	});
 
@@ -286,12 +291,87 @@ describe("getToolRegistry and initToolRegistry", () => {
 	it("should not re-discover on second init call", async () => {
 		const { initToolRegistry } =
 			await import("../../../source/services/tools/registry.js");
-		const { discoverAllTools } =
+		const { getBuiltinTools, discoverExternalTools } =
 			await import("../../../source/services/tools/discoverers/index.js");
 
 		await initToolRegistry();
 		await initToolRegistry();
 
-		expect(vi.mocked(discoverAllTools)).toHaveBeenCalledTimes(1);
+		// getBuiltinTools and discoverExternalTools are called once each
+		expect(vi.mocked(getBuiltinTools)).toHaveBeenCalledTimes(1);
+		expect(vi.mocked(discoverExternalTools)).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("Tool Freezing", () => {
+	let registry: ToolRegistry;
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		registry = new ToolRegistry();
+	});
+
+	describe("freezeTools", () => {
+		it("should freeze tools after discovery", async () => {
+			await registry.discover();
+			expect(registry.isFrozen()).toBe(false);
+
+			registry.freezeTools();
+
+			expect(registry.isFrozen()).toBe(true);
+		});
+
+		it("should only include installed tools in frozen list", async () => {
+			await registry.discover();
+			registry.freezeTools();
+
+			const frozenTools = registry.getFrozenTools();
+
+			// Only git, node, and vscode are installed (not docker)
+			expect(frozenTools.length).toBe(3);
+			expect(frozenTools.every((t) => t.installed)).toBe(true);
+			expect(frozenTools.find((t) => t.id === "docker")).toBeUndefined();
+		});
+
+		it("should sort frozen tools by id", async () => {
+			await registry.discover();
+			registry.freezeTools();
+
+			const frozenTools = registry.getFrozenTools();
+			const ids = frozenTools.map((t) => t.id);
+
+			// git, node, vscode - alphabetically sorted
+			expect(ids).toEqual(["git", "node", "vscode"]);
+		});
+
+		it("should not re-freeze if already frozen", async () => {
+			await registry.discover();
+			registry.freezeTools();
+
+			const firstFrozenTools = registry.getFrozenTools();
+
+			// Add a new tool manually
+			registry.tools.set("new-tool", {
+				id: "new-tool",
+				name: "New Tool",
+				category: "other",
+				installed: true,
+				capabilities: [],
+				keywords: [],
+			});
+
+			// Try to freeze again
+			registry.freezeTools();
+
+			// Frozen list should be unchanged
+			const secondFrozenTools = registry.getFrozenTools();
+			expect(secondFrozenTools).toBe(firstFrozenTools);
+			expect(secondFrozenTools.length).toBe(3);
+		});
+
+		it("should return empty array when not frozen", () => {
+			const frozenTools = registry.getFrozenTools();
+			expect(frozenTools).toEqual([]);
+		});
 	});
 });
