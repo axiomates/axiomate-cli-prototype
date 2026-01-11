@@ -48,6 +48,7 @@ export function SlashMenu({
 
 	return (
 		<Box flexDirection="column">
+			<Text color="gray">{"─".repeat(columns)}</Text>
 			{/* 显示当前路径（如果不在根级） */}
 			{path.length > 0 && (
 				<Box>

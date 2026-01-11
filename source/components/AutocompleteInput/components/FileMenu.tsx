@@ -33,6 +33,7 @@ export function FileMenu({
 	if (loading) {
 		return (
 			<Box flexDirection="column">
+				<Text color="gray">{"─".repeat(columns)}</Text>
 				<Text color="gray">{promptIndent}Loading...</Text>
 			</Box>
 		);
@@ -41,6 +42,7 @@ export function FileMenu({
 	if (files.length === 0) {
 		return (
 			<Box flexDirection="column">
+				<Text color="gray">{"─".repeat(columns)}</Text>
 				<Text color="gray">{promptIndent}No files found</Text>
 			</Box>
 		);
@@ -48,6 +50,7 @@ export function FileMenu({
 
 	return (
 		<Box flexDirection="column">
+			<Text color="gray">{"─".repeat(columns)}</Text>
 			{/* 显示当前路径（面包屑导航） */}
 			{path.length > 0 && (
 				<Box>

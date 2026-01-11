@@ -5,12 +5,15 @@
 import { Box, Text } from "ink";
 import { THEME_LIGHT_YELLOW } from "../../../constants/colors.js";
 import { useTranslation } from "../../../hooks/useTranslation.js";
+import useTerminalWidth from "../../../hooks/useTerminalWidth.js";
 
 export function HelpPanel() {
 	const { t } = useTranslation();
+	const columns = useTerminalWidth();
 
 	return (
 		<Box flexDirection="column">
+			<Text color="gray">{"─".repeat(columns)}</Text>
 			<Box flexDirection="row" flexWrap="wrap">
 				<Box width="50%">
 					<Text color={THEME_LIGHT_YELLOW}>/ </Text>
