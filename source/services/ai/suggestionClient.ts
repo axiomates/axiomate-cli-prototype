@@ -16,13 +16,6 @@ import {
 } from "../../constants/suggestion.js";
 import { getModelApiConfig } from "../../utils/config.js";
 
-/**
- * Context for suggestion request
- */
-type SuggestionContext = {
-	cwd?: string;
-	projectType?: string;
-};
 
 /**
  * Suggestion result
@@ -118,15 +111,11 @@ export class SuggestionClient {
 	 * Get suggestion for the given input.
 	 *
 	 * @param input - User's current input text
-	 * @param context - Optional context (cwd, projectType)
 	 * @returns Suggestion and whether it was cached
 	 */
-	async getSuggestion(
-		input: string,
-		context?: SuggestionContext,
-	): Promise<SuggestionResult> {
+	async getSuggestion(input: string): Promise<SuggestionResult> {
 		// Generate cache key
-		const cacheKey = this.generateCacheKey(input, context);
+		const cacheKey = input;
 
 		// Check cache first
 		const cached = this.cache.get(cacheKey);
@@ -144,7 +133,7 @@ export class SuggestionClient {
 		const signal = this.currentRequest.signal;
 
 		try {
-			const suggestion = await this.fetchSuggestion(input, context, signal);
+			const suggestion = await this.fetchSuggestion(input, signal);
 
 			// Cache the result (only if request wasn't aborted)
 			if (!signal.aborted) {
@@ -184,26 +173,12 @@ export class SuggestionClient {
 		this.cache.clear();
 	}
 
-	/**
-	 * Generate cache key from input and context
-	 */
-	private generateCacheKey(input: string, context?: SuggestionContext): string {
-		const parts = [input];
-		if (context?.cwd) {
-			parts.push(context.cwd);
-		}
-		if (context?.projectType) {
-			parts.push(context.projectType);
-		}
-		return parts.join("|");
-	}
 
 	/**
 	 * Fetch suggestion from AI API
 	 */
 	private async fetchSuggestion(
 		input: string,
-		context: SuggestionContext | undefined,
 		signal: AbortSignal,
 	): Promise<string | null> {
 		// Get suggestion model from config
@@ -219,17 +194,11 @@ export class SuggestionClient {
 		const { baseUrl, apiKey } = apiConfig;
 		const url = `${baseUrl.replace(/\/$/, "")}/chat/completions`;
 
-		// Build minimal context message
-		let userContent = input;
-		if (context?.cwd) {
-			userContent = `[Working directory: ${context.cwd}]\n${input}`;
-		}
-
 		const body = {
 			model: suggestionModelId,
 			messages: [
 				{ role: "system", content: SUGGESTION_SYSTEM_PROMPT },
-				{ role: "user", content: userContent },
+				{ role: "user", content: input },
 			],
 			max_tokens: SUGGESTION_CONFIG.maxTokens,
 			temperature: SUGGESTION_CONFIG.temperature,

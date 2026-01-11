@@ -118,44 +118,6 @@ describe("SuggestionClient", () => {
 			expect(result.suggestion).toBeNull();
 		});
 
-		it("should include cwd in context", async () => {
-			fetchMock.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						choices: [{ message: { content: "suggestion" } }],
-					}),
-			});
-
-			await client.getSuggestion("hello", { cwd: "/home/user" });
-			const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
-			expect(callBody.messages[1].content).toContain("/home/user");
-		});
-
-		it("should include projectType in cache key", async () => {
-			fetchMock.mockResolvedValue({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						choices: [{ message: { content: "suggestion" } }],
-					}),
-			});
-
-			// First call with projectType
-			await client.getSuggestion("hello", {
-				cwd: "/home/user",
-				projectType: "node",
-			});
-			expect(fetchMock).toHaveBeenCalledTimes(1);
-
-			// Second call with same input but different projectType - should not be cached
-			await client.getSuggestion("hello", {
-				cwd: "/home/user",
-				projectType: "python",
-			});
-			expect(fetchMock).toHaveBeenCalledTimes(2);
-		});
-
 		it("should clean up suggestion by removing quotes", async () => {
 			fetchMock.mockResolvedValueOnce({
 				ok: true,

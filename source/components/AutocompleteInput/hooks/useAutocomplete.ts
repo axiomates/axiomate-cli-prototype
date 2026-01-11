@@ -113,9 +113,7 @@ export function useAutocomplete({
 
 			// Get suggestion from AI client (handles its own cancellation)
 			const client = getSuggestionClient();
-			const result = await client.getSuggestion(text, {
-				cwd: process.cwd(),
-			});
+			const result = await client.getSuggestion(text);
 
 			return result.suggestion;
 		},
