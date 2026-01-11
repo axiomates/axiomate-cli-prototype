@@ -609,4 +609,54 @@ describe("config", () => {
 			expect(getThinkingParams()).toEqual({ enable_thinking: false });
 		});
 	});
+
+	describe("getSuggestionThinkingParams", () => {
+		it("should return null when model has no thinkingParams", async () => {
+			const config = {
+				models: {
+					"suggestion-model": {
+						model: "suggestion-model",
+						supportsThinking: true,
+						// 没有 thinkingParams 表示 API 不支持 thinking 参数
+					},
+				},
+			};
+			vi.mocked(fs.existsSync).mockReturnValue(true);
+			vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(config));
+
+			const { getSuggestionThinkingParams } = await resetConfigModule();
+			expect(getSuggestionThinkingParams("suggestion-model")).toBeNull();
+		});
+
+		it("should always return disabled params for suggestion models", async () => {
+			const config = {
+				models: {
+					"suggestion-model": {
+						model: "suggestion-model",
+						supportsThinking: true,
+						thinkingParams: {
+							enabled: { thinking_budget: 1000 },
+							disabled: { thinking_budget: 0 },
+						},
+					},
+				},
+			};
+			vi.mocked(fs.existsSync).mockReturnValue(true);
+			vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(config));
+
+			const { getSuggestionThinkingParams } = await resetConfigModule();
+			// Suggestion always uses disabled params, regardless of user settings
+			expect(getSuggestionThinkingParams("suggestion-model")).toEqual({
+				thinking_budget: 0,
+			});
+		});
+
+		it("should return null when model does not exist", async () => {
+			vi.mocked(fs.existsSync).mockReturnValue(false);
+			vi.mocked(fs.writeFileSync).mockReturnValue(undefined);
+
+			const { getSuggestionThinkingParams } = await resetConfigModule();
+			expect(getSuggestionThinkingParams("non-existent-model")).toBeNull();
+		});
+	});
 });

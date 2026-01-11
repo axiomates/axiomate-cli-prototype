@@ -14,7 +14,10 @@ import {
 	SUGGESTION_CACHE,
 	getSuggestionModel,
 } from "../../constants/suggestion.js";
-import { getModelApiConfig } from "../../utils/config.js";
+import {
+	getModelApiConfig,
+	getSuggestionThinkingParams,
+} from "../../utils/config.js";
 import { stableStringify } from "../../utils/json.js";
 
 
@@ -205,6 +208,12 @@ export class SuggestionClient {
 			temperature: SUGGESTION_CONFIG.temperature,
 			stream: false, // Non-streaming for simplicity
 		};
+
+		// 禁用 thinking 模式（如果模型支持）以确保快速响应
+		const thinkingParams = getSuggestionThinkingParams(suggestionModelId);
+		if (thinkingParams) {
+			Object.assign(body, thinkingParams);
+		}
 
 		// Set up timeout
 		const timeoutId = setTimeout(() => {

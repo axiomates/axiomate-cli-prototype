@@ -412,6 +412,22 @@ export function getThinkingParams(): Record<string, unknown> | null {
 }
 
 /**
+ * 获取 Suggestion 请求的 thinking 参数（总是禁用）
+ * Suggestion 需要快速响应，不应该使用 thinking 模式
+ */
+export function getSuggestionThinkingParams(
+	suggestionModelId: string,
+): Record<string, unknown> | null {
+	const model = getModelById(suggestionModelId);
+
+	// API 不支持 thinking 参数
+	if (!model?.thinkingParams) return null;
+
+	// Suggestion 总是禁用 thinking（快速响应优先）
+	return model.thinkingParams.disabled;
+}
+
+/**
  * 设置是否启用 AI 思考模式
  */
 export function setThinkingEnabled(enabled: boolean): void {

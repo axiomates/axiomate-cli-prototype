@@ -24,6 +24,7 @@ vi.mock("../../../source/utils/config.js", () => ({
 		baseUrl: "https://api.test.com",
 		apiKey: "test-api-key",
 	})),
+	getSuggestionThinkingParams: vi.fn(() => null), // Default: no thinking params
 }));
 
 describe("SuggestionClient", () => {
@@ -266,6 +267,56 @@ describe("SuggestionClient", () => {
 			// Third call - should fetch again
 			await client.getSuggestion("hello");
 			expect(fetchMock).toHaveBeenCalledTimes(2);
+		});
+	});
+
+	describe("thinking mode handling", () => {
+		it("should disable thinking mode for models that support it", async () => {
+			// Mock thinking params to return disabled params
+			const { getSuggestionThinkingParams } =
+				await import("../../../source/utils/config.js");
+			vi.mocked(getSuggestionThinkingParams).mockReturnValue({
+				thinking_budget: 0,
+			});
+
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						choices: [{ message: { content: "test" } }],
+					}),
+			});
+
+			await client.getSuggestion("hello");
+
+			// Verify fetch was called with thinking disabled
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			const fetchCall = fetchMock.mock.calls[0];
+			const body = JSON.parse(fetchCall[1].body);
+			expect(body.thinking_budget).toBe(0);
+		});
+
+		it("should not add thinking params when model does not support it", async () => {
+			// Mock thinking params to return null (model doesn't support thinking)
+			const { getSuggestionThinkingParams } =
+				await import("../../../source/utils/config.js");
+			vi.mocked(getSuggestionThinkingParams).mockReturnValue(null);
+
+			fetchMock.mockResolvedValueOnce({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						choices: [{ message: { content: "test" } }],
+					}),
+			});
+
+			await client.getSuggestion("hello");
+
+			// Verify fetch was called without thinking params
+			expect(fetchMock).toHaveBeenCalledTimes(1);
+			const fetchCall = fetchMock.mock.calls[0];
+			const body = JSON.parse(fetchCall[1].body);
+			expect(body.thinking_budget).toBeUndefined();
 		});
 	});
 
