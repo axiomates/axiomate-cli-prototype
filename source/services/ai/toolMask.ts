@@ -286,7 +286,7 @@ export function buildToolMask(
 	return {
 		mode: "action",
 		allowedTools,
-		useDynamicFallback,
+		...(useDynamicFallback && { useDynamicFallback: true }),
 	};
 }
 
