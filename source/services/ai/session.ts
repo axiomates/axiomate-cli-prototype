@@ -153,9 +153,6 @@ export class Session {
 		if (usage) {
 			this.actualPromptTokens = usage.prompt_tokens;
 			this.actualCompletionTokens += usage.completion_tokens;
-
-			// 用实际值校正估算值
-			this.calibrateEstimates(usage);
 		}
 
 		this.messages.push({
@@ -176,26 +173,6 @@ export class Session {
 			isActual: false,
 			timestamp: Date.now(),
 		});
-	}
-
-	/**
-	 * 根据 API 返回的 usage 校正估算值
-	 * 比较估算值和实际值，记录偏差以供调试
-	 */
-	private calibrateEstimates(usage: TokenUsage): void {
-		const estimatedTotal = this.getEstimatedTotalTokens();
-		const actualTotal = usage.prompt_tokens;
-
-		// 避免除零
-		if (actualTotal === 0) {
-			return;
-		}
-
-		// const deviation = Math.abs(estimatedTotal - actualTotal) / actualTotal;
-		// if (deviation > 0.2) {
-			// 计算不含工具的消息估算（用于更精细的调试）
-			// const estimatedMessages = estimatedTotal - this.toolsTokenEstimate;
-		// }
 	}
 
 	/**
