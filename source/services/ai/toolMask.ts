@@ -277,9 +277,16 @@ export function buildToolMask(
 		allowedTools.add("git");
 	}
 
+	// 检查是否需要动态 fallback
+	// 如果模型不支持 tool_choice 和 prefill，则需要动态过滤工具列表
+	const supportsToolChoice = currentModelSupportsToolChoice();
+	const supportsPrefill = currentModelSupportsPrefill();
+	const useDynamicFallback = !supportsToolChoice && !supportsPrefill;
+
 	return {
 		mode: "action",
 		allowedTools,
+		useDynamicFallback,
 	};
 }
 
