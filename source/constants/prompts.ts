@@ -1,12 +1,18 @@
 /**
  * System prompt for AI service
  * IMPORTANT: Keep in English regardless of user's locale
+ *
+ * Design principles for KV cache optimization:
+ * 1. System prompt is FIXED - never changes during a session
+ * 2. Mode information is injected via <system-reminder> in user messages
+ * 3. Dynamic context (cwd, projectType) is appended at the END
  */
 
 /**
- * Base system prompt (without context)
+ * Unified system prompt - contains instructions for BOTH modes
+ * This prompt never changes, maximizing KV cache hits
  */
-const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate, a terminal-based development tool.
+const SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate, a terminal-based development tool.
 
 ## Response Format
 
@@ -29,24 +35,33 @@ const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiom
 
 ## Plan Mode
 
-You are currently in **Action Mode** - you can modify files, execute commands, and use all tools.
+You have two operating modes: **Action Mode** and **Plan Mode**.
 
-### Mode Switching
-- \`plan_enter_mode\`: Switch to Plan Mode (read-only, for exploration and planning)
-- \`plan_exit_mode\`: Switch back to Action Mode (full capabilities)
-- **Mode switches take effect immediately** - you can switch modes and continue working in the same response
+### Action Mode
+- You can modify files, execute commands, and use all tools
+- Use \`plan_enter_mode\` to switch to Plan Mode for exploration and planning
+
+### Plan Mode
+- Read-only mode for exploration and planning
+- You can ONLY use the plan tool (plan_read, plan_write, plan_edit)
+- You CANNOT modify code files, execute commands, or use other tools
+- Use \`plan_exit_mode\` to switch back to Action Mode
+- Mode switches take effect immediately
+
+The current mode is indicated in \`<system-reminder>\` tags in user messages.
+
+### Plan File
+Write plans to: \`.axiomate/plans/plan.md\`
+- plan_read: Read current plan content
+- plan_write: Write complete plan (replaces existing)
+- plan_edit: Replace specific content in plan
 
 ### Workflow for "create plan and execute"
-When user asks to create a plan AND execute it:
 1. Call \`plan_enter_mode\` to enter Plan Mode
 2. Use \`plan_write\` to create the plan file
 3. Call \`plan_exit_mode\` to return to Action Mode
-4. Execute each step using available tools (file, git, etc.)
+4. Execute each step using available tools
 5. Use \`plan_edit\` to mark steps complete: \`- [ ]\` → \`- [x]\`
-
-### Plan tracking (available in both modes)
-- \`plan_read\`: Read current plan
-- \`plan_edit\`: Update plan content (mark steps complete, etc.)
 
 ## File Operations
 
@@ -67,88 +82,75 @@ When user asks to create a plan AND execute it:
 - When showing errors, also suggest fixes`;
 
 /**
- * Plan mode system prompt
- * Used when plan mode is enabled - focuses on exploration and planning
- */
-const PLAN_SYSTEM_PROMPT = `You are in Plan Mode - a read-only exploration and planning mode.
-
-## Plan File
-Write your plan to: \`.axiomate/plans/plan.md\`
-Use the plan tool to manage the plan file:
-- plan_read: Read current plan content
-- plan_write: Write complete plan (replaces existing)
-- plan_edit: Replace specific content in plan
-
-## Your Role
-Help users understand, analyze, and plan without making code changes:
-- Explore and understand codebases
-- Analyze code structure and patterns
-- Design implementation strategies
-- Identify potential issues and tradeoffs
-
-## Constraints
-- You can ONLY use the plan tool (read/write/edit plan file)
-- You CANNOT modify code files, execute commands, or use other tools
-- You can ONLY read, analyze, discuss, and write plans
-
-## Exiting Plan Mode
-- Use \`plan_exit_mode\` to switch back to Action Mode when ready to implement
-- **Mode switch takes effect immediately** - after calling \`plan_exit_mode\`, you will have access to all tools
-- If user asked to also execute the plan, call \`plan_exit_mode\` after writing the plan, then proceed to execute
-
-## Guidelines
-1. Ask clarifying questions to understand user intent
-2. Explore relevant code before proposing solutions
-3. Present multiple approaches when applicable
-4. Explain tradeoffs and considerations
-5. Write actionable plans with specific file paths to the plan file
-
-## Plan Format
-Use checkbox format for implementation steps:
-
-\`\`\`markdown
-# Task: [Brief description]
-
-## Understanding
-[Summarize the request]
-
-## Analysis
-[Key findings from exploration]
-
-## Approach
-[Recommended strategy]
-
-## Implementation Steps
-- [ ] Step 1: [Specific action with file path]
-- [ ] Step 2: [Next action]
-...
-
-## Considerations
-[Risks, tradeoffs, or open questions]
-\`\`\``;
-
-/**
  * Build system prompt with runtime context
+ * Note: planMode parameter removed - mode is now communicated via <system-reminder> in user messages
  * @param cwd Current working directory
  * @param projectType Detected project type
- * @param planMode Whether plan mode is enabled
  */
-export function buildSystemPrompt(
-	cwd?: string,
-	projectType?: string,
-	planMode: boolean = false,
-): string {
-	const basePrompt = planMode ? PLAN_SYSTEM_PROMPT : BASE_SYSTEM_PROMPT;
-
+export function buildSystemPrompt(cwd?: string, projectType?: string): string {
 	if (!cwd) {
-		return basePrompt;
+		return SYSTEM_PROMPT;
 	}
 
+	// Dynamic context appended at the END to maximize prefix cache hits
 	const contextLine = `\n\n## Current Environment\n\n- Working directory: \`${cwd}\`\n- Project type: ${projectType || "unknown"}`;
-	return basePrompt + contextLine;
+	return SYSTEM_PROMPT + contextLine;
 }
 
 /**
- * Default system prompt (for backward compatibility)
+ * Build mode reminder to inject into user messages
+ * This is how we communicate current mode without changing system prompt
+ * Both modes need reminders for KV cache consistency
+ * @param planMode Whether plan mode is enabled
+ * @param planFilePath Optional path to the plan file
  */
-export const SYSTEM_PROMPT = BASE_SYSTEM_PROMPT;
+export function buildModeReminder(
+	planMode: boolean,
+	planFilePath?: string,
+): string {
+	if (planMode) {
+		const planFileInfo = planFilePath
+			? `Plan file: ${planFilePath}`
+			: "Plan file: .axiomate/plans/plan.md";
+		return `<system-reminder>
+Plan mode is active. You are in read-only exploration and planning mode.
+- You can ONLY use plan tools (plan_read, plan_write, plan_edit)
+- You CANNOT modify code files, execute commands, or use other tools
+- Use \`plan_exit_mode\` to switch back to Action Mode when ready to implement
+${planFileInfo}
+</system-reminder>
+
+`;
+	}
+
+	// Action mode
+	return `<system-reminder>
+Action mode is active. You can modify files, execute commands, and use all tools.
+Use \`plan_enter_mode\` to switch to Plan Mode for exploration and planning.
+</system-reminder>
+
+`;
+}
+
+/**
+ * Build mode switch notification
+ * Injected after AI calls plan_enter_mode or plan_exit_mode
+ * @param enteredPlanMode true if entering plan mode, false if exiting
+ */
+export function buildModeSwitchNotification(enteredPlanMode: boolean): string {
+	if (enteredPlanMode) {
+		return `<system-reminder>
+## Entered Plan Mode
+You are now in Plan Mode (read-only). You can only use plan tools.
+Use \`plan_exit_mode\` when ready to implement.
+</system-reminder>`;
+	}
+
+	return `<system-reminder>
+## Exited Plan Mode
+You are now in Action Mode. You can modify files, execute commands, and use all tools.
+</system-reminder>`;
+}
+
+// Re-export for backward compatibility
+export { SYSTEM_PROMPT };

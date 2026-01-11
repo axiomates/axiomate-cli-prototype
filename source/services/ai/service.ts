@@ -26,7 +26,10 @@ import {
 	type SessionStatus,
 	type CompactCheckResult,
 } from "./session.js";
-import { buildSystemPrompt } from "../../constants/prompts.js";
+import {
+	buildSystemPrompt,
+	buildModeReminder,
+} from "../../constants/prompts.js";
 import { isPlanModeEnabled } from "../../utils/config.js";
 import { estimateTokens } from "./tokenEstimator.js";
 
@@ -237,13 +240,17 @@ export class AIService implements IAIService {
 		const initialPlanMode = options?.planMode ?? false;
 
 		// 确保上下文已注入到 System Prompt
-		this.ensureContextInSystemPrompt(enhancedContext, initialPlanMode);
+		this.ensureContextInSystemPrompt(enhancedContext);
 
 		// 创建检查点（在添加用户消息前）
 		const checkpoint = this.session.checkpoint();
 
+		// 在用户消息前注入 mode reminder（用于 KV cache 优化）
+		const modeReminder = buildModeReminder(initialPlanMode);
+		const messageWithReminder = modeReminder + userMessage;
+
 		// 添加用户消息到 Session（传递 displayContent 用于会话恢复时显示）
-		this.session.addUserMessage(userMessage, displayContent);
+		this.session.addUserMessage(messageWithReminder, displayContent);
 
 		// 获取相关工具 (plan mode only gets plan tool)
 		const tools = this.getContextTools(enhancedContext, initialPlanMode);
@@ -278,20 +285,14 @@ export class AIService implements IAIService {
 
 	/**
 	 * 确保上下文已注入到 System Prompt（仅首次调用时生效）
-	 * @param planMode Whether plan mode is enabled (from snapshot)
+	 * Note: System prompt no longer includes planMode - it's now stable for KV cache optimization
+	 * Mode information is communicated via <system-reminder> in user messages
 	 */
-	private ensureContextInSystemPrompt(
-		context: MatchContext,
-		planMode: boolean = false,
-	): void {
+	private ensureContextInSystemPrompt(context: MatchContext): void {
 		if (this.contextInjected) return;
 
-		// 构建带上下文的 System Prompt
-		const prompt = buildSystemPrompt(
-			context.cwd,
-			context.projectType,
-			planMode,
-		);
+		// 构建带上下文的 System Prompt（不包含 planMode，保持稳定）
+		const prompt = buildSystemPrompt(context.cwd, context.projectType);
 		this.session.setSystemPrompt(prompt);
 		this.contextInjected = true;
 	}
@@ -479,7 +480,9 @@ export class AIService implements IAIService {
 						messages.push(result);
 					}
 
-					// 检查 plan mode 是否发生变化，如果变化则刷新工具列表和 system prompt
+					// 检查 plan mode 是否发生变化，如果变化则刷新工具列表
+					// Note: System prompt 不再修改，保持稳定以优化 KV cache
+					// 模式信息通过 <system-reminder> 在用户消息中传递
 					const newPlanMode = isPlanModeEnabled();
 					if (newPlanMode !== currentPlanMode) {
 						currentPlanMode = newPlanMode;
@@ -487,18 +490,6 @@ export class AIService implements IAIService {
 						tools = this.getContextTools(context, currentPlanMode);
 						// 更新工具 token 估算
 						updateToolsTokenEstimate(tools);
-						// 动态更新 system prompt（让 AI 看到新模式的指导）
-						const newPrompt = buildSystemPrompt(
-							context.cwd,
-							context.projectType,
-							currentPlanMode,
-						);
-						this.session.setSystemPrompt(newPrompt);
-						// 同时更新 messages 数组的第一个元素（system prompt）
-						// 因为 messages 是快照，需要手动同步
-						if (messages.length > 0 && messages[0]?.role === "system") {
-							messages[0] = { role: "system", content: newPrompt };
-						}
 					}
 
 					rounds++;
