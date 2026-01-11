@@ -337,8 +337,9 @@ export class AIService implements IAIService {
 			toolIds.add(match.tool.id);
 		}
 
-		// 4. 转换为 OpenAI 工具格式
+		// 4. 转换为 OpenAI 工具格式（按 ID 排序以稳定顺序，提高 KV 缓存命中率）
 		const filteredTools = Array.from(toolIds)
+			.sort()
 			.map((id) => this.registry.getTool(id))
 			.filter(
 				(t): t is NonNullable<typeof t> => t !== undefined && t.installed,
