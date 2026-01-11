@@ -322,6 +322,11 @@ export class AIService implements IAIService {
 		context: MatchContext,
 		toolMask?: ToolMaskState,
 	): OpenAITool[] {
+		// 如果模型不支持 tools，始终返回空列表
+		if (!this.contextAwareEnabled) {
+			return [];
+		}
+
 		// 如果需要动态 fallback（模型不支持 tool_choice 和 prefill）
 		// 则根据 allowedTools 过滤工具列表
 		if (toolMask?.useDynamicFallback && this.registry.isFrozen()) {
@@ -335,11 +340,6 @@ export class AIService implements IAIService {
 		// 正常情况：使用冻结的完整工具列表（如果可用）
 		if (this.registry.isFrozen()) {
 			return toOpenAITools(this.registry.getFrozenTools());
-		}
-
-		// 未冻结时（加载中）使用原有逻辑
-		if (!this.contextAwareEnabled) {
-			return [];
 		}
 
 		// 1. 根据项目类型和文件自动选择工具

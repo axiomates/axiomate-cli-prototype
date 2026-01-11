@@ -824,6 +824,47 @@ describe("AIService", () => {
 			// Chat should be called without tools
 			expect(mockClient.chat).toHaveBeenCalledWith(expect.any(Array));
 		});
+
+		it("should not use tools even when tools are frozen and contextAwareEnabled is false", async () => {
+			const tools: ToolDefinition[] = [
+				{
+					id: "frozen-tool",
+					name: "Frozen Tool",
+					description: "A frozen tool",
+					type: "node",
+					installed: true,
+					parameters: {},
+				},
+			];
+			const registry = createMockRegistry(tools);
+
+			// Mock registry as frozen with tools available
+			vi.mocked(registry.isFrozen).mockReturnValue(true);
+			vi.mocked(registry.getFrozenTools).mockReturnValue([
+				{
+					id: "frozen-tool",
+					name: "Frozen Tool",
+					category: "runtime",
+					installed: true,
+					capabilities: ["execute"],
+					keywords: ["test"],
+				},
+			]);
+
+			const service = new AIService(
+				{ client: mockClient, contextAwareEnabled: false },
+				registry,
+			);
+
+			await service.sendMessage("Hello", { cwd: "/project" });
+
+			// Chat should be called with only messages (no tools parameter)
+			expect(mockClient.chat).toHaveBeenCalledWith(expect.any(Array));
+			// Verify it's called with exactly 1 argument (messages only, no tools)
+			expect(mockClient.chat).toHaveBeenCalledTimes(1);
+			const callArgs = vi.mocked(mockClient.chat).mock.calls[0];
+			expect(callArgs.length).toBe(1);
+		});
 	});
 
 	describe("createAIService", () => {
