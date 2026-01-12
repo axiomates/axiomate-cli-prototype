@@ -129,10 +129,12 @@ export function buildSystemPrompt(
 // Pre-built mode reminder strings (cached to avoid repeated string construction)
 const PLAN_MODE_REMINDER = `<system-reminder>
 Plan mode is active. You are in read-only exploration and planning mode.
-- You can ONLY use plan tools (p-plan_read, p-plan_write, p-plan_edit, p-plan_leave)
-- You CANNOT modify code files, execute commands, or use other tools
+
+ALLOWED tools: p-plan_read, p-plan_write, p-plan_edit, p-plan_leave
+FORBIDDEN: All other tools (a-c-file, a-c-git, a-c-web, etc.) will be REJECTED.
+
 - Use \`p-plan_leave\` to switch back to Action Mode when ready to implement
-Plan file: .axiomate/plans/plan.md
+- Plan file: .axiomate/plans/plan.md
 </system-reminder>
 
 `;

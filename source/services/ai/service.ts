@@ -291,20 +291,19 @@ export class AIService implements IAIService {
 			const supportsToolChoice = currentModelSupportsToolChoice();
 
 			if (supportsToolChoice) {
-				// 情况1：支持 tool_choice，集合B + auto
+				// 情况1：支持 tool_choice
+				// 始终发送完整工具集，通过 toolMask + system-reminder 限制
+				// 这样可以最大化 KV cache 命中率
+				tools = toOpenAITools(this.projectTools);
+
 				if (initialPlanMode) {
-					// Plan 模式：只发送 p-plan 工具
-					const planTools = this.projectTools.filter(
-						(t) => t.id === "p-plan",
-					);
-					tools = toOpenAITools(planTools);
+					// Plan 模式：toolMask 限制为 p-plan，executor 层拦截
 					toolMask = {
 						mode: "p",
 						allowedTools: new Set(["p-plan"]),
 					};
 				} else {
-					// Action 模式：发送完整集合B
-					tools = toOpenAITools(this.projectTools);
+					// Action 模式：允许所有工具
 					toolMask = {
 						mode: "a",
 						allowedTools: new Set(this.projectTools.map((t) => t.id)),

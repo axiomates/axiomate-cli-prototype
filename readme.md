@@ -258,16 +258,18 @@ axiomate implements several strategies to maximize KV cache efficiency when work
 ### Design Principles
 
 1. **Fixed System Prompt** - The system prompt remains constant throughout a session, never changing based on mode or state
-2. **Mode via User Messages** - Plan/Action mode information is injected into user messages using `<system-reminder>` tags, not the system prompt
-3. **Dynamic Context at End** - Runtime context (working directory, project type) is appended at the END of the system prompt to maximize prefix cache hits
+2. **Fixed Tools List** - For models supporting tool_choice, always send the complete tool set
+3. **Mode via User Messages** - Plan/Action mode information is injected into user messages using `<system-reminder>` tags, not the system prompt
+4. **Dynamic Context at End** - Runtime context (working directory, project type) is appended at the END of the system prompt to maximize prefix cache hits
 
 ### Implementation Details
 
 | Component | Strategy |
 | --------- | -------- |
 | System Prompt | Static base + tool instructions, dynamic context appended at end |
-| Mode Reminder | Pre-built constant strings (`PLAN_MODE_REMINDER`, `ACTION_MODE_REMINDER`) |
-| Message Injection | Mode reminder prepended to user message content |
+| Tools List | Always send complete tool set, restrict via toolMask |
+| Mode Reminder | Pre-built constant strings with ALLOWED/FORBIDDEN format |
+| Tool Interception | Executor layer checks toolMask, rejects illegal calls |
 
 ### How It Works
 
@@ -279,24 +281,37 @@ axiomate implements several strategies to maximize KV cache efficiency when work
 │ ├─ Plan mode documentation              │
 │ └─ Dynamic context (cwd, projectType)   │  ← Appended at end
 ├─────────────────────────────────────────┤
+│ Tools (FIXED)                           │  ← Cached, not filtered by mode
+│ └─ Complete tool set                    │
+├─────────────────────────────────────────┤
 │ User Message                            │
-│ ├─ <system-reminder>Mode info</...>     │  ← Mode injected here
+│ ├─ <system-reminder>                    │  ← ALLOWED/FORBIDDEN tools
 │ └─ Actual user content                  │
 └─────────────────────────────────────────┘
 ```
+
+### Plan Mode Tool Restriction
+
+Instead of filtering tools by mode (which breaks cache), axiomate uses a two-layer approach:
+
+1. **toolMask** - Hard restriction at executor layer, rejects illegal tool calls
+2. **system-reminder** - Explicitly tells AI which tools are ALLOWED/FORBIDDEN
+
+If AI calls a forbidden tool → returns error: "Tool xxx is not available"
 
 ### Benefits
 
 - **Reduced Latency** - Prefix cache hits skip re-computing attention for cached tokens
 - **Lower Costs** - Many API providers offer discounts for cached tokens (e.g., Anthropic: 90% discount)
-- **Consistent Behavior** - Fixed system prompt ensures predictable AI responses
+- **Consistent Behavior** - Fixed system prompt + tools ensures predictable AI responses
 
 ### Key Files
 
 | File | Purpose |
 | ---- | ------- |
 | `constants/prompts.ts` | System prompt construction, mode reminders |
-| `services/ai/service.ts` | Message injection logic (`streamMessage`) |
+| `services/ai/service.ts` | Always send complete tools, toolMask restriction |
+| `services/ai/tool-call-handler.ts` | Executor layer tool interception |
 
 ## Configuration
 

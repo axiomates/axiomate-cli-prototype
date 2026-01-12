@@ -160,16 +160,18 @@ source/
 ### 设计原则
 
 1. **System Prompt 固定** - 会话期间保持不变，不随模式切换而改变
-2. **模式信息注入用户消息** - 使用 `<system-reminder>` 标签注入到用户消息前
-3. **动态上下文追加末尾** - cwd、projectType 等运行时信息追加在 System Prompt 末尾
+2. **Tools 列表固定** - 支持 tool_choice 的模型始终发送完整工具集
+3. **模式信息注入用户消息** - 使用 `<system-reminder>` 标签注入到用户消息前
+4. **动态上下文追加末尾** - cwd、projectType 等运行时信息追加在 System Prompt 末尾
 
 ### 实现策略
 
 | 组件 | 策略 | 文件 |
 |------|------|------|
 | System Prompt | 静态基础 + 工具说明，动态上下文追加末尾 | `constants/prompts.ts` |
-| Mode Reminder | 预构建常量字符串 | `constants/prompts.ts` |
-| 消息注入 | Mode reminder 前置到用户消息内容 | `services/ai/service.ts:278-280` |
+| Tools 列表 | 始终发送完整工具集，通过 toolMask 限制 | `services/ai/service.ts:293-311` |
+| Mode Reminder | 预构建常量字符串，ALLOWED/FORBIDDEN 格式 | `constants/prompts.ts` |
+| 工具拦截 | executor 层检查 toolMask，拒绝非法调用 | `services/ai/tool-call-handler.ts:151-159` |
 
 ### 消息结构
 
@@ -180,22 +182,40 @@ System Prompt (FIXED, 跨请求缓存)
 ├── COMMON_SUFFIX           # 通用后缀
 └── Dynamic Context         # cwd, projectType（追加末尾）
 
+Tools (FIXED, 跨请求缓存)
+└── 完整工具集              # 不随模式切换而改变
+
 User Message
-├── <system-reminder>       # 模式信息注入
+├── <system-reminder>       # 模式信息 + ALLOWED/FORBIDDEN 工具列表
 └── 用户实际内容
 ```
+
+### Plan 模式工具限制
+
+```
+┌─────────────────────────────────────────┐
+│ tools = 完整工具集 (固定)               │  ← KV cache 友好
+│ toolMask = Plan ? [p-plan] : [all]     │  ← executor 层拦截
+│ system-reminder = ALLOWED/FORBIDDEN    │  ← AI 行为约束
+└─────────────────────────────────────────┘
+```
+
+- **toolMask** 在 executor 层硬性拦截非法工具调用
+- **system-reminder** 明确告知 AI 哪些工具可用/禁止
+- AI 调用禁止工具 → 返回错误："Tool xxx is not available"
 
 ### 关键代码
 
 - `buildSystemPrompt()` - 构建固定 System Prompt + 动态上下文
 - `buildModeReminder()` - 返回预构建的模式提醒字符串
-- `streamMessage()` - 在用户消息前注入 mode reminder
+- `streamMessage()` - 始终发送完整工具集，通过 toolMask 限制
+- `isToolAllowed()` - executor 层检查工具是否在允许列表中
 
 ### 效果
 
 - **延迟降低** - 前缀缓存命中跳过已缓存 token 的注意力计算
 - **成本降低** - 缓存 token 通常有折扣（如 Anthropic 90%）
-- **行为一致** - 固定 System Prompt 确保 AI 响应可预测
+- **行为一致** - 固定 System Prompt + Tools 确保 AI 响应可预测
 
 ## 代码规范
 
