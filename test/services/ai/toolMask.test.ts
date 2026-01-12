@@ -94,7 +94,7 @@ describe("toolMask", () => {
 					"Create a plan for this project",
 					undefined, // projectType
 					true, // planMode
-					"platform", // toolSource
+					"constrained", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -113,7 +113,7 @@ describe("toolMask", () => {
 					"Create a plan",
 					undefined, // projectType
 					true,
-					"platform", // toolSource
+					"constrained", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -131,7 +131,7 @@ describe("toolMask", () => {
 					"Create a plan",
 					undefined, // projectType
 					true,
-					"project", // toolSource (动态模式使用 project)
+					"filtered", // constraintMode (动态模式使用 project)
 					mockProjectTools,
 				);
 
@@ -150,7 +150,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -168,7 +168,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -183,7 +183,7 @@ describe("toolMask", () => {
 					"Fetch https://example.com",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -198,7 +198,7 @@ describe("toolMask", () => {
 					"Get the url content",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -213,7 +213,7 @@ describe("toolMask", () => {
 					"commit these changes",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -228,7 +228,7 @@ describe("toolMask", () => {
 					"create a new branch",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -243,7 +243,7 @@ describe("toolMask", () => {
 					"Build the docker image",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -258,7 +258,7 @@ describe("toolMask", () => {
 					"Run npm install",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -273,7 +273,7 @@ describe("toolMask", () => {
 					"Install dependencies",
 					"node", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -289,7 +289,7 @@ describe("toolMask", () => {
 					"Hello",
 					"python", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -304,7 +304,7 @@ describe("toolMask", () => {
 					"Hello",
 					"java", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -322,7 +322,7 @@ describe("toolMask", () => {
 					"Hello",
 					"dotnet", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -338,7 +338,7 @@ describe("toolMask", () => {
 					"Hello",
 					"cpp", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -353,7 +353,7 @@ describe("toolMask", () => {
 					"Hello",
 					"rust", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -369,7 +369,7 @@ describe("toolMask", () => {
 					"Hello",
 					"go", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -385,7 +385,7 @@ describe("toolMask", () => {
 					"Run cmake to build",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -400,7 +400,7 @@ describe("toolMask", () => {
 					"Run maven clean install",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -415,7 +415,7 @@ describe("toolMask", () => {
 					"Execute gradle build",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -430,7 +430,7 @@ describe("toolMask", () => {
 					"Install packages with pip",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -445,7 +445,7 @@ describe("toolMask", () => {
 					"Compile the java code",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -460,7 +460,7 @@ describe("toolMask", () => {
 					"Open in vscode",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -475,7 +475,7 @@ describe("toolMask", () => {
 					"Open in visual studio",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -490,7 +490,7 @@ describe("toolMask", () => {
 					"Build the .sln file",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -505,7 +505,7 @@ describe("toolMask", () => {
 					"Compare the diff between files",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -520,7 +520,7 @@ describe("toolMask", () => {
 					"Connect to mysql database",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -535,7 +535,7 @@ describe("toolMask", () => {
 					"Start the container",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -550,7 +550,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -566,7 +566,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"platform", // toolSource (tool_choice uses platform)
+					"constrained", // constraintMode (tool_choice uses platform)
 					mockPlatformTools,
 				);
 
@@ -581,7 +581,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"platform", // toolSource (prefill uses platform)
+					"constrained", // constraintMode (prefill uses platform)
 					mockPlatformTools,
 				);
 
@@ -596,7 +596,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"platform", // toolSource
+					"constrained", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -612,7 +612,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"platform", // toolSource
+					"constrained", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -629,7 +629,7 @@ describe("toolMask", () => {
 					"fetch http://example.com",
 					undefined, // projectType
 					false,
-					"platform", // toolSource
+					"constrained", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -646,7 +646,7 @@ describe("toolMask", () => {
 					"Hello",
 					"node", // projectType
 					false,
-					"project", // toolSource
+					"filtered", // constraintMode
 					mockProjectTools,
 				);
 
@@ -665,7 +665,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"platform", // toolSource
+					"constrained", // constraintMode
 					[],
 				);
 
@@ -686,7 +686,7 @@ describe("toolMask", () => {
 				"Hello",
 				undefined, // projectType
 				false,
-				"project", // toolSource
+				"filtered", // constraintMode
 				mockProjectTools,
 			);
 
@@ -702,7 +702,7 @@ describe("toolMask", () => {
 				"Hello",
 				undefined, // projectType
 				true, // plan mode - only plan allowed
-				"project", // toolSource
+				"filtered", // constraintMode
 				mockProjectTools,
 			);
 
@@ -724,7 +724,7 @@ describe("toolMask", () => {
 				"Hello",
 				undefined, // projectType
 				true,
-				"project", // toolSource
+				"filtered", // constraintMode
 				mockProjectTools,
 			);
 

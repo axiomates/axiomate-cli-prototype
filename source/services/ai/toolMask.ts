@@ -191,12 +191,19 @@ export function getToolsForProjectType(
 }
 
 /**
+ * 约束模式
+ * - constrained: 通过 API 参数（tool_choice / prefill）约束，发送完整核心工具列表
+ * - filtered: 通过过滤工具列表约束，发送过滤后的工具子集
+ */
+export type ConstraintMode = "constrained" | "filtered";
+
+/**
  * 构建工具遮蔽状态
  *
  * @param input 用户输入内容
  * @param projectType 项目类型（已在 AIService 初始化时固定）
  * @param planMode 是否为 Plan 模式
- * @param toolSource 工具来源：'platform' 或 'project'
+ * @param constraintMode 约束模式：'constrained'（API参数约束）或 'filtered'（列表过滤）
  * @param availableTools 可用的工具列表
  * @returns 工具遮蔽状态
  */
@@ -204,7 +211,7 @@ export function buildToolMask(
 	input: string,
 	projectType: string | undefined,
 	planMode: boolean,
-	toolSource: "platform" | "project",
+	constraintMode: ConstraintMode,
 	availableTools: DiscoveredTool[],
 ): ToolMaskState {
 	// 构建可用工具 ID 集合
@@ -290,10 +297,10 @@ export function buildToolMask(
 		allowedTools.add("a-c-enterplan");
 	}
 
-	// 根据工具源返回不同的遮蔽状态
-	if (toolSource === "platform") {
-		// platform 模式（tool_choice 或 prefill）：
-		// 工具列表已固定（版本A），通过 API 参数约束
+	// 根据约束模式返回不同的遮蔽状态
+	if (constraintMode === "constrained") {
+		// constrained 模式（tool_choice 或 prefill）：
+		// 发送完整核心工具列表，通过 API 参数约束选择
 		const supportsPrefill = currentModelSupportsPrefill();
 
 		// 判断是否所有允许的工具都是核心工具（a-c- 前缀）
@@ -311,9 +318,9 @@ export function buildToolMask(
 		};
 	}
 
-	if (toolSource === "project") {
-		// project 模式（动态过滤）：
-		// 工具列表动态过滤（版本B），通过修改发送的工具约束
+	if (constraintMode === "filtered") {
+		// filtered 模式（动态过滤）：
+		// 发送过滤后的工具子集，通过修改工具列表约束选择
 		return {
 			mode: "a",
 			allowedTools,
@@ -322,7 +329,7 @@ export function buildToolMask(
 	}
 
 	// 不应该到达这里
-	throw new Error(`Unknown toolSource: ${toolSource}`);
+	throw new Error(`Unknown constraintMode: ${constraintMode}`);
 }
 
 /**

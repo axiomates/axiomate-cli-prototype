@@ -282,20 +282,24 @@ export class AIService implements IAIService {
 		let tools: OpenAITool[] = [];
 
 		if (this.contextAwareEnabled) {
-			// 判断工具来源：tool_choice/prefill 使用 platform，动态使用 project
+			// 判断约束模式：
+			// - constrained: 支持 tool_choice/prefill，通过 API 参数约束
+			// - filtered: 不支持上述功能，通过过滤工具列表约束
 			const supportsToolChoice = currentModelSupportsToolChoice();
 			const supportsPrefill = currentModelSupportsPrefill();
-			const toolSource =
-				supportsToolChoice || supportsPrefill ? "platform" : "project";
+			const constraintMode =
+				supportsToolChoice || supportsPrefill ? "constrained" : "filtered";
 			const availableTools =
-				toolSource === "platform" ? this.platformTools : this.projectTools;
+				constraintMode === "constrained"
+					? this.platformTools
+					: this.projectTools;
 
 			// 构建工具遮蔽状态
 			toolMask = buildToolMask(
 				userMessage,
 				this.projectType,
 				initialPlanMode,
-				toolSource,
+				constraintMode,
 				availableTools,
 			);
 
