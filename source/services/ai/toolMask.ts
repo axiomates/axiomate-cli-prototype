@@ -7,12 +7,15 @@
 
 import type { ToolMaskState, MatchContext } from "./types.js";
 import type { DiscoveredTool } from "../tools/types.js";
-import { platform } from "node:os";
 import { tArray } from "../../i18n/index.js";
 import {
 	currentModelSupportsToolChoice,
 	currentModelSupportsPrefill,
 } from "../../utils/config.js";
+import {
+	ACTION_CORE_TOOLS,
+	getPlatformShellTools,
+} from "../../constants/tools.js";
 
 /**
  * 关键词到工具 ID 的映射
@@ -87,25 +90,6 @@ const KEYWORD_TO_TOOL: Record<string, string[]> = {
 	"a-beyondcompare": ["beyond compare", "diff", "compare", "merge files"],
 };
 
-/**
- * 基础工具列表（始终可用）
- * 使用新的工具 ID 格式
- */
-const BASE_TOOLS = new Set([
-	"a-c-askuser",
-	"a-c-file",
-	"a-c-web",
-]);
-
-/**
- * 获取当前平台的 shell 工具 ID
- */
-function getPlatformShellTool(): string {
-	if (platform() === "win32") {
-		return "a-c-powershell"; // Windows 默认使用 PowerShell
-	}
-	return "a-c-bash"; // Unix/Linux/macOS 使用 bash
-}
 
 /**
  * 获取 web 关键词（包含 i18n）
@@ -249,25 +233,17 @@ export function buildToolMask(
 	// Action 模式：构建允许的工具集（两种模式共享相同的工具收集逻辑）
 	const allowedTools = new Set<string>();
 
-	// 1. 添加基础工具
-	for (const toolId of BASE_TOOLS) {
+	// 1. 添加 Action 模式核心工具（askuser, file, web, git, enterplan）
+	for (const toolId of ACTION_CORE_TOOLS) {
 		if (availableToolIds.has(toolId)) {
 			allowedTools.add(toolId);
 		}
 	}
 
 	// 2. 添加平台 shell 工具
-	const shellTool = getPlatformShellTool();
-	if (availableToolIds.has(shellTool)) {
-		allowedTools.add(shellTool);
-	}
-	// 备选 shell（Windows 平台）
-	if (platform() === "win32") {
-		if (availableToolIds.has("a-c-cmd")) {
-			allowedTools.add("a-c-cmd");
-		}
-		if (availableToolIds.has("a-c-pwsh")) {
-			allowedTools.add("a-c-pwsh");
+	for (const shellTool of getPlatformShellTools()) {
+		if (availableToolIds.has(shellTool)) {
+			allowedTools.add(shellTool);
 		}
 	}
 
@@ -285,16 +261,6 @@ export function buildToolMask(
 		if (availableToolIds.has(toolId)) {
 			allowedTools.add(toolId);
 		}
-	}
-
-	// 5. 添加 git 工具（常用工具）
-	if (availableToolIds.has("a-c-git")) {
-		allowedTools.add("a-c-git");
-	}
-
-	// 6. 添加进入 Plan 模式的工具
-	if (availableToolIds.has("a-c-enterplan")) {
-		allowedTools.add("a-c-enterplan");
 	}
 
 	// 根据约束模式返回不同的遮蔽状态

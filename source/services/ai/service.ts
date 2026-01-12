@@ -296,12 +296,24 @@ export class AIService implements IAIService {
 
 			if (supportsToolChoice) {
 				// 情况3：支持 tool_choice，集合B + auto
-				// 发送完整集合B，通过 tool_choice: "auto" 让模型自由选择
-				tools = toOpenAITools(this.projectTools);
-				toolMask = {
-					mode: initialPlanMode ? "p" : "a",
-					allowedTools: new Set(this.projectTools.map((t) => t.id)),
-				};
+				if (initialPlanMode) {
+					// Plan 模式：只发送 p-plan 工具
+					const planTools = this.projectTools.filter(
+						(t) => t.id === "p-plan",
+					);
+					tools = toOpenAITools(planTools);
+					toolMask = {
+						mode: "p",
+						allowedTools: new Set(["p-plan"]),
+					};
+				} else {
+					// Action 模式：发送完整集合B
+					tools = toOpenAITools(this.projectTools);
+					toolMask = {
+						mode: "a",
+						allowedTools: new Set(this.projectTools.map((t) => t.id)),
+					};
+				}
 			} else if (supportsPrefill) {
 				// 情况4：只支持 prefill，集合B + 筛选算法s
 				// 发送完整集合B，通过 prefill 引导工具选择

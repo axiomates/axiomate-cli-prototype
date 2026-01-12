@@ -19,7 +19,10 @@ import {
 } from "./discoverers/index.js";
 import { t } from "../../i18n/index.js";
 import { getToolsForProjectType } from "../ai/toolMask.js";
-import { platform } from "node:os";
+import {
+	getFullCoreTools,
+	getExcludedShellTools,
+} from "../../constants/tools.js";
 
 // 工具发现状态
 export type DiscoveryStatus = "pending" | "discovering" | "completed";
@@ -239,15 +242,7 @@ export class ToolRegistry implements IToolRegistry {
 		if (this._allTools) return; // 已冻结
 
 		// 获取当前平台不支持的工具（需要排除）
-		const excludedTools = new Set<string>();
-		if (platform() === "win32") {
-			excludedTools.add("a-c-bash"); // Windows 不支持 bash
-		} else {
-			// Unix/Linux/macOS 不支持 Windows shell
-			excludedTools.add("a-c-powershell");
-			excludedTools.add("a-c-pwsh");
-			excludedTools.add("a-c-cmd");
-		}
+		const excludedTools = getExcludedShellTools();
 
 		this._allTools = Array.from(this.tools.values())
 			.filter((tool) => tool.installed && !excludedTools.has(tool.id))
@@ -276,24 +271,8 @@ export class ToolRegistry implements IToolRegistry {
 	 * 计算集合B（内部方法）
 	 */
 	private _computeProjectTools(projectType?: string): DiscoveredTool[] {
-		// 必须包含的核心工具（平台相关的shell已在集合A中过滤）
-		const coreToolIds = new Set([
-			"a-c-askuser",
-			"a-c-file",
-			"a-c-web",
-			"a-c-git",
-			"a-c-enterplan",
-			"p-plan",
-		]);
-
-		// 添加当前平台的 shell 工具
-		if (platform() === "win32") {
-			coreToolIds.add("a-c-powershell");
-			coreToolIds.add("a-c-pwsh");
-			coreToolIds.add("a-c-cmd");
-		} else {
-			coreToolIds.add("a-c-bash");
-		}
+		// 获取完整的核心工具集（含平台 shell）
+		const coreToolIds = getFullCoreTools();
 
 		// 获取项目类型对应的工具 ID
 		const projectToolIds = getToolsForProjectType(projectType);
