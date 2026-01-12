@@ -127,8 +127,8 @@ export type StreamOptions = {
  * - prefill: 使用共同前缀，让模型在同类工具中选择 (如 "plan_")
  */
 export type ToolMaskState = {
-	/** 当前模式: p = Plan, a = Action, a-c = Action with core tools only */
-	mode: "p" | "a" | "a-c";
+	/** 当前模式: p = Plan, a = Action */
+	mode: "p" | "a";
 	/** 允许的工具 ID 列表 */
 	allowedTools: Set<string>;
 	/**
@@ -400,6 +400,8 @@ export type AIServiceConfig = {
 	contextAwareEnabled?: boolean;
 	// 上下文窗口大小（token 数）
 	contextWindow?: number;
+	// 当前工作目录（用于项目类型检测）
+	cwd?: string;
 };
 
 /**

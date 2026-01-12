@@ -103,6 +103,13 @@ describe("AI Service index", () => {
 				installed: 0,
 				byCategory: {},
 			})),
+			// 新增的两阶段冻结方法
+			freezePlatformTools: vi.fn(),
+			freezeProjectTools: vi.fn(),
+			getPlatformTools: vi.fn(() => []),
+			getProjectTools: vi.fn(() => []),
+			isPlatformFrozen: vi.fn(() => false),
+			isProjectFrozen: vi.fn(() => false),
 		};
 
 		it("should return null if API config is invalid", () => {

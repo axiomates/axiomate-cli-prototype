@@ -153,7 +153,7 @@ const dockerDefinition: ToolDefinition = {
 };
 
 const dockerComposeDefinition: ToolDefinition = {
-	id: "a-docker-compose",
+	id: "a-dockercompose",
 	name: "Docker Compose",
 	description: "Multi-container application orchestration tool",
 	category: "container",

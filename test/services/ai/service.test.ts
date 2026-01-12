@@ -86,6 +86,13 @@ function createMockRegistry(tools: ToolDefinition[] = []): IToolRegistry {
 		freezeTools: vi.fn(),
 		getFrozenTools: vi.fn(() => tools.filter((t) => t.installed)),
 		isFrozen: vi.fn(() => false),
+		// 新增的两阶段冻结方法
+		freezePlatformTools: vi.fn(),
+		freezeProjectTools: vi.fn(),
+		getPlatformTools: vi.fn(() => tools.filter((t) => t.installed)),
+		getProjectTools: vi.fn(() => tools.filter((t) => t.installed)),
+		isPlatformFrozen: vi.fn(() => false),
+		isProjectFrozen: vi.fn(() => false),
 	};
 }
 
@@ -281,7 +288,11 @@ describe("AIService", () => {
 		});
 
 		it("should inject context into system prompt on first message", async () => {
-			const service = new AIService({ client: mockClient }, mockRegistry);
+			// 项目类型在构造函数中检测，所以传入 cwd
+			const service = new AIService(
+				{ client: mockClient, cwd: "/project" },
+				mockRegistry,
+			);
 
 			await service.sendMessage("Hello", { cwd: "/project" });
 
@@ -289,7 +300,10 @@ describe("AIService", () => {
 		});
 
 		it("should not re-inject context on subsequent messages", async () => {
-			const service = new AIService({ client: mockClient }, mockRegistry);
+			const service = new AIService(
+				{ client: mockClient, cwd: "/project" },
+				mockRegistry,
+			);
 
 			await service.sendMessage("Hello", { cwd: "/project" });
 			vi.mocked(buildSystemPrompt).mockClear();
@@ -300,10 +314,13 @@ describe("AIService", () => {
 		});
 
 		it("should detect project type from cwd", async () => {
-			const service = new AIService({ client: mockClient }, mockRegistry);
+			// 项目类型在构造函数中检测，而不是在每次 sendMessage 时
+			const service = new AIService(
+				{ client: mockClient, cwd: "/my-project" },
+				mockRegistry,
+			);
 
-			await service.sendMessage("Hello", { cwd: "/my-project" });
-
+			// detectProjectType 在构造函数中被调用
 			expect(detectProjectType).toHaveBeenCalledWith("/my-project");
 		});
 	});

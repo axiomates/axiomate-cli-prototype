@@ -70,7 +70,7 @@ vi.mock("../../../../source/services/tools/discoverers/docker.js", () => ({
 		Promise.resolve({ id: "docker", installed: false }),
 	),
 	detectDockerCompose: vi.fn(() =>
-		Promise.resolve({ id: "docker-compose", installed: false }),
+		Promise.resolve({ id: "dockercompose", installed: false }),
 	),
 }));
 

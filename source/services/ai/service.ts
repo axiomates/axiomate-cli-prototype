@@ -17,8 +17,9 @@ import type {
 	AskUserCallback,
 	ToolMaskState,
 	IToolMatcher,
+	ProjectType,
 } from "./types.js";
-import type { IToolRegistry } from "../tools/types.js";
+import type { IToolRegistry, DiscoveredTool } from "../tools/types.js";
 import { toOpenAITools } from "./adapters/openai.js";
 import { ToolCallHandler } from "./tool-call-handler.js";
 import { ToolMatcher, detectProjectType } from "../tools/matcher.js";
@@ -34,6 +35,10 @@ import {
 import { estimateTokens } from "./tokenEstimator.js";
 import { stableStringify } from "../../utils/json.js";
 import { buildToolMask } from "./toolMask.js";
+import {
+	currentModelSupportsToolChoice,
+	currentModelSupportsPrefill,
+} from "../../utils/config.js";
 
 /**
  * 默认上下文窗口大小
@@ -64,6 +69,11 @@ export class AIService implements IAIService {
 	private contextAwareEnabled: boolean;
 	private contextInjected: boolean = false;
 
+	// 两阶段冻结的工具集
+	private platformTools: DiscoveredTool[]; // 版本A
+	private projectTools: DiscoveredTool[]; // 版本B
+	private projectType: ProjectType | undefined; // 固定的项目类型
+
 	constructor(config: AIServiceConfig, registry: IToolRegistry) {
 		this.client = config.client;
 		this.registry = registry;
@@ -77,6 +87,19 @@ export class AIService implements IAIService {
 		this.session = new Session({
 			contextWindow: config.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
 		});
+
+		// 初始化时检测并固定项目类型
+		if (config.cwd) {
+			this.projectType = detectProjectType(config.cwd);
+		}
+
+		// 冻结两个版本的工具集
+		this.registry.freezePlatformTools();
+		this.registry.freezeProjectTools(this.projectType);
+
+		// 获取两个版本的工具
+		this.platformTools = this.registry.getPlatformTools();
+		this.projectTools = this.registry.getProjectTools();
 	}
 
 	/**
@@ -178,8 +201,8 @@ export class AIService implements IAIService {
 		userMessage: string,
 		context?: MatchContext,
 	): Promise<string> {
-		// 增强上下文
-		const enhancedContext = this.enhanceContext(context);
+		// 获取带有固定项目类型的上下文
+		const enhancedContext = this.getContextWithProjectType(context);
 
 		// 确保上下文已注入到 System Prompt
 		this.ensureContextInSystemPrompt(enhancedContext);
@@ -200,8 +223,8 @@ export class AIService implements IAIService {
 		userMessage: string,
 		context?: MatchContext,
 	): Promise<SendMessageResult> {
-		// 增强上下文
-		const enhancedContext = this.enhanceContext(context);
+		// 获取带有固定项目类型的上下文
+		const enhancedContext = this.getContextWithProjectType(context);
 
 		// 确保上下文已注入到 System Prompt
 		this.ensureContextInSystemPrompt(enhancedContext);
@@ -235,8 +258,8 @@ export class AIService implements IAIService {
 		onAskUser?: AskUserCallback,
 		displayContent?: string,
 	): Promise<string> {
-		// 增强上下文
-		const enhancedContext = this.enhanceContext(context);
+		// 获取带有固定项目类型的上下文
+		const enhancedContext = this.getContextWithProjectType(context);
 
 		// Extract planMode from options (default false)
 		const initialPlanMode = options?.planMode ?? false;
@@ -254,12 +277,21 @@ export class AIService implements IAIService {
 		// 添加用户消息到 Session（传递 displayContent 用于会话恢复时显示）
 		this.session.addUserMessage(messageWithReminder, displayContent);
 
-		// 构建工具遮蔽状态（需要先构建，因为可能影响工具列表）
+		// 判断工具来源：tool_choice/prefill 使用 platform，动态使用 project
+		const supportsToolChoice = currentModelSupportsToolChoice();
+		const supportsPrefill = currentModelSupportsPrefill();
+		const toolSource =
+			supportsToolChoice || supportsPrefill ? "platform" : "project";
+		const availableTools =
+			toolSource === "platform" ? this.platformTools : this.projectTools;
+
+		// 构建工具遮蔽状态
 		const toolMask = buildToolMask(
 			userMessage,
-			enhancedContext,
+			this.projectType,
 			initialPlanMode,
-			this.registry.isFrozen() ? this.registry.getFrozenTools() : [],
+			toolSource,
+			availableTools,
 		);
 
 		// 获取相关工具（根据 toolMask 决定是冻结列表还是动态过滤）
@@ -314,10 +346,11 @@ export class AIService implements IAIService {
 
 	/**
 	 * 获取上下文相关工具
-	 * 当工具已冻结时，始终返回完整的冻结工具列表（优化 KV cache）
-	 * 未冻结时（加载中），使用原有的 context-aware 选择逻辑
+	 * 根据模型能力使用不同的工具集：
+	 * - tool_choice/prefill 模式：使用版本A（平台工具集）
+	 * - 动态模式：使用版本B（项目工具集） + 动态过滤
 	 * @param context 上下文信息
-	 * @param toolMask 工具遮蔽状态（可选，用于 fallback 模式）
+	 * @param toolMask 工具遮蔽状态（可选）
 	 */
 	private getContextTools(
 		context: MatchContext,
@@ -328,50 +361,26 @@ export class AIService implements IAIService {
 			return [];
 		}
 
-		// 如果需要动态 fallback（模型不支持 tool_choice 和 prefill）
-		// 则根据 allowedTools 过滤工具列表
-		if (toolMask?.useDynamicFallback && this.registry.isFrozen()) {
-			const allowedIds = toolMask.allowedTools;
-			const filteredTools = this.registry
-				.getFrozenTools()
-				.filter((t) => allowedIds.has(t.id));
-			return toOpenAITools(filteredTools);
+		const supportsToolChoice = currentModelSupportsToolChoice();
+		const supportsPrefill = currentModelSupportsPrefill();
+
+		if (supportsToolChoice || supportsPrefill) {
+			// 方法1 & 2：使用版本A（平台工具集）
+			// tool_choice 或 prefill 模式，发送完整的核心工具列表
+			return toOpenAITools(this.platformTools);
+		} else {
+			// 方法3：使用版本B（项目工具集） + 动态过滤
+			// 动态模式，根据 allowedTools 过滤工具列表
+			if (toolMask?.useDynamicFallback) {
+				const allowedIds = toolMask.allowedTools;
+				const filteredTools = this.projectTools.filter((t) =>
+					allowedIds.has(t.id),
+				);
+				return toOpenAITools(filteredTools);
+			}
+			// 如果没有 toolMask，返回完整的项目工具集
+			return toOpenAITools(this.projectTools);
 		}
-
-		// 正常情况：使用冻结的完整工具列表（如果可用）
-		if (this.registry.isFrozen()) {
-			return toOpenAITools(this.registry.getFrozenTools());
-		}
-
-		// 1. 根据项目类型和文件自动选择工具
-		const autoSelectedTools = this.matcher.autoSelect(context);
-
-		// 2. 根据用户消息关键词匹配工具（使用 cwd 作为 query 的一部分不太合适，暂时跳过）
-		// 可以从 session 获取最后一条用户消息
-		const history = this.session.getHistory();
-		const lastUserMsg = [...history].reverse().find((m) => m.role === "user");
-		const queryMatches = lastUserMsg
-			? this.matcher.match(lastUserMsg.content, context)
-			: [];
-
-		// 3. 合并工具，去重
-		const toolIds = new Set<string>();
-		for (const tool of autoSelectedTools) {
-			toolIds.add(tool.id);
-		}
-		for (const match of queryMatches.slice(0, 10)) {
-			toolIds.add(match.tool.id);
-		}
-
-		// 4. 转换为 OpenAI 工具格式（按 ID 排序以稳定顺序，提高 KV 缓存命中率）
-		const filteredTools = Array.from(toolIds)
-			.sort()
-			.map((id) => this.registry.getTool(id))
-			.filter(
-				(t): t is NonNullable<typeof t> => t !== undefined && t.installed,
-			);
-
-		return toOpenAITools(filteredTools);
 	}
 
 	/**
@@ -570,17 +579,13 @@ export class AIService implements IAIService {
 	}
 
 	/**
-	 * 增强上下文信息
+	 * 获取带有固定项目类型的上下文
 	 */
-	private enhanceContext(context?: MatchContext): MatchContext {
-		const enhanced: MatchContext = { ...context };
-
-		// 自动检测项目类型
-		if (this.contextAwareEnabled && enhanced.cwd && !enhanced.projectType) {
-			enhanced.projectType = detectProjectType(enhanced.cwd);
-		}
-
-		return enhanced;
+	private getContextWithProjectType(context?: MatchContext): MatchContext {
+		return {
+			...context,
+			projectType: this.projectType || context?.projectType,
+		};
 	}
 
 	/**

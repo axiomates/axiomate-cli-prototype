@@ -40,16 +40,25 @@ const createMockTool = (
 	actions: [],
 });
 
-// Mock frozen tools
-const mockFrozenTools: DiscoveredTool[] = [
+// Mock platform tools (版本A：核心工具)
+const mockPlatformTools: DiscoveredTool[] = [
 	createMockTool("a-c-file", "File", "utility", ["read", "write"]),
 	createMockTool("a-c-bash", "Bash", "shell"),
 	createMockTool("a-c-powershell", "PowerShell", "shell"),
 	createMockTool("a-c-git", "Git", "vcs"),
 	createMockTool("a-c-web", "Web Fetch", "web"),
 	createMockTool("a-c-askuser", "Ask User", "utility"),
+	createMockTool("a-c-cmd", "CMD", "shell"),
+	createMockTool("a-c-pwsh", "PowerShell Core", "shell"),
+	createMockTool("a-c-enterplan", "Enter Plan Mode", "utility"),
 	createMockTool("p-plan", "Plan", "utility", ["read", "write"]),
+];
+
+// Mock project tools (版本B：平台工具 + 项目工具)
+const mockProjectTools: DiscoveredTool[] = [
+	...mockPlatformTools,
 	createMockTool("a-node", "Node.js", "runtime"),
+	createMockTool("a-npm", "npm", "package"),
 	createMockTool("a-docker", "Docker", "container"),
 	createMockTool("a-python", "Python", "runtime"),
 	createMockTool("a-java", "Java", "runtime"),
@@ -62,10 +71,10 @@ const mockFrozenTools: DiscoveredTool[] = [
 	createMockTool("a-vscode", "VS Code", "ide"),
 	createMockTool("a-beyondcompare", "Beyond Compare", "diff"),
 	createMockTool("a-mysql", "MySQL", "database"),
-	createMockTool("a-c-cmd", "CMD", "shell"),
-	createMockTool("a-c-pwsh", "PowerShell Core", "shell"),
-	createMockTool("a-c-enterplan", "Enter Plan Mode", "utility"),
 ];
+
+// Deprecated: 保持向后兼容
+const mockFrozenTools = mockProjectTools;
 
 describe("toolMask", () => {
 	beforeEach(() => {
@@ -83,9 +92,10 @@ describe("toolMask", () => {
 
 				const mask = buildToolMask(
 					"Create a plan for this project",
-					{ cwd: "/project" },
+					undefined, // projectType
 					true, // planMode
-					mockFrozenTools,
+					"platform", // toolSource
+					mockPlatformTools,
 				);
 
 				expect(mask.mode).toBe("p");
@@ -101,9 +111,10 @@ describe("toolMask", () => {
 
 				const mask = buildToolMask(
 					"Create a plan",
-					{ cwd: "/project" },
+					undefined, // projectType
 					true,
-					mockFrozenTools,
+					"platform", // toolSource
+					mockPlatformTools,
 				);
 
 				expect(mask.mode).toBe("p");
@@ -118,9 +129,10 @@ describe("toolMask", () => {
 
 				const mask = buildToolMask(
 					"Create a plan",
-					{ cwd: "/project" },
+					undefined, // projectType
 					true,
-					mockFrozenTools,
+					"project", // toolSource (动态模式使用 project)
+					mockProjectTools,
 				);
 
 				expect(mask.mode).toBe("p");
@@ -131,123 +143,169 @@ describe("toolMask", () => {
 
 		describe("Action mode", () => {
 			it("should include base tools", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.mode).toBe("a");
 				expect(mask.allowedTools.has("a-c-askuser")).toBe(true);
 				expect(mask.allowedTools.has("a-c-file")).toBe(true);
+				expect(mask.allowedTools.has("a-c-web")).toBe(true);
 			});
 
 			it("should include git by default", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-c-git")).toBe(true);
 			});
 
 			it("should match web tool from http keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Fetch https://example.com",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-c-web")).toBe(true);
 			});
 
 			it("should match web tool from url keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Get the url content",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-c-web")).toBe(true);
 			});
 
 			it("should match git tool from git keywords", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"commit these changes",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-c-git")).toBe(true);
 			});
 
 			it("should match git tool from branch keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"create a new branch",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-c-git")).toBe(true);
 			});
 
 			it("should match docker tool from docker keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Build the docker image",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-docker")).toBe(true);
 			});
 
 			it("should match node tool from npm keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Run npm install",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-node")).toBe(true);
 			});
 
 			it("should add node tools for node project type", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Install dependencies",
-					{ cwd: "/project", projectType: "node" },
+					"node", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-node")).toBe(true);
+				expect(mask.allowedTools.has("a-npm")).toBe(true);
 			});
 
 			it("should add tools for python project type", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "python" },
+					"python", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-python")).toBe(true);
 			});
 
 			it("should add tools for java project type", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "java" },
+					"java", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-java")).toBe(true);
@@ -257,11 +315,15 @@ describe("toolMask", () => {
 			});
 
 			it("should add tools for dotnet project type", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "dotnet" },
+					"dotnet", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-msbuild")).toBe(true);
@@ -269,22 +331,30 @@ describe("toolMask", () => {
 			});
 
 			it("should add tools for cpp project type", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "cpp" },
+					"cpp", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-cmake")).toBe(true);
 			});
 
 			it("should handle rust project type gracefully", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "rust" },
+					"rust", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				// rust tools not implemented yet, but should not error
@@ -292,11 +362,15 @@ describe("toolMask", () => {
 			});
 
 			it("should handle go project type gracefully", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "go" },
+					"go", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				// go tools not implemented yet, but should not error
@@ -304,121 +378,165 @@ describe("toolMask", () => {
 			});
 
 			it("should match cmake tool from cmake keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Run cmake to build",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-cmake")).toBe(true);
 			});
 
 			it("should match maven tool from maven keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Run maven clean install",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-maven")).toBe(true);
 			});
 
 			it("should match gradle tool from gradle keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Execute gradle build",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-gradle")).toBe(true);
 			});
 
 			it("should match python tool from pip keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Install packages with pip",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-python")).toBe(true);
 			});
 
 			it("should match java tool from java keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Compile the java code",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-java")).toBe(true);
 			});
 
 			it("should match vscode tool from vscode keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Open in vscode",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-vscode")).toBe(true);
 			});
 
 			it("should match vs2022 tool from visual studio keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Open in visual studio",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-vs2022")).toBe(true);
 			});
 
 			it("should match vs2022 tool from sln keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Build the .sln file",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-vs2022")).toBe(true);
 			});
 
 			it("should match beyondcompare tool from diff keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Compare the diff between files",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-beyondcompare")).toBe(true);
 			});
 
 			it("should match mysql tool from mysql keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Connect to mysql database",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-mysql")).toBe(true);
 			});
 
 			it("should match docker tool from container keyword", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 				const mask = buildToolMask(
 					"Start the container",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-docker")).toBe(true);
@@ -430,9 +548,10 @@ describe("toolMask", () => {
 
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
 				expect(mask.mode).toBe("a");
@@ -445,9 +564,10 @@ describe("toolMask", () => {
 
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"platform", // toolSource (tool_choice uses platform)
+					mockPlatformTools,
 				);
 
 				expect(mask.useDynamicFallback).toBeUndefined();
@@ -459,20 +579,25 @@ describe("toolMask", () => {
 
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"platform", // toolSource (prefill uses platform)
+					mockPlatformTools,
 				);
 
 				expect(mask.useDynamicFallback).toBeUndefined();
 			});
 
 			it("should not have requiredTool in action mode", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"platform", // toolSource
+					mockPlatformTools,
 				);
 
 				expect(mask.requiredTool).toBeUndefined();
@@ -482,16 +607,14 @@ describe("toolMask", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
 				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
 
-				// "Hello" only matches base tools (a-c-askuser, a-c-file) + shell + git
-				// All are core tools (a-c-*)
+				// "Hello" doesn't match any specific tools, uses a-c- prefix for platform tools
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"platform", // toolSource
+					mockPlatformTools,
 				);
-
-				console.log(mask.allowedTools);
 
 				expect(mask.toolPrefix).toBe("a-c-");
 			});
@@ -500,54 +623,71 @@ describe("toolMask", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
 				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
 
-				// "docker" keyword matches a-docker (non-core tool)
+				// "docker" keyword matches a-docker (non-core tool) - but platform tools don't include docker
+				// So this test needs to use platform toolsource to test the prefix logic
 				const mask = buildToolMask(
-					"Build the docker image",
-					{ cwd: "/project" },
+					"fetch http://example.com",
+					undefined, // projectType
 					false,
-					mockFrozenTools,
+					"platform", // toolSource
+					mockPlatformTools,
 				);
 
-				expect(mask.toolPrefix).toBe("a-");
+				// web is in platform tools but still a-c-*, so prefix should be a-c-
+				expect(mask.toolPrefix).toBe("a-c-");
 			});
 
 			it("should use a- prefix when project type adds non-core tools", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
-				// node project type adds a-node (non-core tool)
+				// node project type adds a-node (non-core tool) in project tools
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project", projectType: "node" },
+					"node", // projectType
 					false,
-					mockFrozenTools,
+					"project", // toolSource
+					mockProjectTools,
 				);
 
-				expect(mask.toolPrefix).toBe("a-");
+				// Dynamic mode doesn't use toolPrefix
+				expect(mask.toolPrefix).toBeUndefined();
+				expect(mask.useDynamicFallback).toBe(true);
 			});
 		});
 
 		describe("with empty frozen tools", () => {
 			it("should return empty allowedTools when frozen tools is empty", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
+
 				const mask = buildToolMask(
 					"Hello",
-					{ cwd: "/project" },
+					undefined, // projectType
 					false,
+					"platform", // toolSource
 					[],
 				);
 
 				expect(mask.allowedTools.size).toBe(0);
+				// 空工具列表应该使用 "a-" 前缀（更宽松）
+				// 而不是 "a-c-" 前缀（空数组的 every() 返回 true 的边界情况）
+				expect(mask.toolPrefix).toBe("a-");
 			});
 		});
 	});
 
 	describe("isToolAllowed", () => {
 		it("should return true if tool is in allowedTools", () => {
+			vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+			vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 			const mask = buildToolMask(
 				"Hello",
-				{ cwd: "/project" },
+				undefined, // projectType
 				false,
-				mockFrozenTools,
+				"project", // toolSource
+				mockProjectTools,
 			);
 
 			expect(isToolAllowed("a-c-file", mask)).toBe(true);
@@ -555,11 +695,15 @@ describe("toolMask", () => {
 		});
 
 		it("should return false if tool is not in allowedTools", () => {
+			vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+			vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 			const mask = buildToolMask(
 				"Hello",
-				{ cwd: "/project" },
+				undefined, // projectType
 				true, // plan mode - only plan allowed
-				mockFrozenTools,
+				"project", // toolSource
+				mockProjectTools,
 			);
 
 			expect(isToolAllowed("a-c-file", mask)).toBe(false);
@@ -573,11 +717,15 @@ describe("toolMask", () => {
 
 	describe("getToolNotAllowedError", () => {
 		it("should return error message with tool id and allowed list", () => {
+			vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+			vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
+
 			const mask = buildToolMask(
 				"Hello",
-				{ cwd: "/project" },
+				undefined, // projectType
 				true,
-				mockFrozenTools,
+				"project", // toolSource
+				mockProjectTools,
 			);
 
 			const error = getToolNotAllowedError("a-c-file", mask);

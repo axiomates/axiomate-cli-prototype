@@ -140,10 +140,13 @@ export function createAIClient(model: ModelConfig): IAIClient | null {
 /**
  * 创建 AI 服务实例（使用当前配置）
  *
+ * @param registry 工具注册表
+ * @param cwd 当前工作目录（用于项目类型检测）
  * @returns AI 服务实例，如果配置无效则返回 null
  */
 export function createAIServiceFromConfig(
 	registry: IToolRegistry,
+	cwd?: string,
 ): IAIService | null {
 	if (!isApiConfigValid()) {
 		return null;
@@ -170,6 +173,8 @@ export function createAIServiceFromConfig(
 			maxToolCallRounds: 40,
 			// 使用模型的上下文窗口大小
 			contextWindow: model.contextWindow,
+			// 传递当前工作目录
+			cwd: cwd || process.cwd(),
 		},
 		registry,
 	);

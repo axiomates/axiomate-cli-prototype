@@ -127,7 +127,7 @@ describe("docker discoverer", () => {
 			const result = await detectDockerCompose();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("a-docker-compose");
+			expect(result.id).toBe("a-dockercompose");
 		});
 
 		it("should return installed tool when docker compose exists", async () => {

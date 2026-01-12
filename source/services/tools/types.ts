@@ -103,4 +103,16 @@ export type IToolRegistry = {
 	getFrozenTools: () => DiscoveredTool[];
 	// 检查是否已冻结
 	isFrozen: () => boolean;
+	// 冻结平台工具集（版本A：核心工具）
+	freezePlatformTools: () => void;
+	// 冻结项目工具集（版本B：核心工具 + 项目工具）
+	freezeProjectTools: (projectType?: string) => void;
+	// 获取平台工具集
+	getPlatformTools: () => DiscoveredTool[];
+	// 获取项目工具集
+	getProjectTools: () => DiscoveredTool[];
+	// 检查是否已冻结平台工具
+	isPlatformFrozen: () => boolean;
+	// 检查是否已冻结项目工具
+	isProjectFrozen: () => boolean;
 };

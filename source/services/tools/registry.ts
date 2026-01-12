@@ -18,6 +18,7 @@ import {
 	discoverExternalTools,
 } from "./discoverers/index.js";
 import { t } from "../../i18n/index.js";
+import { getToolsForProjectType } from "../ai/toolMask.js";
 
 // 工具发现状态
 export type DiscoveryStatus = "pending" | "discovering" | "completed";
@@ -32,6 +33,8 @@ export class ToolRegistry implements IToolRegistry {
 	private _discoveryStatus: DiscoveryStatus = "pending";
 	private _discoveryCallbacks: DiscoveryCallback[] = [];
 	private _frozenTools: DiscoveredTool[] | null = null;
+	private _platformTools: DiscoveredTool[] | null = null;
+	private _projectTools: DiscoveredTool[] | null = null;
 
 	/**
 	 * 同步注册内置工具（瞬间完成）
@@ -216,6 +219,88 @@ export class ToolRegistry implements IToolRegistry {
 	 */
 	isFrozen(): boolean {
 		return this._frozenTools !== null;
+	}
+
+	/**
+	 * 冻结平台工具集（版本A）
+	 * 只包含核心工具：askuser, file, web, git, shell, enterplan, plan
+	 */
+	freezePlatformTools(): void {
+		if (this._platformTools) return; // 已冻结
+
+		// 核心工具 ID 列表
+		const coreToolIds = new Set([
+			"a-c-askuser",
+			"a-c-file",
+			"a-c-web",
+			"a-c-git",
+			"a-c-bash",
+			"a-c-powershell",
+			"a-c-cmd",
+			"a-c-pwsh",
+			"a-c-enterplan",
+			"p-plan",
+		]);
+
+		this._platformTools = Array.from(this.tools.values())
+			.filter((tool) => tool.installed && coreToolIds.has(tool.id))
+			.sort((a, b) => a.id.localeCompare(b.id));
+	}
+
+	/**
+	 * 冻结项目工具集（版本B）
+	 * 版本A + 根据项目类型添加的工具
+	 */
+	freezeProjectTools(projectType?: string): void {
+		if (this._projectTools) return; // 已冻结
+
+		// 确保平台工具已冻结
+		if (!this._platformTools) {
+			this.freezePlatformTools();
+		}
+
+		// 获取项目类型对应的工具 ID
+		const projectToolIds = getToolsForProjectType(projectType);
+
+		// 版本B = 版本A + 项目工具
+		const projectToolsOnly = Array.from(this.tools.values()).filter(
+			(tool) =>
+				tool.installed &&
+				projectToolIds.has(tool.id) &&
+				!this._platformTools!.some((pt) => pt.id === tool.id),
+		);
+
+		this._projectTools = [...this._platformTools!, ...projectToolsOnly].sort(
+			(a, b) => a.id.localeCompare(b.id),
+		);
+	}
+
+	/**
+	 * 获取平台工具集
+	 */
+	getPlatformTools(): DiscoveredTool[] {
+		return this._platformTools ?? [];
+	}
+
+	/**
+	 * 获取项目工具集
+	 */
+	getProjectTools(): DiscoveredTool[] {
+		return this._projectTools ?? [];
+	}
+
+	/**
+	 * 检查是否已冻结平台工具
+	 */
+	isPlatformFrozen(): boolean {
+		return this._platformTools !== null;
+	}
+
+	/**
+	 * 检查是否已冻结项目工具
+	 */
+	isProjectFrozen(): boolean {
+		return this._projectTools !== null;
 	}
 
 	/**
