@@ -234,30 +234,73 @@ export function buildToolMask(
 			return {
 				mode: "p",
 				allowedTools: new Set(["p-plan"]),
-				useDynamicFallback: true,
+				useDynamicFiltering: true,
 			};
 		}
 	}
 
-	// Action 模式：根据工具源构建不同的遮蔽策略
-	const supportsToolChoice = currentModelSupportsToolChoice();
-	const supportsPrefill = currentModelSupportsPrefill();
+	// Action 模式：构建允许的工具集（两种模式共享相同的工具收集逻辑）
+	const allowedTools = new Set<string>();
 
-	// 对于 platform 模式（tool_choice 和 prefill），只需要判断前缀
+	// 1. 添加基础工具
+	for (const toolId of BASE_TOOLS) {
+		if (availableToolIds.has(toolId)) {
+			allowedTools.add(toolId);
+		}
+	}
+
+	// 2. 添加平台 shell 工具
+	const shellTool = getPlatformShellTool();
+	if (availableToolIds.has(shellTool)) {
+		allowedTools.add(shellTool);
+	}
+	// 备选 shell（Windows 平台）
+	if (platform() === "win32") {
+		if (availableToolIds.has("a-c-cmd")) {
+			allowedTools.add("a-c-cmd");
+		}
+		if (availableToolIds.has("a-c-pwsh")) {
+			allowedTools.add("a-c-pwsh");
+		}
+	}
+
+	// 3. 根据项目类型添加工具
+	const projectTools = getToolsForProjectType(projectType);
+	for (const toolId of projectTools) {
+		if (availableToolIds.has(toolId)) {
+			allowedTools.add(toolId);
+		}
+	}
+
+	// 4. 根据用户输入匹配工具
+	const inputMatched = matchToolsByInput(input);
+	for (const toolId of inputMatched) {
+		if (availableToolIds.has(toolId)) {
+			allowedTools.add(toolId);
+		}
+	}
+
+	// 5. 添加 git 工具（常用工具）
+	if (availableToolIds.has("a-c-git")) {
+		allowedTools.add("a-c-git");
+	}
+
+	// 6. 添加进入 Plan 模式的工具
+	if (availableToolIds.has("a-c-enterplan")) {
+		allowedTools.add("a-c-enterplan");
+	}
+
+	// 根据工具源返回不同的遮蔽状态
 	if (toolSource === "platform") {
-		// 版本A：平台工具集，只判断 p- / a- / a-c- 前缀
-		const inputMatched = matchToolsByInput(input);
+		// platform 模式（tool_choice 或 prefill）：
+		// 工具列表已固定（版本A），通过 API 参数约束
+		const supportsPrefill = currentModelSupportsPrefill();
 
-		// 判断是否只匹配到核心工具
-		// 特殊处理：如果没有可用工具，使用更宽松的 "a-" 前缀
+		// 判断是否所有允许的工具都是核心工具（a-c- 前缀）
+		// 如果是，使用 a-c- 前缀；否则使用 a- 前缀
 		const onlyCoreTools =
-			availableToolIds.size > 0 &&
-			(inputMatched.size === 0 ||
-				[...inputMatched].every((id) => id.startsWith("a-c-")));
-
-		// 构建 allowedTools（用于兜底验证）
-		// 平台工具都是核心工具，直接使用所有可用工具
-		const allowedTools = new Set(availableToolIds);
+			allowedTools.size > 0 &&
+			[...allowedTools].every((id) => id.startsWith("a-c-"));
 
 		return {
 			mode: "a",
@@ -268,62 +311,13 @@ export function buildToolMask(
 		};
 	}
 
-	// 对于 project 模式（动态），需要详细过滤工具列表
 	if (toolSource === "project") {
-		const allowedTools = new Set<string>();
-
-		// 1. 添加基础工具
-		for (const toolId of BASE_TOOLS) {
-			if (availableToolIds.has(toolId)) {
-				allowedTools.add(toolId);
-			}
-		}
-
-		// 2. 添加平台 shell 工具
-		const shellTool = getPlatformShellTool();
-		if (availableToolIds.has(shellTool)) {
-			allowedTools.add(shellTool);
-		}
-		// 备选 shell
-		if (platform() === "win32") {
-			if (availableToolIds.has("a-c-cmd")) {
-				allowedTools.add("a-c-cmd");
-			}
-			if (availableToolIds.has("a-c-pwsh")) {
-				allowedTools.add("a-c-pwsh");
-			}
-		}
-
-		// 3. 根据项目类型添加工具
-		const projectTools = getToolsForProjectType(projectType);
-		for (const toolId of projectTools) {
-			if (availableToolIds.has(toolId)) {
-				allowedTools.add(toolId);
-			}
-		}
-
-		// 4. 根据用户输入匹配工具
-		const inputMatched = matchToolsByInput(input);
-		for (const toolId of inputMatched) {
-			if (availableToolIds.has(toolId)) {
-				allowedTools.add(toolId);
-			}
-		}
-
-		// 5. 添加 git 工具（常用工具）
-		if (availableToolIds.has("a-c-git")) {
-			allowedTools.add("a-c-git");
-		}
-
-		// 6. 添加进入 Plan 模式的工具
-		if (availableToolIds.has("a-c-enterplan")) {
-			allowedTools.add("a-c-enterplan");
-		}
-
+		// project 模式（动态过滤）：
+		// 工具列表动态过滤（版本B），通过修改发送的工具约束
 		return {
 			mode: "a",
 			allowedTools,
-			useDynamicFallback: true,
+			useDynamicFiltering: true,
 		};
 	}
 

@@ -19,6 +19,7 @@ import {
 } from "./discoverers/index.js";
 import { t } from "../../i18n/index.js";
 import { getToolsForProjectType } from "../ai/toolMask.js";
+import { platform } from "node:os";
 
 // 工具发现状态
 export type DiscoveryStatus = "pending" | "discovering" | "completed";
@@ -224,22 +225,37 @@ export class ToolRegistry implements IToolRegistry {
 	/**
 	 * 冻结平台工具集（版本A）
 	 * 只包含核心工具：askuser, file, web, git, shell, enterplan, plan
+	 * 注意：只包含当前平台可用的 shell 工具
 	 */
 	freezePlatformTools(): void {
 		if (this._platformTools) return; // 已冻结
 
-		// 核心工具 ID 列表
-		const coreToolIds = new Set([
+		// 基础核心工具（不包含 shell）
+		const baseCoreToolIds = new Set([
 			"a-c-askuser",
 			"a-c-file",
 			"a-c-web",
 			"a-c-git",
-			"a-c-bash",
-			"a-c-powershell",
-			"a-c-cmd",
-			"a-c-pwsh",
 			"a-c-enterplan",
 			"p-plan",
+		]);
+
+		// 根据当前平台添加 shell 工具
+		const platformShellTools = new Set<string>();
+		if (platform() === "win32") {
+			// Windows 平台：powershell, pwsh, cmd
+			platformShellTools.add("a-c-powershell");
+			platformShellTools.add("a-c-pwsh");
+			platformShellTools.add("a-c-cmd");
+		} else {
+			// Unix/Linux/macOS 平台：bash
+			platformShellTools.add("a-c-bash");
+		}
+
+		// 合并基础工具和平台 shell 工具
+		const coreToolIds = new Set([
+			...baseCoreToolIds,
+			...platformShellTools,
 		]);
 
 		this._platformTools = Array.from(this.tools.values())

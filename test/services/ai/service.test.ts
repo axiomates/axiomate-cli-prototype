@@ -296,7 +296,9 @@ describe("AIService", () => {
 
 			await service.sendMessage("Hello", { cwd: "/project" });
 
-			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node");
+			// buildSystemPrompt 现在接受第三个参数 supportsTools
+			// 默认 contextAwareEnabled = true
+			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node", true);
 		});
 
 		it("should not re-inject context on subsequent messages", async () => {
@@ -311,6 +313,22 @@ describe("AIService", () => {
 			await service.sendMessage("World", { cwd: "/project" });
 
 			expect(buildSystemPrompt).not.toHaveBeenCalled();
+		});
+
+		it("should pass supportsTools=false to buildSystemPrompt when contextAwareEnabled is false", async () => {
+			const service = new AIService(
+				{
+					client: mockClient,
+					cwd: "/project",
+					contextAwareEnabled: false,
+				},
+				mockRegistry,
+			);
+
+			await service.sendMessage("Hello", { cwd: "/project" });
+
+			// 当 contextAwareEnabled = false 时，supportsTools 应该是 false
+			expect(buildSystemPrompt).toHaveBeenCalledWith("/project", "node", false);
 		});
 
 		it("should detect project type from cwd", async () => {

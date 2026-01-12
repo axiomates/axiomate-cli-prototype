@@ -277,25 +277,31 @@ export class AIService implements IAIService {
 		// 添加用户消息到 Session（传递 displayContent 用于会话恢复时显示）
 		this.session.addUserMessage(messageWithReminder, displayContent);
 
-		// 判断工具来源：tool_choice/prefill 使用 platform，动态使用 project
-		const supportsToolChoice = currentModelSupportsToolChoice();
-		const supportsPrefill = currentModelSupportsPrefill();
-		const toolSource =
-			supportsToolChoice || supportsPrefill ? "platform" : "project";
-		const availableTools =
-			toolSource === "platform" ? this.platformTools : this.projectTools;
+		// 工具相关计算（仅在模型支持工具时执行）
+		let toolMask: ToolMaskState | undefined;
+		let tools: OpenAITool[] = [];
 
-		// 构建工具遮蔽状态
-		const toolMask = buildToolMask(
-			userMessage,
-			this.projectType,
-			initialPlanMode,
-			toolSource,
-			availableTools,
-		);
+		if (this.contextAwareEnabled) {
+			// 判断工具来源：tool_choice/prefill 使用 platform，动态使用 project
+			const supportsToolChoice = currentModelSupportsToolChoice();
+			const supportsPrefill = currentModelSupportsPrefill();
+			const toolSource =
+				supportsToolChoice || supportsPrefill ? "platform" : "project";
+			const availableTools =
+				toolSource === "platform" ? this.platformTools : this.projectTools;
 
-		// 获取相关工具（根据 toolMask 决定是冻结列表还是动态过滤）
-		const tools = this.getContextTools(enhancedContext, toolMask);
+			// 构建工具遮蔽状态
+			toolMask = buildToolMask(
+				userMessage,
+				this.projectType,
+				initialPlanMode,
+				toolSource,
+				availableTools,
+			);
+
+			// 获取相关工具（根据 toolMask 决定是冻结列表还是动态过滤）
+			tools = this.getContextTools(enhancedContext, toolMask);
+		}
 
 		// 将 toolMask 添加到 options 中
 		const optionsWithMask: StreamOptions = {
@@ -339,7 +345,12 @@ export class AIService implements IAIService {
 		if (this.contextInjected) return;
 
 		// 构建带上下文的 System Prompt（不包含 planMode，保持稳定）
-		const prompt = buildSystemPrompt(context.cwd, context.projectType);
+		// 根据模型能力决定是否包含工具相关说明
+		const prompt = buildSystemPrompt(
+			context.cwd,
+			context.projectType,
+			this.contextAwareEnabled,
+		);
 		this.session.setSystemPrompt(prompt);
 		this.contextInjected = true;
 	}
@@ -370,16 +381,19 @@ export class AIService implements IAIService {
 			return toOpenAITools(this.platformTools);
 		} else {
 			// 方法3：使用版本B（项目工具集） + 动态过滤
-			// 动态模式，根据 allowedTools 过滤工具列表
-			if (toolMask?.useDynamicFallback) {
-				const allowedIds = toolMask.allowedTools;
-				const filteredTools = this.projectTools.filter((t) =>
-					allowedIds.has(t.id),
-				);
-				return toOpenAITools(filteredTools);
+			// 动态模式必须提供 toolMask 和 useDynamicFiltering
+			if (!toolMask?.useDynamicFiltering) {
+				// 如果没有 toolMask 或不是 dynamic 模式，返回空列表
+				// 这种情况理论上不应该发生，但为了安全起见
+				return [];
 			}
-			// 如果没有 toolMask，返回完整的项目工具集
-			return toOpenAITools(this.projectTools);
+
+			// 根据 allowedTools 过滤工具列表
+			const allowedIds = toolMask.allowedTools;
+			const filteredTools = this.projectTools.filter((t) =>
+				allowedIds.has(t.id),
+			);
+			return toOpenAITools(filteredTools);
 		}
 	}
 

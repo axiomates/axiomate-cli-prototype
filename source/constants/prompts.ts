@@ -9,10 +9,9 @@
  */
 
 /**
- * Unified system prompt - contains instructions for BOTH modes
- * This prompt never changes, maximizing KV cache hits
+ * Base system prompt - common instructions without tool-specific content
  */
-const SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate, a terminal-based development tool.
+const BASE_SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate, a terminal-based development tool.
 
 ## Response Format
 
@@ -22,7 +21,12 @@ const SYSTEM_PROMPT = `You are an AI programming assistant running in axiomate, 
 
 - Provide complete, working code with necessary imports
 - Match existing code style when editing files
-- Reference line numbers when discussing file contents
+- Reference line numbers when discussing file contents`;
+
+/**
+ * Tool-specific instructions (only for models that support tools)
+ */
+const TOOL_INSTRUCTIONS = `
 
 ## Tool Usage
 
@@ -61,7 +65,12 @@ Write plans to: \`.axiomate/plans/plan.md\`
 2. Use \`p-plan_write\` to create the plan file
 3. Call \`p-plan_leave\` to return to Action Mode
 4. Execute each step using available tools
-5. Use \`p-plan_edit\` to mark steps complete: \`- [ ]\` → \`- [x]\`
+5. Use \`p-plan_edit\` to mark steps complete: \`- [ ]\` → \`- [x]\``;
+
+/**
+ * Common instructions at the end
+ */
+const COMMON_SUFFIX = `
 
 ## File Operations
 
@@ -82,19 +91,39 @@ Write plans to: \`.axiomate/plans/plan.md\`
 - When showing errors, also suggest fixes`;
 
 /**
+ * Full system prompt with tools (cached for models that support tools)
+ */
+const SYSTEM_PROMPT_WITH_TOOLS = BASE_SYSTEM_PROMPT + TOOL_INSTRUCTIONS + COMMON_SUFFIX;
+
+/**
+ * System prompt without tools (for models that don't support tools)
+ */
+const SYSTEM_PROMPT_WITHOUT_TOOLS = BASE_SYSTEM_PROMPT + COMMON_SUFFIX;
+
+/**
  * Build system prompt with runtime context
  * Note: planMode parameter removed - mode is now communicated via <system-reminder> in user messages
  * @param cwd Current working directory
  * @param projectType Detected project type
+ * @param supportsTools Whether the model supports tools (default: true for backward compatibility)
  */
-export function buildSystemPrompt(cwd?: string, projectType?: string): string {
+export function buildSystemPrompt(
+	cwd?: string,
+	projectType?: string,
+	supportsTools = true,
+): string {
+	// Choose base prompt based on tool support
+	const basePrompt = supportsTools
+		? SYSTEM_PROMPT_WITH_TOOLS
+		: SYSTEM_PROMPT_WITHOUT_TOOLS;
+
 	if (!cwd) {
-		return SYSTEM_PROMPT;
+		return basePrompt;
 	}
 
 	// Dynamic context appended at the END to maximize prefix cache hits
 	const contextLine = `\n\n## Current Environment\n\n- Working directory: \`${cwd}\`\n- Project type: ${projectType || "unknown"}`;
-	return SYSTEM_PROMPT + contextLine;
+	return basePrompt + contextLine;
 }
 
 // Pre-built mode reminder strings (cached to avoid repeated string construction)
@@ -125,4 +154,5 @@ export function buildModeReminder(planMode: boolean): string {
 }
 
 // Re-export for backward compatibility
-export { SYSTEM_PROMPT };
+// Default to version with tools for existing code
+export const SYSTEM_PROMPT = SYSTEM_PROMPT_WITH_TOOLS;

@@ -373,6 +373,8 @@ export function currentModelSupportsToolChoice(): boolean {
 	const modelId = getCurrentModelId();
 	if (!modelId) return false;
 	const model = getModelById(modelId);
+	// 前提：模型必须支持工具
+	if (!model?.supportsTools) return false;
 	return model?.supportsToolChoice === true;
 }
 
@@ -384,6 +386,8 @@ export function currentModelSupportsPrefill(): boolean {
 	const modelId = getCurrentModelId();
 	if (!modelId) return false;
 	const model = getModelById(modelId);
+	// 前提：模型必须支持工具
+	if (!model?.supportsTools) return false;
 	return model?.supportsPrefill === true;
 }
 

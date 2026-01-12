@@ -102,7 +102,7 @@ describe("toolMask", () => {
 				expect(mask.allowedTools.has("p-plan")).toBe(true);
 				expect(mask.allowedTools.size).toBe(1);
 				expect(mask.toolPrefix).toBe("p-");
-				expect(mask.useDynamicFallback).toBeUndefined();
+				expect(mask.useDynamicFiltering).toBeUndefined();
 			});
 
 			it("should use tool_choice when model supports it", () => {
@@ -120,7 +120,7 @@ describe("toolMask", () => {
 				expect(mask.mode).toBe("p");
 				expect(mask.allowedTools.has("p-plan")).toBe(true);
 				expect(mask.toolPrefix).toBeUndefined();
-				expect(mask.useDynamicFallback).toBeUndefined();
+				expect(mask.useDynamicFiltering).toBeUndefined();
 			});
 
 			it("should use dynamic fallback when model supports neither tool_choice nor prefill", () => {
@@ -137,7 +137,7 @@ describe("toolMask", () => {
 
 				expect(mask.mode).toBe("p");
 				expect(mask.allowedTools.has("p-plan")).toBe(true);
-				expect(mask.useDynamicFallback).toBe(true);
+				expect(mask.useDynamicFiltering).toBe(true);
 			});
 		});
 
@@ -555,7 +555,7 @@ describe("toolMask", () => {
 				);
 
 				expect(mask.mode).toBe("a");
-				expect(mask.useDynamicFallback).toBe(true);
+				expect(mask.useDynamicFiltering).toBe(true);
 			});
 
 			it("should not use dynamic fallback when model supports tool_choice", () => {
@@ -570,7 +570,7 @@ describe("toolMask", () => {
 					mockPlatformTools,
 				);
 
-				expect(mask.useDynamicFallback).toBeUndefined();
+				expect(mask.useDynamicFiltering).toBeUndefined();
 			});
 
 			it("should not use dynamic fallback when model supports prefill", () => {
@@ -585,7 +585,7 @@ describe("toolMask", () => {
 					mockPlatformTools,
 				);
 
-				expect(mask.useDynamicFallback).toBeUndefined();
+				expect(mask.useDynamicFiltering).toBeUndefined();
 			});
 
 			it("should not have requiredTool in action mode", () => {
@@ -652,7 +652,7 @@ describe("toolMask", () => {
 
 				// Dynamic mode doesn't use toolPrefix
 				expect(mask.toolPrefix).toBeUndefined();
-				expect(mask.useDynamicFallback).toBe(true);
+				expect(mask.useDynamicFiltering).toBe(true);
 			});
 		});
 

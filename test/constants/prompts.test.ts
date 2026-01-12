@@ -67,5 +67,27 @@ describe("prompts", () => {
 			expect(result.startsWith(SYSTEM_PROMPT)).toBe(true);
 			expect(result.length).toBeGreaterThan(SYSTEM_PROMPT.length);
 		});
+
+		it("should include tool usage instructions when supportsTools is true", () => {
+			const result = buildSystemPrompt("/path/to/project", "nodejs", true);
+			expect(result).toContain("Tool Usage");
+			expect(result).toContain("a-c-git_status");
+			expect(result).toContain("Plan Mode");
+		});
+
+		it("should exclude tool usage instructions when supportsTools is false", () => {
+			const result = buildSystemPrompt("/path/to/project", "nodejs", false);
+			expect(result).not.toContain("Tool Usage");
+			expect(result).not.toContain("a-c-git_status");
+			expect(result).not.toContain("Plan Mode");
+			// Should still contain common sections
+			expect(result).toContain("Code Guidelines");
+			expect(result).toContain("File Operations");
+		});
+
+		it("should default to supportsTools=true for backward compatibility", () => {
+			const result = buildSystemPrompt("/path/to/project", "nodejs");
+			expect(result).toContain("Tool Usage");
+		});
 	});
 });

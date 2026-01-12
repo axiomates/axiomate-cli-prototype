@@ -142,10 +142,10 @@ export type ToolMaskState = {
 	 */
 	toolPrefix?: string;
 	/**
-	 * 是否使用动态工具列表 fallback
+	 * 是否使用动态工具列表过滤
 	 * 当模型不支持 tool_choice 和 prefill 时，回退到动态过滤工具列表
 	 */
-	useDynamicFallback?: boolean;
+	useDynamicFiltering?: boolean;
 };
 
 /**
