@@ -68,11 +68,23 @@ export class AIService implements IAIService {
 	private maxToolCallRounds: number;
 	private contextAwareEnabled: boolean;
 	private contextInjected: boolean = false;
-
-	// 两阶段冻结的工具集
-	private platformTools: DiscoveredTool[]; // 版本A
-	private projectTools: DiscoveredTool[]; // 版本B
 	private projectType: ProjectType | undefined; // 固定的项目类型
+
+	/**
+	 * 获取集合A（所有已安装 + 当前平台支持的工具）
+	 * 动态获取以支持渐进加载后的更新
+	 */
+	private get allTools(): DiscoveredTool[] {
+		return this.registry.getAllTools();
+	}
+
+	/**
+	 * 获取集合B（核心 + 项目相关，A的子集）
+	 * 动态获取以支持渐进加载后的更新
+	 */
+	private get projectTools(): DiscoveredTool[] {
+		return this.registry.getProjectTools();
+	}
 
 	constructor(config: AIServiceConfig, registry: IToolRegistry) {
 		this.client = config.client;
@@ -93,13 +105,9 @@ export class AIService implements IAIService {
 			this.projectType = detectProjectType(config.cwd);
 		}
 
-		// 冻结两个版本的工具集
-		this.registry.freezePlatformTools();
+		// 冻结两个版本的工具集（初始使用内置工具，后台发现完成后自动刷新）
+		this.registry.freezeAllTools();
 		this.registry.freezeProjectTools(this.projectType);
-
-		// 获取两个版本的工具
-		this.platformTools = this.registry.getPlatformTools();
-		this.projectTools = this.registry.getProjectTools();
 	}
 
 	/**
@@ -282,29 +290,46 @@ export class AIService implements IAIService {
 		let tools: OpenAITool[] = [];
 
 		if (this.contextAwareEnabled) {
-			// 判断约束模式：
-			// - constrained: 支持 tool_choice/prefill，通过 API 参数约束
-			// - filtered: 不支持上述功能，通过过滤工具列表约束
+			// 判断约束模式（三种情况）
 			const supportsToolChoice = currentModelSupportsToolChoice();
 			const supportsPrefill = currentModelSupportsPrefill();
-			const constraintMode =
-				supportsToolChoice || supportsPrefill ? "constrained" : "filtered";
-			const availableTools =
-				constraintMode === "constrained"
-					? this.platformTools
-					: this.projectTools;
 
-			// 构建工具遮蔽状态
-			toolMask = buildToolMask(
-				userMessage,
-				this.projectType,
-				initialPlanMode,
-				constraintMode,
-				availableTools,
-			);
-
-			// 获取相关工具（根据 toolMask 决定是冻结列表还是动态过滤）
-			tools = this.getContextTools(enhancedContext, toolMask);
+			if (supportsToolChoice) {
+				// 情况3：支持 tool_choice，集合B + auto
+				// 发送完整集合B，通过 tool_choice: "auto" 让模型自由选择
+				tools = toOpenAITools(this.projectTools);
+				toolMask = {
+					mode: initialPlanMode ? "p" : "a",
+					allowedTools: new Set(this.projectTools.map((t) => t.id)),
+				};
+			} else if (supportsPrefill) {
+				// 情况4：只支持 prefill，集合B + 筛选算法s
+				// 发送完整集合B，通过 prefill 引导工具选择
+				toolMask = buildToolMask(
+					userMessage,
+					this.projectType,
+					initialPlanMode,
+					"prefill",
+					this.projectTools,
+				);
+				tools = toOpenAITools(this.projectTools);
+			} else {
+				// 情况2：不支持 choice/prefill，集合A + 筛选算法s
+				// 从集合A筛选，发送过滤后的工具列表
+				toolMask = buildToolMask(
+					userMessage,
+					this.projectType,
+					initialPlanMode,
+					"filtered",
+					this.allTools,
+				);
+				// 根据 allowedTools 过滤工具列表
+				const allowedIds = toolMask.allowedTools;
+				const filteredTools = this.allTools.filter((t) =>
+					allowedIds.has(t.id),
+				);
+				tools = toOpenAITools(filteredTools);
+			}
 		}
 
 		// 将 toolMask 添加到 options 中
@@ -357,48 +382,6 @@ export class AIService implements IAIService {
 		);
 		this.session.setSystemPrompt(prompt);
 		this.contextInjected = true;
-	}
-
-	/**
-	 * 获取上下文相关工具
-	 * 根据模型能力使用不同的工具集：
-	 * - tool_choice/prefill 模式：使用版本A（平台工具集）
-	 * - 动态模式：使用版本B（项目工具集） + 动态过滤
-	 * @param context 上下文信息
-	 * @param toolMask 工具遮蔽状态（可选）
-	 */
-	private getContextTools(
-		context: MatchContext,
-		toolMask?: ToolMaskState,
-	): OpenAITool[] {
-		// 如果模型不支持 tools，始终返回空列表
-		if (!this.contextAwareEnabled) {
-			return [];
-		}
-
-		const supportsToolChoice = currentModelSupportsToolChoice();
-		const supportsPrefill = currentModelSupportsPrefill();
-
-		if (supportsToolChoice || supportsPrefill) {
-			// 方法1 & 2：使用版本A（平台工具集）
-			// tool_choice 或 prefill 模式，发送完整的核心工具列表
-			return toOpenAITools(this.platformTools);
-		} else {
-			// 方法3：使用版本B（项目工具集） + 动态过滤
-			// 动态模式必须提供 toolMask 和 useDynamicFiltering
-			if (!toolMask?.useDynamicFiltering) {
-				// 如果没有 toolMask 或不是 dynamic 模式，返回空列表
-				// 这种情况理论上不应该发生，但为了安全起见
-				return [];
-			}
-
-			// 根据 allowedTools 过滤工具列表
-			const allowedIds = toolMask.allowedTools;
-			const filteredTools = this.projectTools.filter((t) =>
-				allowedIds.has(t.id),
-			);
-			return toOpenAITools(filteredTools);
-		}
 	}
 
 	/**

@@ -75,7 +75,6 @@ function createMockClient(overrides?: Partial<IAIClient>): IAIClient {
 // Helper to create mock registry
 function createMockRegistry(tools: ToolDefinition[] = []): IToolRegistry {
 	return {
-		getAllTools: vi.fn(() => tools),
 		getTool: vi.fn((id) => tools.find((t) => t.id === id)),
 		getInstalledTools: vi.fn(() => tools.filter((t) => t.installed)),
 		discoverTools: vi.fn(async () => {}),
@@ -86,12 +85,12 @@ function createMockRegistry(tools: ToolDefinition[] = []): IToolRegistry {
 		freezeTools: vi.fn(),
 		getFrozenTools: vi.fn(() => tools.filter((t) => t.installed)),
 		isFrozen: vi.fn(() => false),
-		// 新增的两阶段冻结方法
-		freezePlatformTools: vi.fn(),
+		// 两阶段冻结方法
+		freezeAllTools: vi.fn(),
 		freezeProjectTools: vi.fn(),
-		getPlatformTools: vi.fn(() => tools.filter((t) => t.installed)),
+		getAllTools: vi.fn(() => tools.filter((t) => t.installed)),
 		getProjectTools: vi.fn(() => tools.filter((t) => t.installed)),
-		isPlatformFrozen: vi.fn(() => false),
+		isAllToolsFrozen: vi.fn(() => false),
 		isProjectFrozen: vi.fn(() => false),
 	};
 }

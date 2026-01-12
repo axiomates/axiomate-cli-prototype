@@ -103,16 +103,16 @@ export type IToolRegistry = {
 	getFrozenTools: () => DiscoveredTool[];
 	// 检查是否已冻结
 	isFrozen: () => boolean;
-	// 冻结平台工具集（版本A：核心工具）
-	freezePlatformTools: () => void;
-	// 冻结项目工具集（版本B：核心工具 + 项目工具）
+	// 冻结集合A（所有已安装 + 当前平台支持的工具）
+	freezeAllTools: () => void;
+	// 冻结集合B（核心工具 + 项目类型相关工具，是A的子集）
 	freezeProjectTools: (projectType?: string) => void;
-	// 获取平台工具集
-	getPlatformTools: () => DiscoveredTool[];
-	// 获取项目工具集
+	// 获取集合A（所有已安装 + 当前平台支持的工具）
+	getAllTools: () => DiscoveredTool[];
+	// 获取集合B（核心工具 + 项目类型相关工具）
 	getProjectTools: () => DiscoveredTool[];
-	// 检查是否已冻结平台工具
-	isPlatformFrozen: () => boolean;
-	// 检查是否已冻结项目工具
+	// 检查是否已冻结集合A
+	isAllToolsFrozen: () => boolean;
+	// 检查是否已冻结集合B
 	isProjectFrozen: () => boolean;
 };

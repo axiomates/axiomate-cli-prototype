@@ -94,7 +94,7 @@ describe("toolMask", () => {
 					"Create a plan for this project",
 					undefined, // projectType
 					true, // planMode
-					"constrained", // constraintMode
+					"prefill", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -113,7 +113,7 @@ describe("toolMask", () => {
 					"Create a plan",
 					undefined, // projectType
 					true,
-					"constrained", // constraintMode
+					"prefill", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -566,7 +566,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"constrained", // constraintMode (tool_choice uses platform)
+					"prefill", // constraintMode (tool_choice uses platform)
 					mockPlatformTools,
 				);
 
@@ -581,7 +581,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"constrained", // constraintMode (prefill uses platform)
+					"prefill", // constraintMode (prefill uses platform)
 					mockPlatformTools,
 				);
 
@@ -596,7 +596,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"constrained", // constraintMode
+					"prefill", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -612,7 +612,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"constrained", // constraintMode
+					"prefill", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -629,7 +629,7 @@ describe("toolMask", () => {
 					"fetch http://example.com",
 					undefined, // projectType
 					false,
-					"constrained", // constraintMode
+					"prefill", // constraintMode
 					mockPlatformTools,
 				);
 
@@ -665,7 +665,7 @@ describe("toolMask", () => {
 					"Hello",
 					undefined, // projectType
 					false,
-					"constrained", // constraintMode
+					"prefill", // constraintMode
 					[],
 				);
 

@@ -34,8 +34,12 @@ export class ToolRegistry implements IToolRegistry {
 	private _discoveryStatus: DiscoveryStatus = "pending";
 	private _discoveryCallbacks: DiscoveryCallback[] = [];
 	private _frozenTools: DiscoveredTool[] | null = null;
-	private _platformTools: DiscoveredTool[] | null = null;
+	// 集合A：所有已安装 + 当前平台支持的工具
+	private _allTools: DiscoveredTool[] | null = null;
+	// 集合B：核心工具 + 项目类型相关工具（A的子集）
 	private _projectTools: DiscoveredTool[] | null = null;
+	// 保存项目类型用于刷新时重新计算集合B
+	private _projectType: string | undefined;
 
 	/**
 	 * 同步注册内置工具（瞬间完成）
@@ -67,6 +71,11 @@ export class ToolRegistry implements IToolRegistry {
 				}
 				this._externalDiscovered = true;
 				this._discoveryStatus = "completed";
+
+				// 刷新冻结的工具集合（如果已冻结）
+				if (this._allTools !== null) {
+					this.refreshFrozenTools();
+				}
 
 				// 通知所有等待的回调
 				for (const callback of this._discoveryCallbacks) {
@@ -223,15 +232,52 @@ export class ToolRegistry implements IToolRegistry {
 	}
 
 	/**
-	 * 冻结平台工具集（版本A）
-	 * 只包含核心工具：askuser, file, web, git, shell, enterplan, plan
-	 * 注意：只包含当前平台可用的 shell 工具
+	 * 冻结集合A（所有已安装 + 当前平台支持的工具）
+	 * 排除当前平台不支持的 shell 工具
 	 */
-	freezePlatformTools(): void {
-		if (this._platformTools) return; // 已冻结
+	freezeAllTools(): void {
+		if (this._allTools) return; // 已冻结
 
-		// 基础核心工具（不包含 shell）
-		const baseCoreToolIds = new Set([
+		// 获取当前平台不支持的工具（需要排除）
+		const excludedTools = new Set<string>();
+		if (platform() === "win32") {
+			excludedTools.add("a-c-bash"); // Windows 不支持 bash
+		} else {
+			// Unix/Linux/macOS 不支持 Windows shell
+			excludedTools.add("a-c-powershell");
+			excludedTools.add("a-c-pwsh");
+			excludedTools.add("a-c-cmd");
+		}
+
+		this._allTools = Array.from(this.tools.values())
+			.filter((tool) => tool.installed && !excludedTools.has(tool.id))
+			.sort((a, b) => a.id.localeCompare(b.id));
+	}
+
+	/**
+	 * 冻结集合B（核心工具 + 项目类型相关工具，是A的子集）
+	 * 必须包含核心工具，加上项目类型相关的工具
+	 */
+	freezeProjectTools(projectType?: string): void {
+		if (this._projectTools) return; // 已冻结
+
+		// 保存项目类型用于刷新时重新计算
+		this._projectType = projectType;
+
+		// 确保集合A已冻结
+		if (!this._allTools) {
+			this.freezeAllTools();
+		}
+
+		this._projectTools = this._computeProjectTools(projectType);
+	}
+
+	/**
+	 * 计算集合B（内部方法）
+	 */
+	private _computeProjectTools(projectType?: string): DiscoveredTool[] {
+		// 必须包含的核心工具（平台相关的shell已在集合A中过滤）
+		const coreToolIds = new Set([
 			"a-c-askuser",
 			"a-c-file",
 			"a-c-web",
@@ -240,76 +286,59 @@ export class ToolRegistry implements IToolRegistry {
 			"p-plan",
 		]);
 
-		// 根据当前平台添加 shell 工具
-		const platformShellTools = new Set<string>();
+		// 添加当前平台的 shell 工具
 		if (platform() === "win32") {
-			// Windows 平台：powershell, pwsh, cmd
-			platformShellTools.add("a-c-powershell");
-			platformShellTools.add("a-c-pwsh");
-			platformShellTools.add("a-c-cmd");
+			coreToolIds.add("a-c-powershell");
+			coreToolIds.add("a-c-pwsh");
+			coreToolIds.add("a-c-cmd");
 		} else {
-			// Unix/Linux/macOS 平台：bash
-			platformShellTools.add("a-c-bash");
-		}
-
-		// 合并基础工具和平台 shell 工具
-		const coreToolIds = new Set([
-			...baseCoreToolIds,
-			...platformShellTools,
-		]);
-
-		this._platformTools = Array.from(this.tools.values())
-			.filter((tool) => tool.installed && coreToolIds.has(tool.id))
-			.sort((a, b) => a.id.localeCompare(b.id));
-	}
-
-	/**
-	 * 冻结项目工具集（版本B）
-	 * 版本A + 根据项目类型添加的工具
-	 */
-	freezeProjectTools(projectType?: string): void {
-		if (this._projectTools) return; // 已冻结
-
-		// 确保平台工具已冻结
-		if (!this._platformTools) {
-			this.freezePlatformTools();
+			coreToolIds.add("a-c-bash");
 		}
 
 		// 获取项目类型对应的工具 ID
 		const projectToolIds = getToolsForProjectType(projectType);
 
-		// 版本B = 版本A + 项目工具
-		const projectToolsOnly = Array.from(this.tools.values()).filter(
-			(tool) =>
-				tool.installed &&
-				projectToolIds.has(tool.id) &&
-				!this._platformTools!.some((pt) => pt.id === tool.id),
-		);
-
-		this._projectTools = [...this._platformTools!, ...projectToolsOnly].sort(
-			(a, b) => a.id.localeCompare(b.id),
+		// 集合B = 核心工具 + 项目工具（都必须在A中存在）
+		return this._allTools!.filter(
+			(tool) => coreToolIds.has(tool.id) || projectToolIds.has(tool.id),
 		);
 	}
 
 	/**
-	 * 获取平台工具集
+	 * 刷新冻结的工具集合（在发现完成后调用）
+	 * 重新计算集合A和B，保持已设置的项目类型
 	 */
-	getPlatformTools(): DiscoveredTool[] {
-		return this._platformTools ?? [];
+	refreshFrozenTools(): void {
+		// 重置冻结状态
+		this._allTools = null;
+		this._projectTools = null;
+
+		// 重新冻结
+		this.freezeAllTools();
+		if (this._projectType !== undefined) {
+			this._projectTools = this._computeProjectTools(this._projectType);
+		}
 	}
 
 	/**
-	 * 获取项目工具集
+	 * 获取集合A（所有已安装 + 当前平台支持的工具）
+	 */
+	getAllTools(): DiscoveredTool[] {
+		return this._allTools ?? [];
+	}
+
+	/**
+	 * 获取集合B（核心工具 + 项目类型相关工具）
 	 */
 	getProjectTools(): DiscoveredTool[] {
 		return this._projectTools ?? [];
 	}
 
 	/**
-	 * 检查是否已冻结平台工具
+	 * 检查是否已冻结集合A
 	 */
-	isPlatformFrozen(): boolean {
-		return this._platformTools !== null;
+	isAllToolsFrozen(): boolean {
+		return this._allTools !== null;
 	}
 
 	/**

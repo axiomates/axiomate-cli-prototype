@@ -192,10 +192,10 @@ export function getToolsForProjectType(
 
 /**
  * 约束模式
- * - constrained: 通过 API 参数（tool_choice / prefill）约束，发送完整核心工具列表
+ * - prefill: 通过 prefill 技术约束，发送完整工具列表 + 设置 toolPrefix
  * - filtered: 通过过滤工具列表约束，发送过滤后的工具子集
  */
-export type ConstraintMode = "constrained" | "filtered";
+export type ConstraintMode = "prefill" | "filtered";
 
 /**
  * 构建工具遮蔽状态
@@ -203,7 +203,7 @@ export type ConstraintMode = "constrained" | "filtered";
  * @param input 用户输入内容
  * @param projectType 项目类型（已在 AIService 初始化时固定）
  * @param planMode 是否为 Plan 模式
- * @param constraintMode 约束模式：'constrained'（API参数约束）或 'filtered'（列表过滤）
+ * @param constraintMode 约束模式：'prefill'（prefill引导）或 'filtered'（列表过滤）
  * @param availableTools 可用的工具列表
  * @returns 工具遮蔽状态
  */
@@ -298,11 +298,8 @@ export function buildToolMask(
 	}
 
 	// 根据约束模式返回不同的遮蔽状态
-	if (constraintMode === "constrained") {
-		// constrained 模式（tool_choice 或 prefill）：
-		// 发送完整核心工具列表，通过 API 参数约束选择
-		const supportsPrefill = currentModelSupportsPrefill();
-
+	if (constraintMode === "prefill") {
+		// prefill 模式：发送完整工具列表，通过 prefill 引导工具选择
 		// 判断是否所有允许的工具都是核心工具（a-c- 前缀）
 		// 如果是，使用 a-c- 前缀；否则使用 a- 前缀
 		const onlyCoreTools =
@@ -312,15 +309,12 @@ export function buildToolMask(
 		return {
 			mode: "a",
 			allowedTools,
-			...(supportsPrefill && {
-				toolPrefix: onlyCoreTools ? "a-c-" : "a-",
-			}),
+			toolPrefix: onlyCoreTools ? "a-c-" : "a-",
 		};
 	}
 
 	if (constraintMode === "filtered") {
-		// filtered 模式（动态过滤）：
-		// 发送过滤后的工具子集，通过修改工具列表约束选择
+		// filtered 模式：发送过滤后的工具子集
 		return {
 			mode: "a",
 			allowedTools,
