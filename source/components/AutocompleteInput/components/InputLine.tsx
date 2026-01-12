@@ -9,6 +9,7 @@ import type { ColorRange } from "../../../models/richInput.js";
 import { THEME_PINK } from "../../../constants/colors.js";
 import { getStringWidth, getCharWidth } from "../utils/lineProcessor.js";
 import { splitGraphemes } from "../utils/grapheme.js";
+import { logger } from "../../../utils/logger.js";
 
 type InputLineProps = {
 	/** 当前行文本 */
@@ -110,6 +111,14 @@ export function InputLine({
 	promptIndent,
 	colorRanges = [],
 }: InputLineProps) {
+	// 调试日志
+	logger.warn("[InputLine] render", {
+		lineIndex,
+		isFirstLine,
+		isCursorLine,
+		linePreview: line.slice(0, 20),
+	});
+
 	// 拆分行内容：用户输入部分 vs 建议部分
 	// suggestionStart 现在是显示宽度，需要转换为字符索引
 	let userPart = line;

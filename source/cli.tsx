@@ -95,10 +95,10 @@ async function main() {
 	}
 
 	// 正常启动 App
-	// 使用 incrementalRendering 减少滚动时的条纹问题
+	// 注意：incrementalRendering 会导致长输出后的渲染残留问题，暂时关闭
 	const { waitUntilExit } = render(<App initResult={initResult} />, {
 		patchConsole: true,
-		incrementalRendering: true,
+		incrementalRendering: false,
 	});
 	await waitUntilExit();
 	clearScreen();

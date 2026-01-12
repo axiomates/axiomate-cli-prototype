@@ -17,6 +17,7 @@ import {
 } from "../../models/inputInstance.js";
 import { PATH_SEPARATOR } from "../../constants/platform.js";
 import { isMessageInput } from "../../models/input.js";
+import { logger } from "../../utils/logger.js";
 
 // Types
 import type { AutocompleteInputProps } from "./types.js";
@@ -225,6 +226,17 @@ export default function AutocompleteInput({
 
 	// 计算 prompt 缩进（用于后续行对齐）
 	const promptIndent = " ".repeat(prompt.length);
+
+	// 调试日志
+	logger.warn("[AutocompleteInput] render", {
+		uiMode: uiMode.type,
+		linesCount: lines.length,
+		lines: lines.map((l, i) => `[${i}]${l.slice(0, 15)}`),
+		input: input.slice(0, 30),
+		inSlashMode,
+		inFileMode,
+		filteredCommandsCount: filteredCommands.length,
+	});
 
 	return (
 		<Box flexDirection="column">
