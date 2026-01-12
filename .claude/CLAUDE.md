@@ -153,6 +153,50 @@ source/
 | System Prompt | `constants/prompts.ts` |
 | 状态存储 | `utils/config.ts` (planModeEnabled) |
 
+## KV Cache 优化
+
+为最大化 AI 模型的 KV Cache 命中率，减少延迟和 API 成本，采用以下策略：
+
+### 设计原则
+
+1. **System Prompt 固定** - 会话期间保持不变，不随模式切换而改变
+2. **模式信息注入用户消息** - 使用 `<system-reminder>` 标签注入到用户消息前
+3. **动态上下文追加末尾** - cwd、projectType 等运行时信息追加在 System Prompt 末尾
+
+### 实现策略
+
+| 组件 | 策略 | 文件 |
+|------|------|------|
+| System Prompt | 静态基础 + 工具说明，动态上下文追加末尾 | `constants/prompts.ts` |
+| Mode Reminder | 预构建常量字符串 | `constants/prompts.ts` |
+| 消息注入 | Mode reminder 前置到用户消息内容 | `services/ai/service.ts:278-280` |
+
+### 消息结构
+
+```
+System Prompt (FIXED, 跨请求缓存)
+├── BASE_SYSTEM_PROMPT      # 基础指令
+├── TOOL_INSTRUCTIONS       # 工具使用说明
+├── COMMON_SUFFIX           # 通用后缀
+└── Dynamic Context         # cwd, projectType（追加末尾）
+
+User Message
+├── <system-reminder>       # 模式信息注入
+└── 用户实际内容
+```
+
+### 关键代码
+
+- `buildSystemPrompt()` - 构建固定 System Prompt + 动态上下文
+- `buildModeReminder()` - 返回预构建的模式提醒字符串
+- `streamMessage()` - 在用户消息前注入 mode reminder
+
+### 效果
+
+- **延迟降低** - 前缀缓存命中跳过已缓存 token 的注意力计算
+- **成本降低** - 缓存 token 通常有折扣（如 Anthropic 90%）
+- **行为一致** - 固定 System Prompt 确保 AI 响应可预测
+
 ## 代码规范
 
 - 用户可见文本必须用 i18n `t()` 函数

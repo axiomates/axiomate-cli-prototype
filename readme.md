@@ -251,6 +251,53 @@ The AI will automatically:
 3. **Review plans** - Check the generated plan before AI executes it
 4. **Incremental execution** - AI marks progress, making it easy to resume
 
+## KV Cache Optimization
+
+axiomate implements several strategies to maximize KV cache efficiency when working with AI models that support prefix caching (like Claude, GPT-4, etc.). This reduces latency and API costs by reusing cached key-value pairs from previous requests.
+
+### Design Principles
+
+1. **Fixed System Prompt** - The system prompt remains constant throughout a session, never changing based on mode or state
+2. **Mode via User Messages** - Plan/Action mode information is injected into user messages using `<system-reminder>` tags, not the system prompt
+3. **Dynamic Context at End** - Runtime context (working directory, project type) is appended at the END of the system prompt to maximize prefix cache hits
+
+### Implementation Details
+
+| Component | Strategy |
+| --------- | -------- |
+| System Prompt | Static base + tool instructions, dynamic context appended at end |
+| Mode Reminder | Pre-built constant strings (`PLAN_MODE_REMINDER`, `ACTION_MODE_REMINDER`) |
+| Message Injection | Mode reminder prepended to user message content |
+
+### How It Works
+
+```
+┌─────────────────────────────────────────┐
+│ System Prompt (FIXED)                   │  ← Cached across all requests
+│ ├─ Base instructions                    │
+│ ├─ Tool usage guidelines                │
+│ ├─ Plan mode documentation              │
+│ └─ Dynamic context (cwd, projectType)   │  ← Appended at end
+├─────────────────────────────────────────┤
+│ User Message                            │
+│ ├─ <system-reminder>Mode info</...>     │  ← Mode injected here
+│ └─ Actual user content                  │
+└─────────────────────────────────────────┘
+```
+
+### Benefits
+
+- **Reduced Latency** - Prefix cache hits skip re-computing attention for cached tokens
+- **Lower Costs** - Many API providers offer discounts for cached tokens (e.g., Anthropic: 90% discount)
+- **Consistent Behavior** - Fixed system prompt ensures predictable AI responses
+
+### Key Files
+
+| File | Purpose |
+| ---- | ------- |
+| `constants/prompts.ts` | System prompt construction, mode reminders |
+| `services/ai/service.ts` | Message injection logic (`streamMessage`) |
+
 ## Configuration
 
 - `~/.axiomate.json` - Model and API configuration
