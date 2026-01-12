@@ -4,7 +4,6 @@
 
 import { Box, Text } from "ink";
 import type { SlashCommand } from "../types.js";
-import { logger } from "../../../utils/logger.js";
 
 type SlashMenuProps = {
 	/** 当前过滤后的命令列表 */
@@ -29,12 +28,6 @@ export function SlashMenu({
 	if (commands.length === 0) {
 		return null;
 	}
-
-	// 调试日志
-	logger.warn("[SlashMenu] render", {
-		commandsCount: commands.length,
-		selectedIndex,
-	});
 
 	// 窗口化逻辑：最多显示 9 个命令（与 FileMenu 一致）
 	const maxVisible = 9;

@@ -28,7 +28,6 @@ import {
 	removeSelectedFile,
 } from "./types.js";
 import { PATH_SEPARATOR } from "../../constants/platform.js";
-import { logger } from "../../utils/logger.js";
 
 /**
  * 初始状态
@@ -57,14 +56,6 @@ export function editorReducer(
 			const wasSlash = state.instance.text.startsWith("/");
 			const currentPath = state.instance.commandPath;
 			const currentFilePath = state.instance.filePath;
-
-			logger.warn("[reducer] SET_TEXT", {
-				oldText: state.instance.text.slice(0, 20),
-				newText: text.slice(0, 20),
-				oldMode: state.uiMode.type,
-				isSlash,
-				wasSlash,
-			});
 
 			// 在历史模式下输入，退出历史模式
 			if (isHistoryMode(state.uiMode)) {

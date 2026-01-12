@@ -1,4 +1,4 @@
-import { Box, Static, useApp, useStdout } from "ink";
+import { Box, Static, useApp } from "ink";
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import AutocompleteInput from "./components/AutocompleteInput/index.js";
 import Divider from "./components/Divider.js";
@@ -39,7 +39,6 @@ import {
 import { SessionStore } from "./services/ai/sessionStore.js";
 import { clearCommandCache } from "./constants/commands.js";
 import { clearScreen } from "./utils/platform.js";
-import { logger } from "./utils/logger.js";
 
 type Props = {
 	initResult: InitResult;
@@ -497,38 +496,6 @@ export default function App({ initResult }: Props) {
 		};
 	}, [messages]);
 
-	// 调试日志
-	logger.warn("[App] render", {
-		messagesCount: messages.length,
-		completedCount: completedMessages.length,
-		hasStreaming: !!streamingMessage,
-		pendingAskUser: !!pendingAskUser,
-	});
-
-	// 当 streaming 结束时（从有变无），触发强制重绘
-	// 这是为了解决 Ink Static 组件更新时的渲染残留问题
-	const [forceRefreshKey, setForceRefreshKey] = useState(0);
-	const prevStreamingRef = useRef<boolean>(false);
-	const { write: inkWrite } = useStdout();
-	useEffect(() => {
-		const wasStreaming = prevStreamingRef.current;
-		const isStreaming = !!streamingMessage;
-
-		if (wasStreaming && !isStreaming) {
-			// Streaming 刚结束，清除可能的渲染残留并强制重绘
-			// 1. 使用 ANSI 转义序列清除从光标到屏幕底部的内容
-			// \x1b[J - 清除从光标到屏幕底部
-			inkWrite("\x1b[J");
-			// 2. 通过更新 key 强制 React 重新挂载组件
-			setImmediate(() => {
-				setForceRefreshKey((k) => k + 1);
-				logger.warn("[App] streaming ended, cleared and refreshed");
-			});
-		}
-
-		prevStreamingRef.current = isStreaming;
-	}, [streamingMessage, inkWrite]);
-
 	return (
 		<>
 			{/* 已完成消息 - 进入终端原生滚动区 */}
@@ -543,8 +510,7 @@ export default function App({ initResult }: Props) {
 			</Static>
 
 			{/* 当前交互区域 */}
-			{/* key={forceRefreshKey} 用于在 streaming 结束时强制重绘整个交互区域 */}
-			<Box flexDirection="column" key={`interaction-${forceRefreshKey}`}>
+			<Box flexDirection="column">
 				{/* 当前流式消息（如果有） */}
 				{streamingMessage && (
 					<StreamingMessage message={streamingMessage} width={terminalWidth} />
