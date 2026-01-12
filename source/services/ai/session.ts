@@ -151,9 +151,8 @@ export class Session {
 	addAssistantMessage(message: ChatMessage, usage?: TokenUsage): void {
 		// 如果有 usage 信息，更新实际 token 计数
 		if (usage) {
-			// prompt_tokens 代表本次请求的提示词开销，这里累加以反映会话
-			// 累计真实消耗，而不是只保留最后一次请求的值。
-			this.actualPromptTokens += usage.prompt_tokens;
+			// prompt_tokens 代表本次请求的提示词开销
+			this.actualPromptTokens = usage.prompt_tokens;
 			this.actualCompletionTokens += usage.completion_tokens;
 		}
 
