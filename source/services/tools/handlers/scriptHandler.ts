@@ -13,11 +13,11 @@ import { executeCommand } from "../executorUtils.js";
 
 // Map tool IDs to script types for run_script_content action
 const TOOL_SCRIPT_TYPE_MAP: Record<string, ScriptType> = {
-	powershell: "powershell",
-	pwsh: "pwsh", // PowerShell Core - uses pwsh command
-	python: "python",
-	cmd: "cmd",
-	bash: "bash",
+	"a-c-powershell": "powershell",
+	"a-c-pwsh": "pwsh", // PowerShell Core - uses pwsh command
+	"a-python": "python",
+	"a-c-cmd": "cmd",
+	"a-c-bash": "bash",
 };
 
 /**

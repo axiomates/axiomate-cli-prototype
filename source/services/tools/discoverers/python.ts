@@ -17,7 +17,7 @@ import {
 } from "./base.js";
 
 const pythonDefinition: ToolDefinition = {
-	id: "python",
+	id: "a-python",
 	name: "Python",
 	description:
 		"Python programming language interpreter. Preferred for file operations due to better encoding support.",

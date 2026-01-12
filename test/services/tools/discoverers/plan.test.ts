@@ -27,7 +27,7 @@ describe("plan discoverer", () => {
 			const result = await detectPlan();
 
 			expect(result.installed).toBe(true);
-			expect(result.id).toBe("plan");
+			expect(result.id).toBe("p-plan");
 		});
 
 		it("should have correct tool properties", async () => {
@@ -179,7 +179,7 @@ describe("plan discoverer", () => {
 
 			expect(createInstalledTool).toHaveBeenCalledWith(
 				expect.objectContaining({
-					id: "plan",
+					id: "p-plan",
 					name: "Plan",
 					category: "utility",
 				}),
@@ -219,7 +219,7 @@ describe("plan discoverer", () => {
 			const result = await detectEnterPlan();
 
 			expect(result.installed).toBe(true);
-			expect(result.id).toBe("enterplan");
+			expect(result.id).toBe("a-c-enterplan");
 		});
 
 		it("should have correct tool properties", async () => {

@@ -37,7 +37,7 @@ describe("git discoverer", () => {
 			const result = await detectGit();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("git");
+			expect(result.id).toBe("a-c-git");
 		});
 
 		it("should return installed tool when git exists", async () => {

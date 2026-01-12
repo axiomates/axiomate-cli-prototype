@@ -13,7 +13,7 @@ import {
 } from "./base.js";
 
 const vsDefinition: ToolDefinition = {
-	id: "vs2022",
+	id: "a-vs2022",
 	name: "Visual Studio 2022",
 	description: "Microsoft Visual Studio IDE for .NET development",
 	category: "ide",
@@ -92,7 +92,7 @@ const vsDefinition: ToolDefinition = {
 
 // MSBuild definition
 const msbuildDefinition: ToolDefinition = {
-	id: "msbuild",
+	id: "a-msbuild",
 	name: "MSBuild",
 	description: "Microsoft Build Engine",
 	category: "build",

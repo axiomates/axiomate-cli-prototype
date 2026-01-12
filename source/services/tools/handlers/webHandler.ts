@@ -12,7 +12,7 @@ import { getCurrentModelId, getModelById } from "../../../utils/config.js";
  */
 export const webHandler: RegisteredHandler = {
 	name: "web",
-	matches: (ctx) => ctx.tool.id === "web" && ctx.action.name === "fetch",
+	matches: (ctx) => ctx.tool.id === "a-c-web" && ctx.action.name === "fetch",
 	handle: async (ctx) => {
 		const url = ctx.params.url as string;
 		const timeout = ctx.options?.timeout;

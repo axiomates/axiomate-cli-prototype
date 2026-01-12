@@ -10,7 +10,7 @@ import type { DiscoveredTool, ToolDefinition } from "../types.js";
 import { createInstalledTool } from "./base.js";
 
 const planDefinition: ToolDefinition = {
-	id: "plan",
+	id: "p-plan",
 	name: "Plan",
 	description: "Plan file management (restricted to .axiomate/plans/plan.md)",
 	category: "utility",
@@ -134,10 +134,10 @@ const planDefinition: ToolDefinition = {
 
 /**
  * Mode switching tool definition
- * Separate from plan tool so it's not restricted by plan_ prefix in Plan mode
+ * Uses a-c- prefix so it's available in Action mode via a- prefill
  */
 const enterPlanDefinition: ToolDefinition = {
-	id: "enterplan",
+	id: "a-c-enterplan",
 	name: "Enter Plan Mode",
 	description: "Switch to Plan Mode for exploration and planning",
 	category: "utility",
@@ -146,7 +146,7 @@ const enterPlanDefinition: ToolDefinition = {
 		{
 			name: "enter",
 			description:
-				"Switch to Plan Mode (read-only exploration and planning). In Plan Mode you can only use plan tools (plan_read, plan_write, plan_edit). Takes effect immediately.",
+				"Switch to Plan Mode (read-only exploration and planning). In Plan Mode you can only use plan tools (p-plan_read, p-plan_write, p-plan_edit). Takes effect immediately.",
 			parameters: [],
 			commandTemplate: "__PLAN_ENTER_MODE__",
 		},

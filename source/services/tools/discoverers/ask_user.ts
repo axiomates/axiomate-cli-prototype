@@ -9,7 +9,7 @@ import type { DiscoveredTool, ToolDefinition } from "../types.js";
 import { createInstalledTool } from "./base.js";
 
 const askUserDefinition: ToolDefinition = {
-	id: "askuser",
+	id: "a-c-askuser",
 	name: "Ask User",
 	description:
 		"Ask user a question when clarification is needed. " +

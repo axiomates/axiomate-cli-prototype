@@ -12,7 +12,7 @@ import { t } from "../../../i18n/index.js";
  */
 export async function detectWebFetch(): Promise<DiscoveredTool> {
 	return {
-		id: "web",
+		id: "a-c-web",
 		name: "Web Fetch",
 		description: t("tools.fetchWebDesc"),
 		category: "web",

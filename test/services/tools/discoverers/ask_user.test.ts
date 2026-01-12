@@ -23,7 +23,7 @@ describe("ask_user discoverer", () => {
 			const result = await detectAskUser();
 
 			expect(result.installed).toBe(true);
-			expect(result.id).toBe("askuser");
+			expect(result.id).toBe("a-c-askuser");
 		});
 
 		it("should have correct tool properties", async () => {
@@ -66,7 +66,7 @@ describe("ask_user discoverer", () => {
 
 			expect(createInstalledTool).toHaveBeenCalledWith(
 				expect.objectContaining({
-					id: "askuser",
+					id: "a-c-askuser",
 					name: "Ask User",
 					category: "utility",
 				}),

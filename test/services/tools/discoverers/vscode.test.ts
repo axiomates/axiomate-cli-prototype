@@ -37,7 +37,7 @@ describe("vscode discoverer", () => {
 			const result = await detectVscode();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("vscode");
+			expect(result.id).toBe("a-vscode");
 		});
 
 		it("should return installed tool when code exists", async () => {

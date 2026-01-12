@@ -25,7 +25,7 @@ import {
 } from "./base.js";
 
 const powershellDefinition: ToolDefinition = {
-	id: "powershell",
+	id: "a-c-powershell",
 	name: "PowerShell",
 	description:
 		"Windows PowerShell 5.1 for Windows system operations. NOT recommended for file read/write - use Python instead.",
@@ -61,7 +61,7 @@ const powershellDefinition: ToolDefinition = {
 
 // PowerShell Core (pwsh) - cross-platform version
 const pwshDefinition: ToolDefinition = {
-	id: "pwsh",
+	id: "a-c-pwsh",
 	name: "PowerShell Core",
 	description:
 		"Cross-platform PowerShell 7+. Better encoding support than Windows PowerShell 5.1.",

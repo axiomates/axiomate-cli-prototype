@@ -199,7 +199,7 @@ vi.mock("../../source/constants/commands.js", () => ({
 			description: "Command without action",
 		},
 		{
-			name: "unknown-action-type",
+			name: "unknown-a-type",
 			description: "Command with unknown action type",
 			action: { type: "unknown" as any },
 		},
@@ -621,7 +621,7 @@ describe("commandHandler", () => {
 
 		it("should handle unknown action type", async () => {
 			const callbacks = createMockCallbacks();
-			await handleCommand(["unknown-action-type"], context, callbacks);
+			await handleCommand(["unknown-a-type"], context, callbacks);
 
 			expect(callbacks.showMessage).toHaveBeenCalledWith(
 				expect.stringContaining("Error"),

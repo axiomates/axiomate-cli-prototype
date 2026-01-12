@@ -12,7 +12,7 @@ import {
 } from "./base.js";
 
 const dockerDefinition: ToolDefinition = {
-	id: "docker",
+	id: "a-docker",
 	name: "Docker",
 	description: "Container platform",
 	category: "container",
@@ -153,7 +153,7 @@ const dockerDefinition: ToolDefinition = {
 };
 
 const dockerComposeDefinition: ToolDefinition = {
-	id: "docker-compose",
+	id: "a-docker-compose",
 	name: "Docker Compose",
 	description: "Multi-container application orchestration tool",
 	category: "container",

@@ -13,7 +13,7 @@ import {
 
 // MySQL client definition
 const mysqlDefinition: ToolDefinition = {
-	id: "mysql",
+	id: "a-mysql",
 	name: "MySQL Client",
 	description: "MySQL command-line client",
 	category: "database",
@@ -118,7 +118,7 @@ const mysqlDefinition: ToolDefinition = {
 
 // PostgreSQL client definition
 const psqlDefinition: ToolDefinition = {
-	id: "psql",
+	id: "a-psql",
 	name: "PostgreSQL Client",
 	description: "PostgreSQL command-line client",
 	category: "database",
@@ -222,7 +222,7 @@ const psqlDefinition: ToolDefinition = {
 
 // SQLite definition
 const sqliteDefinition: ToolDefinition = {
-	id: "sqlite3",
+	id: "a-sqlite3",
 	name: "SQLite",
 	description: "SQLite command-line tool",
 	category: "database",

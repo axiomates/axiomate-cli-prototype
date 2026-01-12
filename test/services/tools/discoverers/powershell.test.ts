@@ -40,7 +40,7 @@ describe("powershell discoverer", () => {
 			const result = await detectPowershell();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("powershell");
+			expect(result.id).toBe("a-c-powershell");
 		});
 
 		it("should return installed tool when powershell exists", async () => {
@@ -117,7 +117,7 @@ describe("powershell discoverer", () => {
 			const result = await detectPwsh();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("pwsh");
+			expect(result.id).toBe("a-c-pwsh");
 		});
 
 		it("should return installed tool when pwsh exists", async () => {

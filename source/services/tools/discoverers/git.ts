@@ -12,7 +12,7 @@ import {
 } from "./base.js";
 
 const gitDefinition: ToolDefinition = {
-	id: "git",
+	id: "a-c-git",
 	name: "Git",
 	description: "Distributed version control system",
 	category: "vcs",

@@ -40,7 +40,7 @@ describe("visualstudio discoverer", () => {
 			const result = await detectVisualStudio();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("vs2022");
+			expect(result.id).toBe("a-vs2022");
 		});
 
 		it("should return not installed when devenv.exe does not exist", async () => {
@@ -94,7 +94,7 @@ describe("visualstudio discoverer", () => {
 			const result = await detectMsbuild();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("msbuild");
+			expect(result.id).toBe("a-msbuild");
 		});
 
 		it("should return not installed when MSBuild.exe does not exist", async () => {

@@ -159,7 +159,7 @@ export class ToolCallHandler implements IToolCallHandler {
 			}
 
 			// Special handling for askuser tool
-			if (toolId === "askuser" && actionName === "ask") {
+			if (toolId === "a-c-askuser" && actionName === "ask") {
 				const askResult = await this.handleAskUser(call, onAskUser);
 				results.push(askResult);
 				continue;

@@ -6,7 +6,7 @@ describe("web discoverer", () => {
 		it("should return builtin web fetch tool", async () => {
 			const tool = await detectWebFetch();
 
-			expect(tool.id).toBe("web");
+			expect(tool.id).toBe("a-c-web");
 			expect(tool.name).toBe("Web Fetch");
 			expect(tool.installed).toBe(true);
 			expect(tool.executablePath).toBe("builtin");

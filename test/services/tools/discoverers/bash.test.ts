@@ -37,7 +37,7 @@ describe("bash discoverer", () => {
 			const result = await detectBash();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("bash");
+			expect(result.id).toBe("a-c-bash");
 		});
 
 		it("should return installed tool when bash exists", async () => {

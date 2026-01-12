@@ -37,7 +37,7 @@ describe("python discoverer", () => {
 			const result = await detectPython();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("python");
+			expect(result.id).toBe("a-python");
 		});
 
 		it("should detect python3 first if available", async () => {

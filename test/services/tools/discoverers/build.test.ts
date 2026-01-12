@@ -41,7 +41,7 @@ describe("build discoverer", () => {
 			const result = await detectCmake();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("cmake");
+			expect(result.id).toBe("a-cmake");
 		});
 
 		it("should return installed tool when cmake exists", async () => {
@@ -114,7 +114,7 @@ describe("build discoverer", () => {
 			const result = await detectGradle();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("gradle");
+			expect(result.id).toBe("a-gradle");
 		});
 
 		it("should return installed tool when gradle exists", async () => {
@@ -189,7 +189,7 @@ describe("build discoverer", () => {
 			const result = await detectMaven();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("maven");
+			expect(result.id).toBe("a-maven");
 		});
 
 		it("should return installed tool when mvn exists", async () => {

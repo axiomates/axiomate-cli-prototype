@@ -23,7 +23,7 @@ describe("file discoverer", () => {
 			const result = await detectFile();
 
 			expect(result.installed).toBe(true);
-			expect(result.id).toBe("file");
+			expect(result.id).toBe("a-c-file");
 		});
 
 		it("should have correct tool properties", async () => {
@@ -167,7 +167,7 @@ describe("file discoverer", () => {
 
 			expect(createInstalledTool).toHaveBeenCalledWith(
 				expect.objectContaining({
-					id: "file",
+					id: "a-c-file",
 					name: "File",
 					category: "utility",
 				}),

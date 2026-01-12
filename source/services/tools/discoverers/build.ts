@@ -13,7 +13,7 @@ import {
 
 // CMake definition
 const cmakeDefinition: ToolDefinition = {
-	id: "cmake",
+	id: "a-cmake",
 	name: "CMake",
 	description: "Cross-platform build system generator for C/C++ projects",
 	category: "build",
@@ -91,7 +91,7 @@ const cmakeDefinition: ToolDefinition = {
 
 // Gradle definition
 const gradleDefinition: ToolDefinition = {
-	id: "gradle",
+	id: "a-gradle",
 	name: "Gradle",
 	description: "Groovy/Kotlin-based build tool",
 	category: "build",
@@ -141,7 +141,7 @@ const gradleDefinition: ToolDefinition = {
 
 // Maven definition
 const mavenDefinition: ToolDefinition = {
-	id: "maven",
+	id: "a-maven",
 	name: "Maven",
 	description: "Apache Maven project management tool",
 	category: "build",

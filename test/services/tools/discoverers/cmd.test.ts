@@ -42,7 +42,7 @@ describe("cmd discoverer", () => {
 			const result = await detectCmd();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("cmd");
+			expect(result.id).toBe("a-c-cmd");
 		});
 
 		it("should return not installed tool when cmd is not found on Windows", async () => {
@@ -52,7 +52,7 @@ describe("cmd discoverer", () => {
 			const result = await detectCmd();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("cmd");
+			expect(result.id).toBe("a-c-cmd");
 		});
 
 		it("should return installed tool when cmd exists on Windows", async () => {

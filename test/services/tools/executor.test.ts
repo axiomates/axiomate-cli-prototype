@@ -484,7 +484,7 @@ describe("Tool Executor", () => {
 
 		it("should return error for empty script content", async () => {
 			const tool: DiscoveredTool = {
-				id: "bash",
+				id: "a-c-bash",
 				name: "Bash",
 				description: "Test",
 				category: "shell",
@@ -740,7 +740,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -767,7 +767,7 @@ describe("Tool Executor", () => {
 
 		it("should handle invalid URL", async () => {
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -793,7 +793,7 @@ describe("Tool Executor", () => {
 
 		it("should reject non-http protocols", async () => {
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -828,7 +828,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -879,7 +879,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -913,7 +913,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockRejectedValue(abortError);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -941,7 +941,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockRejectedValue(new Error("Network error"));
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -978,7 +978,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -1015,7 +1015,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -1053,7 +1053,7 @@ describe("Tool Executor", () => {
 			vi.mocked(global.fetch).mockResolvedValue(mockResponse as any);
 
 			const tool: DiscoveredTool = {
-				id: "web",
+				id: "a-c-web",
 				name: "Web Fetch",
 				description: "Fetch web content",
 				category: "shell",
@@ -1085,7 +1085,7 @@ describe("Tool Executor", () => {
 
 	describe("executeToolAction - file operations", () => {
 		const fileTool: DiscoveredTool = {
-			id: "file",
+			id: "a-c-file",
 			name: "File",
 			description: "File operations",
 			category: "shell",
@@ -1339,7 +1339,7 @@ describe("Tool Executor", () => {
 
 	describe("executeToolAction - plan operations", () => {
 		const planTool: DiscoveredTool = {
-			id: "plan",
+			id: "p-plan",
 			name: "Plan",
 			description: "Plan operations",
 			category: "shell",

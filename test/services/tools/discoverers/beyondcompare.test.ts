@@ -52,7 +52,7 @@ describe("beyondcompare discoverer", () => {
 			const result = await detect();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("beyondcompare");
+			expect(result.id).toBe("a-beyondcompare");
 		});
 
 		it("should detect from registry path BC4", async () => {

@@ -41,7 +41,7 @@ describe("node discoverer", () => {
 			const result = await detectNode();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("node");
+			expect(result.id).toBe("a-node");
 		});
 
 		it("should return installed tool when node exists", async () => {
@@ -112,7 +112,7 @@ describe("node discoverer", () => {
 			const result = await detectNvm();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("nvm");
+			expect(result.id).toBe("a-nvm");
 		});
 
 		it("should return installed tool when nvm exists", async () => {
@@ -183,7 +183,7 @@ describe("node discoverer", () => {
 			const result = await detectNpm();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("npm");
+			expect(result.id).toBe("a-npm");
 		});
 
 		it("should return installed tool when npm exists", async () => {

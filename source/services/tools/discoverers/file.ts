@@ -9,7 +9,7 @@ import type { DiscoveredTool, ToolDefinition } from "../types.js";
 import { createInstalledTool } from "./base.js";
 
 const fileDefinition: ToolDefinition = {
-	id: "file",
+	id: "a-c-file",
 	name: "File",
 	description: "File operations with auto encoding detection",
 	category: "utility",

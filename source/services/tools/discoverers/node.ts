@@ -13,7 +13,7 @@ import {
 
 // Node.js definition
 const nodeDefinition: ToolDefinition = {
-	id: "node",
+	id: "a-node",
 	name: "Node.js",
 	description: "JavaScript runtime environment",
 	category: "runtime",
@@ -57,7 +57,7 @@ const nodeDefinition: ToolDefinition = {
 
 // NVM (Node Version Manager) definition
 const nvmDefinition: ToolDefinition = {
-	id: "nvm",
+	id: "a-nvm",
 	name: "NVM",
 	description: "Node.js version manager",
 	category: "package",
@@ -108,7 +108,7 @@ const nvmDefinition: ToolDefinition = {
 
 // npm definition
 const npmDefinition: ToolDefinition = {
-	id: "npm",
+	id: "a-npm",
 	name: "npm",
 	description: "Node.js package manager",
 	category: "package",

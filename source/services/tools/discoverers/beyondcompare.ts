@@ -14,7 +14,7 @@ import {
 const isWindows = platform() === "win32";
 
 const bcDefinition: ToolDefinition = {
-	id: "beyondcompare",
+	id: "a-beyondcompare",
 	name: "Beyond Compare",
 	description: "Powerful file and folder comparison tool",
 	category: "diff",

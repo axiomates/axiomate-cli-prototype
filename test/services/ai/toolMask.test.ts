@@ -23,184 +23,48 @@ import {
 	currentModelSupportsPrefill,
 } from "../../../source/utils/config.js";
 
+// Helper to create mock tool
+const createMockTool = (
+	id: string,
+	name: string,
+	category: DiscoveredTool["category"],
+	capabilities: DiscoveredTool["capabilities"] = ["execute"],
+): DiscoveredTool => ({
+	id,
+	name,
+	description: `${name} tool`,
+	category,
+	installed: true,
+	capabilities,
+	executablePath: `/bin/${id}`,
+	actions: [],
+});
+
 // Mock frozen tools
 const mockFrozenTools: DiscoveredTool[] = [
-	{
-		id: "file",
-		name: "File",
-		category: "builtin",
-		installed: true,
-		capabilities: ["read", "write"],
-		keywords: ["file"],
-	},
-	{
-		id: "bash",
-		name: "Bash",
-		category: "shell",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["bash", "shell"],
-	},
-	{
-		id: "powershell",
-		name: "PowerShell",
-		category: "shell",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["powershell"],
-	},
-	{
-		id: "git",
-		name: "Git",
-		category: "vcs",
-		installed: true,
-		capabilities: ["version_control"],
-		keywords: ["git"],
-	},
-	{
-		id: "web",
-		name: "Web Fetch",
-		category: "web",
-		installed: true,
-		capabilities: ["fetch"],
-		keywords: ["web", "http"],
-	},
-	{
-		id: "askuser",
-		name: "Ask User",
-		category: "builtin",
-		installed: true,
-		capabilities: ["interact"],
-		keywords: ["ask"],
-	},
-	{
-		id: "plan",
-		name: "Plan",
-		category: "builtin",
-		installed: true,
-		capabilities: ["plan"],
-		keywords: ["plan"],
-	},
-	{
-		id: "node",
-		name: "Node.js",
-		category: "runtime",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["node", "npm"],
-	},
-	{
-		id: "docker",
-		name: "Docker",
-		category: "container",
-		installed: true,
-		capabilities: ["container"],
-		keywords: ["docker"],
-	},
-	{
-		id: "python",
-		name: "Python",
-		category: "runtime",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["python"],
-	},
-	{
-		id: "java",
-		name: "Java",
-		category: "runtime",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["java"],
-	},
-	{
-		id: "javac",
-		name: "Javac",
-		category: "build",
-		installed: true,
-		capabilities: ["compile"],
-		keywords: ["javac"],
-	},
-	{
-		id: "maven",
-		name: "Maven",
-		category: "build",
-		installed: true,
-		capabilities: ["build"],
-		keywords: ["maven"],
-	},
-	{
-		id: "gradle",
-		name: "Gradle",
-		category: "build",
-		installed: true,
-		capabilities: ["build"],
-		keywords: ["gradle"],
-	},
-	{
-		id: "cmake",
-		name: "CMake",
-		category: "build",
-		installed: true,
-		capabilities: ["build"],
-		keywords: ["cmake"],
-	},
-	{
-		id: "msbuild",
-		name: "MSBuild",
-		category: "build",
-		installed: true,
-		capabilities: ["build"],
-		keywords: ["msbuild"],
-	},
-	{
-		id: "vs2022",
-		name: "Visual Studio 2022",
-		category: "ide",
-		installed: true,
-		capabilities: ["ide"],
-		keywords: ["vs2022"],
-	},
-	{
-		id: "vscode",
-		name: "VS Code",
-		category: "ide",
-		installed: true,
-		capabilities: ["ide"],
-		keywords: ["vscode"],
-	},
-	{
-		id: "beyondcompare",
-		name: "Beyond Compare",
-		category: "diff",
-		installed: true,
-		capabilities: ["compare"],
-		keywords: ["beyondcompare"],
-	},
-	{
-		id: "mysql",
-		name: "MySQL",
-		category: "database",
-		installed: true,
-		capabilities: ["database"],
-		keywords: ["mysql"],
-	},
-	{
-		id: "cmd",
-		name: "CMD",
-		category: "shell",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["cmd"],
-	},
-	{
-		id: "pwsh",
-		name: "PowerShell Core",
-		category: "shell",
-		installed: true,
-		capabilities: ["execute"],
-		keywords: ["pwsh"],
-	},
+	createMockTool("a-c-file", "File", "utility", ["read", "write"]),
+	createMockTool("a-c-bash", "Bash", "shell"),
+	createMockTool("a-c-powershell", "PowerShell", "shell"),
+	createMockTool("a-c-git", "Git", "vcs"),
+	createMockTool("a-c-web", "Web Fetch", "web"),
+	createMockTool("a-c-askuser", "Ask User", "utility"),
+	createMockTool("p-plan", "Plan", "utility", ["read", "write"]),
+	createMockTool("a-node", "Node.js", "runtime"),
+	createMockTool("a-docker", "Docker", "container"),
+	createMockTool("a-python", "Python", "runtime"),
+	createMockTool("a-java", "Java", "runtime"),
+	createMockTool("a-javac", "Javac", "build"),
+	createMockTool("a-maven", "Maven", "build"),
+	createMockTool("a-gradle", "Gradle", "build"),
+	createMockTool("a-cmake", "CMake", "build"),
+	createMockTool("a-msbuild", "MSBuild", "build"),
+	createMockTool("a-vs2022", "Visual Studio 2022", "ide"),
+	createMockTool("a-vscode", "VS Code", "ide"),
+	createMockTool("a-beyondcompare", "Beyond Compare", "diff"),
+	createMockTool("a-mysql", "MySQL", "database"),
+	createMockTool("a-c-cmd", "CMD", "shell"),
+	createMockTool("a-c-pwsh", "PowerShell Core", "shell"),
+	createMockTool("a-c-enterplan", "Enter Plan Mode", "utility"),
 ];
 
 describe("toolMask", () => {
@@ -224,10 +88,10 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.mode).toBe("plan");
-				expect(mask.allowedTools.has("plan")).toBe(true);
+				expect(mask.mode).toBe("p");
+				expect(mask.allowedTools.has("p-plan")).toBe(true);
 				expect(mask.allowedTools.size).toBe(1);
-				expect(mask.toolPrefix).toBe("plan_");
+				expect(mask.toolPrefix).toBe("p-");
 				expect(mask.useDynamicFallback).toBeUndefined();
 			});
 
@@ -242,8 +106,8 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.mode).toBe("plan");
-				expect(mask.allowedTools.has("plan")).toBe(true);
+				expect(mask.mode).toBe("p");
+				expect(mask.allowedTools.has("p-plan")).toBe(true);
 				expect(mask.toolPrefix).toBeUndefined();
 				expect(mask.useDynamicFallback).toBeUndefined();
 			});
@@ -259,8 +123,8 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.mode).toBe("plan");
-				expect(mask.allowedTools.has("plan")).toBe(true);
+				expect(mask.mode).toBe("p");
+				expect(mask.allowedTools.has("p-plan")).toBe(true);
 				expect(mask.useDynamicFallback).toBe(true);
 			});
 		});
@@ -274,9 +138,9 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.mode).toBe("action");
-				expect(mask.allowedTools.has("askuser")).toBe(true);
-				expect(mask.allowedTools.has("file")).toBe(true);
+				expect(mask.mode).toBe("a");
+				expect(mask.allowedTools.has("a-c-askuser")).toBe(true);
+				expect(mask.allowedTools.has("a-c-file")).toBe(true);
 			});
 
 			it("should include git by default", () => {
@@ -287,7 +151,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("git")).toBe(true);
+				expect(mask.allowedTools.has("a-c-git")).toBe(true);
 			});
 
 			it("should match web tool from http keyword", () => {
@@ -298,7 +162,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("web")).toBe(true);
+				expect(mask.allowedTools.has("a-c-web")).toBe(true);
 			});
 
 			it("should match web tool from url keyword", () => {
@@ -309,7 +173,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("web")).toBe(true);
+				expect(mask.allowedTools.has("a-c-web")).toBe(true);
 			});
 
 			it("should match git tool from git keywords", () => {
@@ -320,7 +184,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("git")).toBe(true);
+				expect(mask.allowedTools.has("a-c-git")).toBe(true);
 			});
 
 			it("should match git tool from branch keyword", () => {
@@ -331,7 +195,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("git")).toBe(true);
+				expect(mask.allowedTools.has("a-c-git")).toBe(true);
 			});
 
 			it("should match docker tool from docker keyword", () => {
@@ -342,7 +206,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("docker")).toBe(true);
+				expect(mask.allowedTools.has("a-docker")).toBe(true);
 			});
 
 			it("should match node tool from npm keyword", () => {
@@ -353,7 +217,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("node")).toBe(true);
+				expect(mask.allowedTools.has("a-node")).toBe(true);
 			});
 
 			it("should add node tools for node project type", () => {
@@ -364,7 +228,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("node")).toBe(true);
+				expect(mask.allowedTools.has("a-node")).toBe(true);
 			});
 
 			it("should add tools for python project type", () => {
@@ -375,7 +239,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("python")).toBe(true);
+				expect(mask.allowedTools.has("a-python")).toBe(true);
 			});
 
 			it("should add tools for java project type", () => {
@@ -386,10 +250,10 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("java")).toBe(true);
-				expect(mask.allowedTools.has("javac")).toBe(true);
-				expect(mask.allowedTools.has("maven")).toBe(true);
-				expect(mask.allowedTools.has("gradle")).toBe(true);
+				expect(mask.allowedTools.has("a-java")).toBe(true);
+				expect(mask.allowedTools.has("a-javac")).toBe(true);
+				expect(mask.allowedTools.has("a-maven")).toBe(true);
+				expect(mask.allowedTools.has("a-gradle")).toBe(true);
 			});
 
 			it("should add tools for dotnet project type", () => {
@@ -400,8 +264,8 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("msbuild")).toBe(true);
-				expect(mask.allowedTools.has("vs2022")).toBe(true);
+				expect(mask.allowedTools.has("a-msbuild")).toBe(true);
+				expect(mask.allowedTools.has("a-vs2022")).toBe(true);
 			});
 
 			it("should add tools for cpp project type", () => {
@@ -412,7 +276,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("cmake")).toBe(true);
+				expect(mask.allowedTools.has("a-cmake")).toBe(true);
 			});
 
 			it("should handle rust project type gracefully", () => {
@@ -424,7 +288,7 @@ describe("toolMask", () => {
 				);
 
 				// rust tools not implemented yet, but should not error
-				expect(mask.mode).toBe("action");
+				expect(mask.mode).toBe("a");
 			});
 
 			it("should handle go project type gracefully", () => {
@@ -436,7 +300,7 @@ describe("toolMask", () => {
 				);
 
 				// go tools not implemented yet, but should not error
-				expect(mask.mode).toBe("action");
+				expect(mask.mode).toBe("a");
 			});
 
 			it("should match cmake tool from cmake keyword", () => {
@@ -447,7 +311,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("cmake")).toBe(true);
+				expect(mask.allowedTools.has("a-cmake")).toBe(true);
 			});
 
 			it("should match maven tool from maven keyword", () => {
@@ -458,7 +322,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("maven")).toBe(true);
+				expect(mask.allowedTools.has("a-maven")).toBe(true);
 			});
 
 			it("should match gradle tool from gradle keyword", () => {
@@ -469,7 +333,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("gradle")).toBe(true);
+				expect(mask.allowedTools.has("a-gradle")).toBe(true);
 			});
 
 			it("should match python tool from pip keyword", () => {
@@ -480,7 +344,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("python")).toBe(true);
+				expect(mask.allowedTools.has("a-python")).toBe(true);
 			});
 
 			it("should match java tool from java keyword", () => {
@@ -491,7 +355,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("java")).toBe(true);
+				expect(mask.allowedTools.has("a-java")).toBe(true);
 			});
 
 			it("should match vscode tool from vscode keyword", () => {
@@ -502,7 +366,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("vscode")).toBe(true);
+				expect(mask.allowedTools.has("a-vscode")).toBe(true);
 			});
 
 			it("should match vs2022 tool from visual studio keyword", () => {
@@ -513,7 +377,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("vs2022")).toBe(true);
+				expect(mask.allowedTools.has("a-vs2022")).toBe(true);
 			});
 
 			it("should match vs2022 tool from sln keyword", () => {
@@ -524,7 +388,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("vs2022")).toBe(true);
+				expect(mask.allowedTools.has("a-vs2022")).toBe(true);
 			});
 
 			it("should match beyondcompare tool from diff keyword", () => {
@@ -535,7 +399,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("beyondcompare")).toBe(true);
+				expect(mask.allowedTools.has("a-beyondcompare")).toBe(true);
 			});
 
 			it("should match mysql tool from mysql keyword", () => {
@@ -546,7 +410,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("mysql")).toBe(true);
+				expect(mask.allowedTools.has("a-mysql")).toBe(true);
 			});
 
 			it("should match docker tool from container keyword", () => {
@@ -557,7 +421,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.allowedTools.has("docker")).toBe(true);
+				expect(mask.allowedTools.has("a-docker")).toBe(true);
 			});
 
 			it("should use dynamic fallback when model supports neither tool_choice nor prefill", () => {
@@ -571,7 +435,7 @@ describe("toolMask", () => {
 					mockFrozenTools,
 				);
 
-				expect(mask.mode).toBe("action");
+				expect(mask.mode).toBe("a");
 				expect(mask.useDynamicFallback).toBe(true);
 			});
 
@@ -613,6 +477,54 @@ describe("toolMask", () => {
 
 				expect(mask.requiredTool).toBeUndefined();
 			});
+
+			it("should use a-c- prefix when only core tools are matched", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
+
+				// "Hello" only matches base tools (a-c-askuser, a-c-file) + shell + git
+				// All are core tools (a-c-*)
+				const mask = buildToolMask(
+					"Hello",
+					{ cwd: "/project" },
+					false,
+					mockFrozenTools,
+				);
+
+				console.log(mask.allowedTools);
+
+				expect(mask.toolPrefix).toBe("a-c-");
+			});
+
+			it("should use a- prefix when non-core tools are matched", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
+
+				// "docker" keyword matches a-docker (non-core tool)
+				const mask = buildToolMask(
+					"Build the docker image",
+					{ cwd: "/project" },
+					false,
+					mockFrozenTools,
+				);
+
+				expect(mask.toolPrefix).toBe("a-");
+			});
+
+			it("should use a- prefix when project type adds non-core tools", () => {
+				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
+				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
+
+				// node project type adds a-node (non-core tool)
+				const mask = buildToolMask(
+					"Hello",
+					{ cwd: "/project", projectType: "node" },
+					false,
+					mockFrozenTools,
+				);
+
+				expect(mask.toolPrefix).toBe("a-");
+			});
 		});
 
 		describe("with empty frozen tools", () => {
@@ -638,8 +550,8 @@ describe("toolMask", () => {
 				mockFrozenTools,
 			);
 
-			expect(isToolAllowed("file", mask)).toBe(true);
-			expect(isToolAllowed("askuser", mask)).toBe(true);
+			expect(isToolAllowed("a-c-file", mask)).toBe(true);
+			expect(isToolAllowed("a-c-askuser", mask)).toBe(true);
 		});
 
 		it("should return false if tool is not in allowedTools", () => {
@@ -650,8 +562,8 @@ describe("toolMask", () => {
 				mockFrozenTools,
 			);
 
-			expect(isToolAllowed("file", mask)).toBe(false);
-			expect(isToolAllowed("git", mask)).toBe(false);
+			expect(isToolAllowed("a-c-file", mask)).toBe(false);
+			expect(isToolAllowed("a-c-git", mask)).toBe(false);
 		});
 
 		it("should return true if mask is undefined", () => {
@@ -668,11 +580,11 @@ describe("toolMask", () => {
 				mockFrozenTools,
 			);
 
-			const error = getToolNotAllowedError("file", mask);
+			const error = getToolNotAllowedError("a-c-file", mask);
 
-			expect(error).toContain("file");
+			expect(error).toContain("a-c-file");
 			expect(error).toContain("not available");
-			expect(error).toContain("plan");
+			expect(error).toContain("p-plan");
 		});
 	});
 });

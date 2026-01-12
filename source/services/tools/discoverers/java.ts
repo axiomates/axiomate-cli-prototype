@@ -12,7 +12,7 @@ import {
 } from "./base.js";
 
 const javaDefinition: ToolDefinition = {
-	id: "java",
+	id: "a-java",
 	name: "Java",
 	description: "Java runtime environment",
 	category: "runtime",
@@ -56,7 +56,7 @@ const javaDefinition: ToolDefinition = {
 };
 
 const javacDefinition: ToolDefinition = {
-	id: "javac",
+	id: "a-javac",
 	name: "Java Compiler",
 	description: "Java compiler (JDK)",
 	category: "build",

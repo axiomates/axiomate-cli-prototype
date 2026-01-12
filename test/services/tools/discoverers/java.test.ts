@@ -40,7 +40,7 @@ describe("java discoverer", () => {
 			const result = await detectJava();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("java");
+			expect(result.id).toBe("a-java");
 		});
 
 		it("should return installed tool when java exists", async () => {
@@ -128,7 +128,7 @@ describe("java discoverer", () => {
 			const result = await detectJavac();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("javac");
+			expect(result.id).toBe("a-javac");
 		});
 
 		it("should return installed tool when javac exists", async () => {

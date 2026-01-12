@@ -12,7 +12,7 @@ import {
 } from "./base.js";
 
 const cmdDefinition: ToolDefinition = {
-	id: "cmd",
+	id: "a-c-cmd",
 	name: "CMD",
 	description: "Windows Command Prompt",
 	category: "shell",

@@ -41,7 +41,7 @@ describe("database discoverer", () => {
 			const result = await detectMysql();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("mysql");
+			expect(result.id).toBe("a-mysql");
 		});
 
 		it("should return installed tool when mysql exists", async () => {
@@ -116,7 +116,7 @@ describe("database discoverer", () => {
 			const result = await detectPsql();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("psql");
+			expect(result.id).toBe("a-psql");
 		});
 
 		it("should return installed tool when psql exists", async () => {
@@ -189,7 +189,7 @@ describe("database discoverer", () => {
 			const result = await detectSqlite();
 
 			expect(result.installed).toBe(false);
-			expect(result.id).toBe("sqlite3");
+			expect(result.id).toBe("a-sqlite3");
 		});
 
 		it("should return installed tool when sqlite3 exists", async () => {

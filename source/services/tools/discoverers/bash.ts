@@ -12,7 +12,7 @@ import {
 } from "./base.js";
 
 const bashDefinition: ToolDefinition = {
-	id: "bash",
+	id: "a-c-bash",
 	name: "Bash",
 	description: "Unix shell script interpreter",
 	category: "shell",

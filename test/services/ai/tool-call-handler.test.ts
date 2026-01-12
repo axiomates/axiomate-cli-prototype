@@ -48,8 +48,8 @@ describe("ToolCallHandler", () => {
 
 	describe("parseToolCallName", () => {
 		it("should parse tool name with action", () => {
-			const result = handler.parseToolCallName("git_status");
-			expect(result.toolId).toBe("git");
+			const result = handler.parseToolCallName("a-c-git_status");
+			expect(result.toolId).toBe("a-c-git");
 			expect(result.actionName).toBe("status");
 		});
 
@@ -59,10 +59,10 @@ describe("ToolCallHandler", () => {
 			expect(result.actionName).toBe("default");
 		});
 
-		it("should handle multiple underscores", () => {
-			const result = handler.parseToolCallName("my_tool_action_name");
-			expect(result.toolId).toBe("my");
-			expect(result.actionName).toBe("tool_action_name");
+		it("should handle multiple underscores in action name", () => {
+			const result = handler.parseToolCallName("a-c-git_commit_amend");
+			expect(result.toolId).toBe("a-c-git");
+			expect(result.actionName).toBe("commit_amend");
 		});
 	});
 
@@ -91,7 +91,7 @@ describe("ToolCallHandler", () => {
 
 		it("should return error when tool not installed", async () => {
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -105,7 +105,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_status",
+						name: "a-c-git_status",
 						arguments: "{}",
 					},
 				},
@@ -120,7 +120,7 @@ describe("ToolCallHandler", () => {
 
 		it("should return error when action not found", async () => {
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -136,7 +136,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_unknown",
+						name: "a-c-git_unknown",
 						arguments: "{}",
 					},
 				},
@@ -155,7 +155,7 @@ describe("ToolCallHandler", () => {
 				parameters: [],
 			};
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -169,7 +169,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_status",
+						name: "a-c-git_status",
 						arguments: "invalid json {",
 					},
 				},
@@ -188,7 +188,7 @@ describe("ToolCallHandler", () => {
 				parameters: [],
 			};
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -208,7 +208,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_status",
+						name: "a-c-git_status",
 						arguments: "{}",
 					},
 				},
@@ -229,7 +229,7 @@ describe("ToolCallHandler", () => {
 				parameters: [],
 			};
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -249,7 +249,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_init",
+						name: "a-c-git_init",
 						arguments: "{}",
 					},
 				},
@@ -268,7 +268,7 @@ describe("ToolCallHandler", () => {
 				parameters: [],
 			};
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -289,7 +289,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_push",
+						name: "a-c-git_push",
 						arguments: "{}",
 					},
 				},
@@ -315,7 +315,7 @@ describe("ToolCallHandler", () => {
 			};
 
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -345,12 +345,12 @@ describe("ToolCallHandler", () => {
 				{
 					id: "call_1",
 					type: "function",
-					function: { name: "git_status", arguments: "{}" },
+					function: { name: "a-c-git_status", arguments: "{}" },
 				},
 				{
 					id: "call_2",
 					type: "function",
-					function: { name: "git_branch", arguments: "{}" },
+					function: { name: "a-c-git_branch", arguments: "{}" },
 				},
 			];
 
@@ -368,7 +368,7 @@ describe("ToolCallHandler", () => {
 				parameters: [],
 			};
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -388,7 +388,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_status",
+						name: "a-c-git_status",
 						arguments: "{}",
 					},
 				},
@@ -407,7 +407,7 @@ describe("ToolCallHandler", () => {
 				parameters: [],
 			};
 			vi.mocked(registry.getTool).mockReturnValue({
-				id: "git",
+				id: "a-c-git",
 				name: "Git",
 				description: "Git version control",
 				category: "shell",
@@ -427,7 +427,7 @@ describe("ToolCallHandler", () => {
 					id: "call_123",
 					type: "function",
 					function: {
-						name: "git_status",
+						name: "a-c-git_status",
 						arguments: "{}",
 					},
 				},
@@ -449,7 +449,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({
 							question: "What is your name?",
 							options: '["Alice", "Bob"]',
@@ -477,7 +477,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({ question: "Test?" }),
 					},
 				},
@@ -497,7 +497,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({ question: "Confirm?" }),
 					},
 				},
@@ -517,7 +517,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({ question: "Test?" }),
 					},
 				},
@@ -538,7 +538,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: "invalid json {",
 					},
 				},
@@ -559,7 +559,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({}),
 					},
 				},
@@ -579,7 +579,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({
 							question: "Test?",
 							options: "not valid json",
@@ -603,7 +603,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({
 							question: "Test?",
 							options: JSON.stringify({ key: "value" }),
@@ -627,7 +627,7 @@ describe("ToolCallHandler", () => {
 					id: "call_ask",
 					type: "function",
 					function: {
-						name: "askuser_ask",
+						name: "a-c-askuser_ask",
 						arguments: JSON.stringify({
 							question: "Pick a number?",
 							options: JSON.stringify([1, 2, 3]),

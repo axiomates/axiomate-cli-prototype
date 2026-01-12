@@ -12,7 +12,7 @@ import {
 } from "./base.js";
 
 const vscodeDefinition: ToolDefinition = {
-	id: "vscode",
+	id: "a-vscode",
 	name: "Visual Studio Code",
 	description: "Lightweight code editor",
 	category: "ide",
