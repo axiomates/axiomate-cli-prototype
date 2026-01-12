@@ -26,15 +26,9 @@ export type ModelConfig = {
 	/**
 	 * 是否支持 tool_choice 参数（用于动态遮蔽工具）
 	 * - true: 支持 tool_choice 参数，可用于强制/禁用特定工具
-	 * - false/undefined: 不支持，使用 Prefill Response 技术实现遮蔽
+	 * - false/undefined: 不支持，使用动态工具列表过滤
 	 */
 	supportsToolChoice?: boolean;
-	/**
-	 * 是否支持 Prefill Response 技术
-	 * - true: 支持在 assistant 消息中预填充内容引导输出
-	 * - false/undefined: 不支持，Plan 模式将使用动态工具列表
-	 */
-	supportsPrefill?: boolean;
 	/** 模型是否具有 thinking/reasoning 能力（默认 false） */
 	supportsThinking?: boolean;
 	/**
@@ -376,19 +370,6 @@ export function currentModelSupportsToolChoice(): boolean {
 	// 前提：模型必须支持工具
 	if (!model?.supportsTools) return false;
 	return model?.supportsToolChoice === true;
-}
-
-/**
- * 检查当前模型是否支持 Prefill Response 技术
- * Prefill 允许在 assistant 消息中预填充内容来引导模型输出
- */
-export function currentModelSupportsPrefill(): boolean {
-	const modelId = getCurrentModelId();
-	if (!modelId) return false;
-	const model = getModelById(modelId);
-	// 前提：模型必须支持工具
-	if (!model?.supportsTools) return false;
-	return model?.supportsPrefill === true;
 }
 
 /**

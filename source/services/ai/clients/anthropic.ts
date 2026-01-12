@@ -25,7 +25,6 @@ import {
 	isThinkingEnabled,
 	currentModelSupportsThinking,
 	currentModelSupportsToolChoice,
-	currentModelSupportsPrefill,
 } from "../../../utils/config.js";
 import { stableStringify } from "../../../utils/json.js";
 
@@ -98,12 +97,9 @@ export class AnthropicClient implements IAIClient {
 		// 提取 system 消息
 		const systemPrompt = extractSystemMessage(messages);
 
-		// 如果不支持 tool_choice 但需要强制工具，使用 prefill
-		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
-
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toAnthropicMessages(processedMessages),
+			messages: toAnthropicMessages(messages),
 			max_tokens: 4096,
 		};
 
@@ -291,53 +287,6 @@ export class AnthropicClient implements IAIClient {
 	}
 
 	/**
-	 * 如果不支持 tool_choice 但需要强制工具，使用 Prefill Response 技术
-	 * 在消息末尾添加预填充的 assistant 消息
-	 * 注意：Anthropic 扩展思考模式不支持预填充
-	 */
-	/**
-	 * 如果不支持 tool_choice 但需要引导工具调用，使用 Prefill Response 技术
-	 *
-	 * tool_choice vs prefill 的区别：
-	 * - tool_choice: 需要完整工具名，强制调用特定工具
-	 * - prefill: 使用共同前缀，让模型在同类工具中选择
-	 */
-	private applyPrefillIfNeeded(
-		messages: ChatMessage[],
-		toolMask?: ToolMaskState,
-	): ChatMessage[] {
-		// 如果支持 tool_choice，不需要 prefill
-		if (currentModelSupportsToolChoice()) {
-			return messages;
-		}
-
-		// 如果模型不支持 prefill，不应用
-		if (!currentModelSupportsPrefill()) {
-			return messages;
-		}
-
-		// 如果没有工具前缀，不需要 prefill
-		if (!toolMask?.toolPrefix) {
-			return messages;
-		}
-
-		// 如果启用了扩展思考模式，不能使用 prefill
-		if (isThinkingEnabled() && currentModelSupportsThinking()) {
-			return messages;
-		}
-
-		// 使用 prefill 引导模型调用指定前缀的工具
-		// 例如 toolPrefix = "plan_" 会引导模型调用 plan_read/plan_write/plan_edit
-		return [
-			...messages,
-			{
-				role: "assistant",
-				content: `I'll call the ${toolMask.toolPrefix}`,
-			},
-		];
-	}
-
-	/**
 	 * 流式聊天请求
 	 * 使用 SSE (Server-Sent Events) 格式解析 Anthropic 流式响应
 	 * @param messages 消息列表
@@ -356,12 +305,9 @@ export class AnthropicClient implements IAIClient {
 		// 提取 system 消息
 		const systemPrompt = extractSystemMessage(messages);
 
-		// 如果不支持 tool_choice 但需要强制工具，使用 prefill
-		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
-
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toAnthropicMessages(processedMessages),
+			messages: toAnthropicMessages(messages),
 			max_tokens: 4096,
 			stream: true, // 启用流式响应
 		};

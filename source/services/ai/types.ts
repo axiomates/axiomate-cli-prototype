@@ -121,10 +121,6 @@ export type StreamOptions = {
 /**
  * 工具遮蔽状态
  * 用于在保持工具列表稳定的同时，动态控制可用工具子集
- *
- * tool_choice vs prefill 的区别：
- * - tool_choice: 需要完整工具名，强制调用特定工具 (如 "plan_read")
- * - prefill: 使用共同前缀，让模型在同类工具中选择 (如 "plan_")
  */
 export type ToolMaskState = {
 	/** 当前模式: p = Plan, a = Action */
@@ -137,13 +133,8 @@ export type ToolMaskState = {
 	 */
 	requiredTool?: string;
 	/**
-	 * 工具前缀（用于 prefill）
-	 * 共同前缀，如 "plan_"，让模型在同类工具中选择
-	 */
-	toolPrefix?: string;
-	/**
 	 * 是否使用动态工具列表过滤
-	 * 当模型不支持 tool_choice 和 prefill 时，回退到动态过滤工具列表
+	 * 当模型不支持 tool_choice 时，回退到动态过滤工具列表
 	 */
 	useDynamicFiltering?: boolean;
 };

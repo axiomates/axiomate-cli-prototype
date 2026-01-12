@@ -4,7 +4,6 @@ import { initI18n, setLocale } from "../../../source/i18n/index.js";
 // Mock config module for model capability checks
 vi.mock("../../../source/utils/config.js", () => ({
 	currentModelSupportsToolChoice: vi.fn(() => false),
-	currentModelSupportsPrefill: vi.fn(() => true), // Default to prefill support for tests
 }));
 
 beforeAll(() => {
@@ -18,10 +17,7 @@ import {
 	getToolNotAllowedError,
 } from "../../../source/services/ai/toolMask.js";
 import type { DiscoveredTool } from "../../../source/services/tools/types.js";
-import {
-	currentModelSupportsToolChoice,
-	currentModelSupportsPrefill,
-} from "../../../source/utils/config.js";
+import { currentModelSupportsToolChoice } from "../../../source/utils/config.js";
 
 // Helper to create mock tool
 const createMockTool = (
@@ -73,65 +69,37 @@ const mockProjectTools: DiscoveredTool[] = [
 	createMockTool("a-mysql", "MySQL", "database"),
 ];
 
-// Deprecated: 保持向后兼容
-const mockFrozenTools = mockProjectTools;
-
 describe("toolMask", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// Reset to default: no tool_choice, but prefill support
+		// Reset to default: no tool_choice support
 		vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-		vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
 	});
 
 	describe("buildToolMask", () => {
 		describe("Plan mode", () => {
-			it("should use prefill when model supports it", () => {
-				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
-
-				const mask = buildToolMask(
-					"Create a plan for this project",
-					undefined, // projectType
-					true, // planMode
-					"prefill", // constraintMode
-					mockPlatformTools,
-				);
-
-				expect(mask.mode).toBe("p");
-				expect(mask.allowedTools.has("p-plan")).toBe(true);
-				expect(mask.allowedTools.size).toBe(1);
-				expect(mask.toolPrefix).toBe("p-");
-				expect(mask.useDynamicFiltering).toBeUndefined();
-			});
-
 			it("should use tool_choice when model supports it", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(true);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Create a plan",
 					undefined, // projectType
-					true,
-					"prefill", // constraintMode
+					true, // planMode
 					mockPlatformTools,
 				);
 
 				expect(mask.mode).toBe("p");
 				expect(mask.allowedTools.has("p-plan")).toBe(true);
-				expect(mask.toolPrefix).toBeUndefined();
 				expect(mask.useDynamicFiltering).toBeUndefined();
 			});
 
-			it("should use dynamic fallback when model supports neither tool_choice nor prefill", () => {
+			it("should use dynamic filtering when model does not support tool_choice", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Create a plan",
 					undefined, // projectType
-					true,
-					"filtered", // constraintMode (动态模式使用 project)
+					true, // planMode
 					mockProjectTools,
 				);
 
@@ -144,13 +112,11 @@ describe("toolMask", () => {
 		describe("Action mode", () => {
 			it("should include base tools", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -162,13 +128,11 @@ describe("toolMask", () => {
 
 			it("should include git by default", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -177,13 +141,11 @@ describe("toolMask", () => {
 
 			it("should match web tool from http keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Fetch https://example.com",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -192,13 +154,11 @@ describe("toolMask", () => {
 
 			it("should match web tool from url keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Get the url content",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -207,13 +167,11 @@ describe("toolMask", () => {
 
 			it("should match git tool from git keywords", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"commit these changes",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -222,13 +180,11 @@ describe("toolMask", () => {
 
 			it("should match git tool from branch keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"create a new branch",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -237,13 +193,11 @@ describe("toolMask", () => {
 
 			it("should match docker tool from docker keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Build the docker image",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -252,13 +206,11 @@ describe("toolMask", () => {
 
 			it("should match node tool from npm keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Run npm install",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -267,13 +219,11 @@ describe("toolMask", () => {
 
 			it("should add node tools for node project type", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Install dependencies",
 					"node", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -283,13 +233,11 @@ describe("toolMask", () => {
 
 			it("should add tools for python project type", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					"python", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -298,13 +246,11 @@ describe("toolMask", () => {
 
 			it("should add tools for java project type", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					"java", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -316,13 +262,11 @@ describe("toolMask", () => {
 
 			it("should add tools for dotnet project type", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					"dotnet", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -332,13 +276,11 @@ describe("toolMask", () => {
 
 			it("should add tools for cpp project type", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					"cpp", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -347,13 +289,11 @@ describe("toolMask", () => {
 
 			it("should handle rust project type gracefully", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					"rust", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -363,13 +303,11 @@ describe("toolMask", () => {
 
 			it("should handle go project type gracefully", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					"go", // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -379,13 +317,11 @@ describe("toolMask", () => {
 
 			it("should match cmake tool from cmake keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Run cmake to build",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -394,13 +330,11 @@ describe("toolMask", () => {
 
 			it("should match maven tool from maven keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Run maven clean install",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -409,13 +343,11 @@ describe("toolMask", () => {
 
 			it("should match gradle tool from gradle keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Execute gradle build",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -424,13 +356,11 @@ describe("toolMask", () => {
 
 			it("should match python tool from pip keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Install packages with pip",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -439,13 +369,11 @@ describe("toolMask", () => {
 
 			it("should match java tool from java keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Compile the java code",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -454,13 +382,11 @@ describe("toolMask", () => {
 
 			it("should match vscode tool from vscode keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Open in vscode",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -469,13 +395,11 @@ describe("toolMask", () => {
 
 			it("should match vs2022 tool from visual studio keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Open in visual studio",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -484,13 +408,11 @@ describe("toolMask", () => {
 
 			it("should match vs2022 tool from sln keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Build the .sln file",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -499,13 +421,11 @@ describe("toolMask", () => {
 
 			it("should match beyondcompare tool from diff keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Compare the diff between files",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -514,13 +434,11 @@ describe("toolMask", () => {
 
 			it("should match mysql tool from mysql keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Connect to mysql database",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -529,28 +447,24 @@ describe("toolMask", () => {
 
 			it("should match docker tool from container keyword", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Start the container",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
 				expect(mask.allowedTools.has("a-docker")).toBe(true);
 			});
 
-			it("should use dynamic fallback when model supports neither tool_choice nor prefill", () => {
+			it("should use dynamic filtering when model does not support tool_choice", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 				const mask = buildToolMask(
 					"Hello",
 					undefined, // projectType
-					false,
-					"filtered", // constraintMode
+					false, // planMode
 					mockProjectTools,
 				);
 
@@ -558,121 +472,32 @@ describe("toolMask", () => {
 				expect(mask.useDynamicFiltering).toBe(true);
 			});
 
-			it("should not use dynamic fallback when model supports tool_choice", () => {
-				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(true);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
-
-				const mask = buildToolMask(
-					"Hello",
-					undefined, // projectType
-					false,
-					"prefill", // constraintMode (tool_choice uses platform)
-					mockPlatformTools,
-				);
-
-				expect(mask.useDynamicFiltering).toBeUndefined();
-			});
-
-			it("should not use dynamic fallback when model supports prefill", () => {
-				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
-
-				const mask = buildToolMask(
-					"Hello",
-					undefined, // projectType
-					false,
-					"prefill", // constraintMode (prefill uses platform)
-					mockPlatformTools,
-				);
-
-				expect(mask.useDynamicFiltering).toBeUndefined();
-			});
-
 			it("should not have requiredTool in action mode", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
 
 				const mask = buildToolMask(
 					"Hello",
 					undefined, // projectType
-					false,
-					"prefill", // constraintMode
+					false, // planMode
 					mockPlatformTools,
 				);
 
 				expect(mask.requiredTool).toBeUndefined();
 			});
-
-			it("should use a-c- prefix when only core tools are matched", () => {
-				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
-
-				// "Hello" doesn't match any specific tools, uses a-c- prefix for platform tools
-				const mask = buildToolMask(
-					"Hello",
-					undefined, // projectType
-					false,
-					"prefill", // constraintMode
-					mockPlatformTools,
-				);
-
-				expect(mask.toolPrefix).toBe("a-c-");
-			});
-
-			it("should use a- prefix when non-core tools are matched", () => {
-				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
-
-				// "docker" keyword matches a-docker (non-core tool) - but platform tools don't include docker
-				// So this test needs to use platform toolsource to test the prefix logic
-				const mask = buildToolMask(
-					"fetch http://example.com",
-					undefined, // projectType
-					false,
-					"prefill", // constraintMode
-					mockPlatformTools,
-				);
-
-				// web is in platform tools but still a-c-*, so prefix should be a-c-
-				expect(mask.toolPrefix).toBe("a-c-");
-			});
-
-			it("should use a- prefix when project type adds non-core tools", () => {
-				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
-
-				// node project type adds a-node (non-core tool) in project tools
-				const mask = buildToolMask(
-					"Hello",
-					"node", // projectType
-					false,
-					"filtered", // constraintMode
-					mockProjectTools,
-				);
-
-				// Dynamic mode doesn't use toolPrefix
-				expect(mask.toolPrefix).toBeUndefined();
-				expect(mask.useDynamicFiltering).toBe(true);
-			});
 		});
 
-		describe("with empty frozen tools", () => {
-			it("should return empty allowedTools when frozen tools is empty", () => {
+		describe("with empty tools", () => {
+			it("should return empty allowedTools when tools is empty", () => {
 				vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-				vi.mocked(currentModelSupportsPrefill).mockReturnValue(true);
 
 				const mask = buildToolMask(
 					"Hello",
 					undefined, // projectType
-					false,
-					"prefill", // constraintMode
+					false, // planMode
 					[],
 				);
 
 				expect(mask.allowedTools.size).toBe(0);
-				// 空工具列表应该使用 "a-" 前缀（更宽松）
-				// 而不是 "a-c-" 前缀（空数组的 every() 返回 true 的边界情况）
-				expect(mask.toolPrefix).toBe("a-");
 			});
 		});
 	});
@@ -680,13 +505,11 @@ describe("toolMask", () => {
 	describe("isToolAllowed", () => {
 		it("should return true if tool is in allowedTools", () => {
 			vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-			vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 			const mask = buildToolMask(
 				"Hello",
 				undefined, // projectType
-				false,
-				"filtered", // constraintMode
+				false, // planMode
 				mockProjectTools,
 			);
 
@@ -696,13 +519,11 @@ describe("toolMask", () => {
 
 		it("should return false if tool is not in allowedTools", () => {
 			vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-			vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 			const mask = buildToolMask(
 				"Hello",
 				undefined, // projectType
 				true, // plan mode - only plan allowed
-				"filtered", // constraintMode
 				mockProjectTools,
 			);
 
@@ -718,13 +539,11 @@ describe("toolMask", () => {
 	describe("getToolNotAllowedError", () => {
 		it("should return error message with tool id and allowed list", () => {
 			vi.mocked(currentModelSupportsToolChoice).mockReturnValue(false);
-			vi.mocked(currentModelSupportsPrefill).mockReturnValue(false);
 
 			const mask = buildToolMask(
 				"Hello",
 				undefined, // projectType
-				true,
-				"filtered", // constraintMode
+				true, // planMode
 				mockProjectTools,
 			);
 

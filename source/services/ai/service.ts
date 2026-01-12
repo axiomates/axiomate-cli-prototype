@@ -35,10 +35,7 @@ import {
 import { estimateTokens } from "./tokenEstimator.js";
 import { stableStringify } from "../../utils/json.js";
 import { buildToolMask } from "./toolMask.js";
-import {
-	currentModelSupportsToolChoice,
-	currentModelSupportsPrefill,
-} from "../../utils/config.js";
+import { currentModelSupportsToolChoice } from "../../utils/config.js";
 
 /**
  * 默认上下文窗口大小
@@ -290,12 +287,11 @@ export class AIService implements IAIService {
 		let tools: OpenAITool[] = [];
 
 		if (this.contextAwareEnabled) {
-			// 判断约束模式（三种情况）
+			// 判断约束模式（两种情况）
 			const supportsToolChoice = currentModelSupportsToolChoice();
-			const supportsPrefill = currentModelSupportsPrefill();
 
 			if (supportsToolChoice) {
-				// 情况3：支持 tool_choice，集合B + auto
+				// 情况1：支持 tool_choice，集合B + auto
 				if (initialPlanMode) {
 					// Plan 模式：只发送 p-plan 工具
 					const planTools = this.projectTools.filter(
@@ -314,25 +310,13 @@ export class AIService implements IAIService {
 						allowedTools: new Set(this.projectTools.map((t) => t.id)),
 					};
 				}
-			} else if (supportsPrefill) {
-				// 情况4：只支持 prefill，集合B + 筛选算法s
-				// 发送完整集合B，通过 prefill 引导工具选择
-				toolMask = buildToolMask(
-					userMessage,
-					this.projectType,
-					initialPlanMode,
-					"prefill",
-					this.projectTools,
-				);
-				tools = toOpenAITools(this.projectTools);
 			} else {
-				// 情况2：不支持 choice/prefill，集合A + 筛选算法s
+				// 情况2：不支持 tool_choice，集合A + 筛选算法s
 				// 从集合A筛选，发送过滤后的工具列表
 				toolMask = buildToolMask(
 					userMessage,
 					this.projectType,
 					initialPlanMode,
-					"filtered",
 					this.allTools,
 				);
 				// 根据 allowedTools 过滤工具列表

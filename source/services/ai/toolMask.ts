@@ -2,16 +2,13 @@
  * 工具遮蔽状态构建器
  *
  * 根据用户输入和上下文构建工具遮蔽状态，用于动态控制可用工具子集
- * 保持工具列表稳定（优化 KV cache），通过 tool_choice 或 Prefill 实现遮蔽
+ * 保持工具列表稳定（优化 KV cache），通过 tool_choice 或动态过滤实现遮蔽
  */
 
 import type { ToolMaskState, MatchContext } from "./types.js";
 import type { DiscoveredTool } from "../tools/types.js";
 import { tArray } from "../../i18n/index.js";
-import {
-	currentModelSupportsToolChoice,
-	currentModelSupportsPrefill,
-} from "../../utils/config.js";
+import { currentModelSupportsToolChoice } from "../../utils/config.js";
 import {
 	ACTION_CORE_TOOLS,
 	getPlatformShellTools,
@@ -175,19 +172,11 @@ export function getToolsForProjectType(
 }
 
 /**
- * 约束模式
- * - prefill: 通过 prefill 技术约束，发送完整工具列表 + 设置 toolPrefix
- * - filtered: 通过过滤工具列表约束，发送过滤后的工具子集
- */
-export type ConstraintMode = "prefill" | "filtered";
-
-/**
  * 构建工具遮蔽状态
  *
  * @param input 用户输入内容
  * @param projectType 项目类型（已在 AIService 初始化时固定）
  * @param planMode 是否为 Plan 模式
- * @param constraintMode 约束模式：'prefill'（prefill引导）或 'filtered'（列表过滤）
  * @param availableTools 可用的工具列表
  * @returns 工具遮蔽状态
  */
@@ -195,7 +184,6 @@ export function buildToolMask(
 	input: string,
 	projectType: string | undefined,
 	planMode: boolean,
-	constraintMode: ConstraintMode,
 	availableTools: DiscoveredTool[],
 ): ToolMaskState {
 	// 构建可用工具 ID 集合
@@ -204,7 +192,6 @@ export function buildToolMask(
 	// Plan 模式：只允许 plan 工具
 	if (planMode) {
 		const supportsToolChoice = currentModelSupportsToolChoice();
-		const supportsPrefill = currentModelSupportsPrefill();
 
 		if (supportsToolChoice) {
 			// 模型支持 tool_choice，使用冻结工具列表 + tool_choice 限制
@@ -212,16 +199,8 @@ export function buildToolMask(
 				mode: "p",
 				allowedTools: new Set(["p-plan"]),
 			};
-		} else if (supportsPrefill) {
-			// 模型支持 prefill，使用冻结工具列表 + prefill 引导
-			// prefill "p-" 将约束到 p-plan_* 工具
-			return {
-				mode: "p",
-				allowedTools: new Set(["p-plan"]),
-				toolPrefix: "p-",
-			};
 		} else {
-			// Fallback: 动态过滤工具列表（不支持 tool_choice 和 prefill）
+			// Fallback: 动态过滤工具列表（不支持 tool_choice）
 			return {
 				mode: "p",
 				allowedTools: new Set(["p-plan"]),
@@ -263,33 +242,12 @@ export function buildToolMask(
 		}
 	}
 
-	// 根据约束模式返回不同的遮蔽状态
-	if (constraintMode === "prefill") {
-		// prefill 模式：发送完整工具列表，通过 prefill 引导工具选择
-		// 判断是否所有允许的工具都是核心工具（a-c- 前缀）
-		// 如果是，使用 a-c- 前缀；否则使用 a- 前缀
-		const onlyCoreTools =
-			allowedTools.size > 0 &&
-			[...allowedTools].every((id) => id.startsWith("a-c-"));
-
-		return {
-			mode: "a",
-			allowedTools,
-			toolPrefix: onlyCoreTools ? "a-c-" : "a-",
-		};
-	}
-
-	if (constraintMode === "filtered") {
-		// filtered 模式：发送过滤后的工具子集
-		return {
-			mode: "a",
-			allowedTools,
-			useDynamicFiltering: true,
-		};
-	}
-
-	// 不应该到达这里
-	throw new Error(`Unknown constraintMode: ${constraintMode}`);
+	// filtered 模式：发送过滤后的工具子集
+	return {
+		mode: "a",
+		allowedTools,
+		useDynamicFiltering: true,
+	};
 }
 
 /**

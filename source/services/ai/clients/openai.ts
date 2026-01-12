@@ -19,7 +19,6 @@ import { toOpenAIMessages, parseOpenAIToolCalls } from "../adapters/openai.js";
 import {
 	getThinkingParams,
 	currentModelSupportsToolChoice,
-	currentModelSupportsPrefill,
 } from "../../../utils/config.js";
 import { stableStringify } from "../../../utils/json.js";
 
@@ -83,12 +82,9 @@ export class OpenAIClient implements IAIClient {
 			this.config.baseUrl?.replace(/\/$/, "") || "https://api.openai.com/v1";
 		const url = `${baseUrl}/chat/completions`;
 
-		// 如果不支持 tool_choice 且有 requiredTool，使用 prefill
-		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
-
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toOpenAIMessages(processedMessages),
+			messages: toOpenAIMessages(messages),
 		};
 
 		if (tools && tools.length > 0) {
@@ -222,44 +218,6 @@ export class OpenAIClient implements IAIClient {
 	}
 
 	/**
-	 * 如果不支持 tool_choice 但需要强制工具，使用 Prefill Response 技术
-	 * 在消息末尾添加预填充的 assistant 消息
-	 *
-	 * tool_choice vs prefill 的区别：
-	 * - tool_choice: 需要完整工具名，强制调用特定工具
-	 * - prefill: 使用共同前缀，让模型在同类工具中选择
-	 */
-	private applyPrefillIfNeeded(
-		messages: ChatMessage[],
-		toolMask?: ToolMaskState,
-	): ChatMessage[] {
-		// 如果支持 tool_choice，不需要 prefill
-		if (currentModelSupportsToolChoice()) {
-			return messages;
-		}
-
-		// 如果模型不支持 prefill，不应用
-		if (!currentModelSupportsPrefill()) {
-			return messages;
-		}
-
-		// 如果没有工具前缀，不需要 prefill
-		if (!toolMask?.toolPrefix) {
-			return messages;
-		}
-
-		// 使用 prefill 引导模型调用指定前缀的工具
-		// 例如 toolPrefix = "plan_" 会引导模型调用 plan_read/plan_write/plan_edit
-		return [
-			...messages,
-			{
-				role: "assistant",
-				content: `<tool_call>{"name": "${toolMask.toolPrefix}`,
-			},
-		];
-	}
-
-	/**
 	 * 流式聊天请求
 	 * 使用 SSE (Server-Sent Events) 格式解析流式响应
 	 * @param messages 消息列表
@@ -275,12 +233,9 @@ export class OpenAIClient implements IAIClient {
 			this.config.baseUrl?.replace(/\/$/, "") || "https://api.openai.com/v1";
 		const url = `${baseUrl}/chat/completions`;
 
-		// 如果不支持 tool_choice 且有 requiredTool，使用 prefill
-		const processedMessages = this.applyPrefillIfNeeded(messages, options?.toolMask);
-
 		const body: Record<string, unknown> = {
 			model: this.config.model,
-			messages: toOpenAIMessages(processedMessages),
+			messages: toOpenAIMessages(messages),
 			stream: true, // 启用流式响应
 			stream_options: { include_usage: true }, // 请求在流结束时返回 usage
 		};
