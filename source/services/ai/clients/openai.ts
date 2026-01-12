@@ -61,7 +61,7 @@ export class OpenAIClient implements IAIClient {
 
 	constructor(config: AIClientConfig) {
 		this.config = {
-			baseUrl: "https://api.openai.com",
+			baseUrl: "https://api.openai.com/v1",
 			timeout: 60000,
 			maxRetries: 3,
 			...config,

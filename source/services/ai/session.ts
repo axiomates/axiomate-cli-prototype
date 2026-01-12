@@ -151,13 +151,24 @@ export class Session {
 	addAssistantMessage(message: ChatMessage, usage?: TokenUsage): void {
 		// 如果有 usage 信息，更新实际 token 计数
 		if (usage) {
-			this.actualPromptTokens = usage.prompt_tokens;
+			// prompt_tokens 代表本次请求的提示词开销，这里累加以反映会话
+			// 累计真实消耗，而不是只保留最后一次请求的值。
+			this.actualPromptTokens += usage.prompt_tokens;
 			this.actualCompletionTokens += usage.completion_tokens;
 		}
 
+		// 缺少 usage 时，为了更准确估算，将 tool_calls 也计入 token 估算
+		const estimatedTokens =
+			usage?.completion_tokens ??
+			estimateTokens(
+				(message.content ?? "") +
+					(message.reasoning_content ?? "") +
+					(message.tool_calls?.length ? JSON.stringify(message.tool_calls) : ""),
+			);
+
 		this.messages.push({
 			message,
-			tokens: usage?.completion_tokens ?? estimateTokens(message.content),
+			tokens: estimatedTokens,
 			isActual: !!usage,
 			timestamp: Date.now(),
 		});
